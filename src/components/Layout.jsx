@@ -24,6 +24,9 @@ function Layout() {
                     <Link to="/aulas" className="p-3 rounded-lg bg-transparent hover:bg-surface-dark/80 hover:shadow-lg hover:text-neon-blue transition-all font-semibold text-text-title-dark border border-transparent hover:border-border-dark">
                         Aulas
                     </Link>
+                    <Link to="/mapa" className="p-3 rounded-lg bg-transparent hover:bg-surface-dark/80 hover:shadow-lg hover:text-neon-blue transition-all font-semibold text-text-title-dark border border-transparent hover:border-border-dark">
+                        Mapa
+                    </Link>
                     <Link to="/bisontstore" className="p-3 rounded-lg bg-transparent hover:bg-surface-dark/80 hover:shadow-lg hover:text-neon-blue transition-all font-semibold text-text-title-dark border border-transparent hover:border-border-dark">
                         Bisontstore
                     </Link>
@@ -41,7 +44,7 @@ function Layout() {
 
             {/* Contenedor principal de vistas */}
             <main className="flex-1 flex justify-center relative z-10">
-                <div className="w-full max-w-3xl p-8">
+                <div className="w-full p-8">
                     <Outlet />
                 </div>
             </main>

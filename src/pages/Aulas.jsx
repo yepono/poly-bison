@@ -18,7 +18,7 @@ function Aulas() {
     };
 
     const agregarAsistente = () => setAsistentes([...asistentes, { nombre: "", matricula: "" }]);
-    
+
     const removerAsistente = (index) => {
         if (asistentes.length > 1) {
             setAsistentes(asistentes.filter((_, i) => i !== index));
@@ -27,13 +27,13 @@ function Aulas() {
 
     return (
         <div className="w-full max-w-4xl mx-auto">
-            
-            
+
+
             <div className="mb-8 text-center">
                 <h1 className="text-3xl font-bold text-text-title-dark drop-shadow-[0_0_8px_var(--color-neon-blue)] mb-4">
                     Reserva de Aulas
                 </h1>
-                
+
                 <div className="flex items-center justify-center gap-2">
                     {[1, 2, 3].map((num) => (
                         <div key={num} className="flex items-center gap-2">
@@ -47,13 +47,13 @@ function Aulas() {
             </div>
 
             <AnimatePresence mode="wait">
-                
+
                 {paso === 1 && (
                     <motion.div key="paso1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
                         <div className="bg-surface-dark/50 border border-border-dark rounded-2xl p-6 shadow-lg mb-6">
-                            
+
                             <h2 className="text-xl font-bold text-text-title-dark mb-4">1. Selecciona un Aula</h2>
-                            
+
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                                 {[
                                     { id: "A1", nombre: "Sala de Estudio A", icon: "M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" },
@@ -76,10 +76,10 @@ function Aulas() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div>
                                     <label className="text-sm font-semibold text-text-body-dark mb-1.5 block">Fecha</label>
-                                    <input 
-                                        type="date" 
-                                        value={reserva.fecha} 
-                                        onChange={(e) => setReserva({...reserva, fecha: e.target.value})}
+                                    <input
+                                        type="date"
+                                        value={reserva.fecha}
+                                        onChange={(e) => setReserva({ ...reserva, fecha: e.target.value })}
                                         className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue"
                                     />
                                 </div>
@@ -87,9 +87,9 @@ function Aulas() {
                                     <label className="text-sm font-semibold text-text-body-dark mb-1.5 block">Horario (Max 1 hora)</label>
                                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
                                         {horarios.map(hora => (
-                                            <button 
+                                            <button
                                                 key={hora}
-                                                onClick={() => setReserva({...reserva, hora})}
+                                                onClick={() => setReserva({ ...reserva, hora })}
                                                 className={`py-2 text-sm rounded-lg border transition-colors ${reserva.hora === hora ? 'bg-neon-blue text-bg-deep font-bold border-neon-blue' : 'bg-bg-dark border-border-dark text-text-body-dark hover:border-text-muted-dark'}`}
                                             >
                                                 {hora}
@@ -99,9 +99,9 @@ function Aulas() {
                                 </div>
                             </div>
 
-                            <button 
+                            <button
                                 disabled={!reserva.aula || !reserva.fecha || !reserva.hora}
-                                onClick={() => setPaso(2)} 
+                                onClick={() => setPaso(2)}
                                 className="mt-8 w-full bg-primary hover:bg-primary-hover text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Continuar
@@ -110,30 +110,30 @@ function Aulas() {
                     </motion.div>
                 )}
 
-                
+
                 {paso === 2 && (
                     <motion.div key="paso2" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
                         <div className="bg-surface-dark/50 border border-border-dark rounded-2xl p-6 shadow-lg mb-6">
                             <h2 className="text-xl font-bold text-text-title-dark mb-2">2. Asistentes</h2>
                             <p className="text-text-muted-dark text-sm mb-6">Ingresa los datos de los estudiantes que ocuparán el aula.</p>
-                            
+
                             <div className="flex flex-col gap-4">
                                 {asistentes.map((asistente, index) => (
                                     <div key={index} className="flex flex-col sm:flex-row gap-4 items-end bg-bg-dark p-4 rounded-lg border border-border-dark">
                                         <div className="flex-1 w-full">
                                             <label className="text-xs font-semibold text-text-body-dark mb-1 block">Nombre Completo</label>
-                                            <input 
-                                                type="text" 
-                                                value={asistente.nombre} 
+                                            <input
+                                                type="text"
+                                                value={asistente.nombre}
                                                 onChange={(e) => handleAsistenteChange(index, "nombre", e.target.value)}
                                                 className="w-full p-2.5 border border-border-dark rounded-lg bg-surface-dark text-text-title-dark focus:outline-none focus:ring-1 focus:ring-neon-blue"
                                             />
                                         </div>
                                         <div className="flex-1 w-full">
                                             <label className="text-xs font-semibold text-text-body-dark mb-1 block">Matrícula</label>
-                                            <input 
-                                                type="text" 
-                                                value={asistente.matricula} 
+                                            <input
+                                                type="text"
+                                                value={asistente.matricula}
                                                 onChange={(e) => handleAsistenteChange(index, "matricula", e.target.value)}
                                                 className="w-full p-2.5 border border-border-dark rounded-lg bg-surface-dark text-text-title-dark focus:outline-none focus:ring-1 focus:ring-neon-blue"
                                             />
@@ -146,7 +146,7 @@ function Aulas() {
                                     </div>
                                 ))}
                             </div>
-                            
+
                             <button onClick={agregarAsistente} className="mt-4 text-sm text-neon-blue font-bold hover:underline flex items-center gap-1">
                                 <span>+</span> Añadir otro asistente
                             </button>
@@ -162,7 +162,7 @@ function Aulas() {
                 {paso === 3 && (
                     <motion.div key="paso3" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
                         <div className="bg-surface-dark/50 border border-neon-blue/50 rounded-2xl p-0 shadow-[0_0_20px_rgba(0,191,255,0.15)] mb-6 overflow-hidden relative">
-                            
+
                             <div className="bg-linear-to-r from-primary to-neon-blue p-6 text-center">
                                 <h2 className="text-2xl font-bold text-white tracking-widest uppercase">Ticket de Acceso</h2>
                                 <p className="text-white/80 text-sm">Reserva Confirmada</p>
@@ -178,6 +178,22 @@ function Aulas() {
                                         <p className="text-text-muted-dark text-xs uppercase tracking-wider">Fecha y Hora</p>
                                         <p className="text-text-title-dark font-bold text-lg">{reserva.fecha}</p>
                                         <p className="text-neon-blue font-bold">{reserva.hora}</p>
+                                    </div>
+                                </div>
+
+                                <div className="mb-6 border-b border-border-dark pb-6">
+                                    <p className="text-text-muted-dark text-xs uppercase tracking-wider mb-3">Asistentes Autorizados</p>
+                                    <div className="space-y-2">
+                                        {asistentes.map((asistente, index) => (
+                                            <div key={index} className="flex justify-between items-center bg-bg-dark p-3 rounded-lg border border-border-dark">
+                                                <span className="text-text-title-dark font-bold text-sm">
+                                                    {asistente.nombre || "Nombre no especificado"}
+                                                </span>
+                                                <span className="text-neon-blue font-mono text-sm bg-primary/20 px-2 py-1 rounded">
+                                                    {asistente.matricula || "Sin matrícula"}
+                                                </span>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 

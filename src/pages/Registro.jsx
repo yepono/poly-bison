@@ -147,7 +147,9 @@ function Registro() {
 
                             <div className="flex gap-4 mt-6">
                                 <button type="button" onClick={handleAnterior} className="flex-1 border border-border-dark text-text-body-dark font-bold py-3 px-4 rounded-lg hover:bg-bg-dark transition-colors">Atrás</button>
-                                <button type="submit" className="flex-1 bg-linear-to-r from-primary to-neon-blue hover:from-primary-hover text-text-title-dark font-bold py-3 px-4 rounded-lg transition-colors">Finalizar</button>
+                                <button type="submit" className="flex-1 bg-linear-to-r from-primary to-neon-blue hover:from-primary-hover text-text-title-dark font-bold py-3 px-4 rounded-lg transition-colors">
+                                    <Link to="/login">Finalizar</Link>
+                                </button>
                             </div>
                         </form>
                     )}

@@ -80,7 +80,7 @@ function ProductModal({ producto, onClose }) {
                             {producto.descripcionLarga}
                         </p>
                         <button
-                            className="w-full bg-linear-to-r from-primary to-neon-blue hover:from-primary-hover text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-[0_0_15px_rgba(0,191,255,0.4)]"
+                            className="w-full bg-linear-to-r from-primary to-neon-blue hover:from-primary-hover text-white font-bold py-3 px-4 rounded-lg transition-colors"
                         >
                             Adquirir en Dirección
                         </button>

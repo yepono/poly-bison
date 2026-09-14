@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 import Feed from "./pages/Feed"; 
 import Aulas from "./pages/Aulas"
 import Bisontstore from "./pages/Bisontstore";
+import Calendario from "./pages/Calendario";
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/feed" element={<Feed />} />
         <Route path="/aulas" element={<Aulas />} />
         <Route path="Bisontstore" element={<Bisontstore />} />
+        <Route path="Calendario" element={<Calendario />} />
       </Route>
     </Routes>
   );

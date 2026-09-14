@@ -72,7 +72,7 @@ function Feed() {
     }, []);
 
     return (
-        <div className="w-full relative">
+        <div className="w-full max-w-3xl mx-auto relative">
 
             <CreatePost />
 
