@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colores base[cite: 2] */
+  --color-primary: #003366;
+  --color-primary-hover: #002244;
+  
+  --color-secondary: #cc0000;
+  --color-secondary-hover: #990000;
+
+  /* Variantes Neón para gráficos */
+  --color-neon-blue: #00bfff;
+  --color-neon-red: #ff4d4d;
+
+  /* Fondos Globales[cite: 2] */
+  --color-bg-light: #f8fafc; 
+  --color-bg-dark: #0f172a;  
+  --color-bg-deep: #05020a; /* Para maximizar el brillo neón */
+
+  /* Superficies (Tarjetas, Formularios, Modales)[cite: 2] */
+  --color-surface-light: #ffffff;
+  --color-surface-dark: #1e293b;
+
+  /* Textos y Tipografía[cite: 2] */
+  --color-text-title-light: #0f172a;
+  --color-text-body-light: #334155;
+  --color-text-muted-light: #64748b;
+
+  --color-text-title-dark: #f8fafc;
+  --color-text-body-dark: #cbd5e1;
+  --color-text-muted-dark: #94a3b8;
+
+  /* Bordes y Divisores[cite: 2] */
+  --color-border-light: #e2e8f0;
+  --color-border-dark: #334155;
+}
