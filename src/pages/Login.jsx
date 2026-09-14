@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import NeonBackground from "../components/NeonBackground";
 
 function Login() {
@@ -62,6 +63,12 @@ function Login() {
                             Iniciar Sesión
                         </button>
                     </form>
+                    <p className="text-center text-sm text-text-muted-dark mt-6">
+                        ¿No tienes cuenta?{" "}
+                        <Link to="/registro" className="text-neon-blue font-bold hover:underline transition-all">
+                            Regístrate aquí
+                        </Link>
+                    </p>
                 </div>
             </motion.div>
         </div>
