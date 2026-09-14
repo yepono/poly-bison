@@ -33,7 +33,7 @@ function CreatePost() {
     };
 
     return (
-        <div className="bg-surface-dark border border-border-dark rounded-2xl p-6 shadow-[0_5px_15px_rgba(0,0,0,0.5)] mb-8">
+        <div className="bg-surface-dark/50 border border-border-dark rounded-2xl p-6 shadow-[0_5px_15px_rgba(0,0,0,0.5)] mb-8">
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 
                

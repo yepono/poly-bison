@@ -9,7 +9,7 @@ function PostCard({ post }) {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-surface-dark border border-border-dark rounded-2xl shadow-[0_5px_15px_rgba(0,0,0,0.3)] mb-6 overflow-hidden"
+            className="bg-surface-dark/50 border border-border-dark rounded-2xl shadow-[0_5px_15px_rgba(0,0,0,0.3)] mb-6 overflow-hidden"
         >
             {imagen && (
                 <div className="relative w-full h-64 sm:h-72">
@@ -47,9 +47,7 @@ function PostCard({ post }) {
                             <p className="text-xs text-text-muted-dark">{fecha}</p>
                         </div>
                     </div>
-                    {etiqueta && (
-                        <TechTag etiqueta={etiqueta} />
-                    )}
+                    
                 </div>
 
                 <p className="text-text-body-dark text-sm sm:text-base whitespace-pre-wrap mb-6">

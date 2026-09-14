@@ -50,7 +50,7 @@ function Aulas() {
                 
                 {paso === 1 && (
                     <motion.div key="paso1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-                        <div className="bg-surface-dark border border-border-dark rounded-2xl p-6 shadow-lg mb-6">
+                        <div className="bg-surface-dark/50 border border-border-dark rounded-2xl p-6 shadow-lg mb-6">
                             
                             <h2 className="text-xl font-bold text-text-title-dark mb-4">1. Selecciona un Aula</h2>
                             
@@ -113,7 +113,7 @@ function Aulas() {
                 
                 {paso === 2 && (
                     <motion.div key="paso2" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-                        <div className="bg-surface-dark border border-border-dark rounded-2xl p-6 shadow-lg mb-6">
+                        <div className="bg-surface-dark/50 border border-border-dark rounded-2xl p-6 shadow-lg mb-6">
                             <h2 className="text-xl font-bold text-text-title-dark mb-2">2. Asistentes</h2>
                             <p className="text-text-muted-dark text-sm mb-6">Ingresa los datos de los estudiantes que ocuparán el aula.</p>
                             
@@ -161,7 +161,7 @@ function Aulas() {
 
                 {paso === 3 && (
                     <motion.div key="paso3" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-                        <div className="bg-surface-dark border border-neon-blue/50 rounded-2xl p-0 shadow-[0_0_20px_rgba(0,191,255,0.15)] mb-6 overflow-hidden relative">
+                        <div className="bg-surface-dark/50 border border-neon-blue/50 rounded-2xl p-0 shadow-[0_0_20px_rgba(0,191,255,0.15)] mb-6 overflow-hidden relative">
                             
                             <div className="bg-linear-to-r from-primary to-neon-blue p-6 text-center">
                                 <h2 className="text-2xl font-bold text-white tracking-widest uppercase">Ticket de Acceso</h2>
