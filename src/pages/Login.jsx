@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import NeonBackground from "../components/NeonBackground";
 
 function Login() {
     const [correo, setCorreo] = useState("");
     const [contrasenia, setContrasenia] = useState("");
 
+    const navigate = useNavigate();
+
     const handleSubmit = (e) => {
         e.preventDefault();
         console.log('Submited Data:', { correo, contrasenia });
+        navigate("/feed");
     }
 
     return (
