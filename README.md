@@ -1,3 +1,11 @@
+# Red Social FCFM
+
+Plataforma social exclusiva para estudiantes de la Facultad de Ciencias Físico Matemáticas (UANL).
+
+## Tecnologías Utilizadas
+* **Frontend:** React, Vite, Tailwind CSS v4, Framer Motion.
+* **Backend:** PHP (API REST, MVC, POO) y MySQL (Próximamente).
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
