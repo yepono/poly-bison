@@ -6,6 +6,7 @@ import Feed from "./pages/Feed";
 import Aulas from "./pages/Aulas"
 import Bisontstore from "./pages/Bisontstore";
 import Calendario from "./pages/Calendario";
+import Mapa from "./pages/Mapa";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/aulas" element={<Aulas />} />
         <Route path="Bisontstore" element={<Bisontstore />} />
         <Route path="Calendario" element={<Calendario />} />
+        <Route path="Mapa" element={<Mapa />} />
       </Route>
     </Routes>
   );
