@@ -30,7 +30,7 @@ function Aulas() {
 
 
             <div className="mb-8 text-center">
-                <h1 className="text-3xl font-bold text-text-title-dark drop-shadow-[0_0_8px_var(--color-neon-blue)] mb-4">
+                <h1 className="theme-glow mb-4 text-3xl font-bold text-text-title-dark">
                     Reserva de Aulas
                 </h1>
 

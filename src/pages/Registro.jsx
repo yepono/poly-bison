@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import NeonBackground from "../components/NeonBackground";
 import CustomSelect from "../components/CustomSelect";
+import { useAppData } from "../context/AppDataContext";
+import { CAREERS } from "../utils/careers";
 
 function Registro() {
     const [paso, setPaso] = useState(1);
     const [previewFoto, setPreviewFoto] = useState(null);
+    const { updateUser } = useAppData();
+    const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
         nombre: "",
@@ -30,7 +34,9 @@ function Registro() {
         const file = e.target.files[0];
         if (file) {
             setFormData(prev => ({ ...prev, foto: file }));
-            setPreviewFoto(URL.createObjectURL(file));
+            const reader = new FileReader();
+            reader.onload = () => setPreviewFoto(reader.result);
+            reader.readAsDataURL(file);
         }
     };
 
@@ -45,7 +51,15 @@ function Registro() {
 
     const handleSubmitFinal = (e) => {
         e.preventDefault();
-        console.log('Datos de Registro Final:', formData);
+        updateUser({
+            nombre: formData.nombre,
+            alias: formData.alias,
+            carrera: formData.carrera,
+            semestre: formData.semestre,
+            avatar: previewFoto || "",
+            fechaRegistro: new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" }),
+        });
+        navigate("/feed");
     };
 
     return (
@@ -56,9 +70,9 @@ function Registro() {
                 initial={{ scale: 0.5 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", duration: 1.5 }}
-                className="relative z-10 w-full max-w-5xl h-165 flex items-center justify-end p-8 lg:p-12"
+                className="relative z-10 flex min-h-[calc(100dvh-2rem)] w-full max-w-5xl items-center justify-center py-4 sm:p-8 lg:justify-end lg:p-12"
             >
-                <div className="relative z-20 w-full max-w-md bg-surface-dark/20% backdrop-blur-md border border-border-dark rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.8)] p-8 overflow-y-auto max-h-full custom-scrollbar">
+                <div className="relative z-20 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-border-dark bg-surface-dark/20% p-5 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-md custom-scrollbar sm:p-8">
 
                     <h1 className="text-3xl font-bold text-center text-text-title-dark mb-2">
                         Registro - Paso {paso} de 3
@@ -100,14 +114,7 @@ function Registro() {
                                 label="Carrera"
                                 value={formData.carrera}
                                 onChange={(val) => setFormData((prev) => ({ ...prev, carrera: val }))}
-                                options={[
-                                    { value: "LSTI", label: "LSTI" },
-                                    { value: "LMAD", label: "LMAD" },
-                                    { value: "LCC", label: "LCC" },
-                                    { value: "LF", label: "LF" },
-                                    { value: "LA", label: "LA" },
-                                    { value: "LM", label: "LM" },
-                                ]}
+                                options={CAREERS.map((career) => ({ value: career, label: career }))}
                             />
 
                             <CustomSelect

@@ -3,11 +3,14 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
+import { AppDataProvider } from './context/AppDataContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter basename='poly-bison'>
-      <App />
+      <AppDataProvider>
+        <App />
+      </AppDataProvider>
     </BrowserRouter>
 
   </StrictMode>,

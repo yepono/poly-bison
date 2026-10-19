@@ -34,3 +34,113 @@
   --color-border-light: #e2e8f0;
   --color-border-dark: #334155;
 }
+
+:root[data-theme="light"] {
+  --color-bg-deep: #f1f5f9;
+  --color-bg-dark: #e2e8f0;
+  --color-surface-dark: #ffffff;
+  --color-text-title-dark: #0f172a;
+  --color-text-body-dark: #334155;
+  --color-text-muted-dark: #64748b;
+  --color-border-dark: #cbd5e1;
+  --color-neon-blue: #006f9f;
+  --color-neon-red: #b42323;
+}
+
+:root[data-font-size="small"] { font-size: 14px; }
+:root[data-font-size="normal"] { font-size: 16px; }
+:root[data-font-size="large"] { font-size: 19px; }
+
+.theme-glow {
+  text-shadow: 0 0 8px var(--color-neon-blue);
+}
+
+:root[data-theme="light"] .theme-glow {
+  text-shadow: none;
+}
+
+:root[data-theme="light"] [class*="shadow-[0_0_"] {
+  box-shadow: none !important;
+}
+
+:root[data-theme="light"] [class*="drop-shadow-"] {
+  filter: none !important;
+}
+
+@layer components {
+  .settings-section {
+    @apply rounded-xl border border-border-dark bg-surface-dark/50 p-5 sm:p-6;
+  }
+
+  .form-label {
+    @apply flex flex-col gap-2 text-sm font-semibold text-text-body-dark;
+  }
+
+  .form-input {
+    @apply min-h-11 w-full rounded-lg border border-border-dark bg-bg-dark px-3 py-2 text-text-title-dark outline-none transition focus-visible:ring-2 focus-visible:ring-neon-blue;
+  }
+
+  .action-button {
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 py-2 font-semibold text-white transition hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon-blue;
+  }
+
+  .action-button-danger {
+    @apply bg-secondary hover:bg-secondary-hover;
+  }
+
+  .profile-header {
+    @apply flex flex-wrap items-center gap-5 border-b border-border-dark pb-6;
+  }
+
+  .profile-hero {
+    @apply relative flex flex-wrap items-center gap-5 overflow-hidden rounded-2xl bg-linear-to-br from-primary via-[#07538a] to-[#007c88] p-6 shadow-lg sm:p-8;
+  }
+
+  .profile-joined {
+    @apply w-full border-t border-white/20 pt-3 text-sm text-white/80 sm:w-auto sm:border-0 sm:pt-0;
+  }
+
+  .profile-metrics {
+    @apply mt-5 grid gap-3 sm:grid-cols-2;
+  }
+
+  .profile-metric {
+    @apply min-w-0 rounded-xl border border-border-dark bg-surface-dark/70 p-5;
+  }
+
+  .profile-metric dt {
+    @apply text-sm font-semibold uppercase text-text-muted-dark;
+  }
+
+  .profile-metric dd {
+    @apply mt-2 font-bold leading-tight text-text-title-dark;
+  }
+
+  .profile-metric > p {
+    @apply mt-1 text-sm text-text-muted-dark;
+  }
+
+  .profile-number {
+    @apply flex items-baseline gap-1 text-4xl sm:text-5xl;
+  }
+
+  .profile-number span {
+    @apply text-xl text-text-muted-dark;
+  }
+
+  .profile-career {
+    @apply sm:col-span-2;
+  }
+
+  .career-icon {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-neon-blue;
+  }
+
+  .career-icon svg {
+    @apply h-6 w-6;
+  }
+
+  .action-button-secondary {
+    @apply border border-border-dark bg-transparent text-text-title-dark hover:bg-surface-dark;
+  }
+}

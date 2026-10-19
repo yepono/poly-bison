@@ -1,20 +1,21 @@
 import { useState } from "react";
 import CustomSelect from "./CustomSelect";
+import { useAppData } from "../context/AppDataContext";
 
 function CreatePost() {
+    const { addPost } = useAppData();
     const [titulo, setTitulo] = useState("");
     const [contenido, setContenido] = useState("");
-    const [imagen, setImagen] = useState(null);
     const [previewURL, setPreviewURL] = useState(null);
     const [etiqueta, setEtiqueta] = useState("General");
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        console.log("Publicación creada:", { titulo, contenido, imagen, etiqueta });
+        if (!contenido.trim()) return;
+        addPost({ titulo: titulo.trim() || null, contenido: contenido.trim(), imagen: previewURL, etiqueta });
         
         setTitulo("");
         setContenido("");
-        setImagen(null);
         setPreviewURL(null);
         setEtiqueta("General");
     };
@@ -22,13 +23,13 @@ function CreatePost() {
     const handleImagen = (e) => {
         const file = e.target.files[0];
         if (file) {
-            setImagen(file);
-            setPreviewURL(URL.createObjectURL(file)); 
+            const reader = new FileReader();
+            reader.onload = () => setPreviewURL(reader.result);
+            reader.readAsDataURL(file);
         }
     };
 
     const removerImagen = () => {
-        setImagen(null);
         setPreviewURL(null);
     };
 
@@ -107,7 +108,7 @@ function CreatePost() {
                         </div>
                     </div>
 
-                    <button type="submit" className="bg-linear-to-r from-primary to-secondary hover:from-primary-hover hover:to-secondary-hover text-white font-bold py-2 px-6 rounded-lg transition-colors w-full sm:w-auto">
+                    <button type="submit" disabled={!contenido.trim()} className="min-h-11 bg-linear-to-r from-primary to-secondary hover:from-primary-hover hover:to-secondary-hover text-white font-bold py-2 px-6 rounded-lg transition-colors w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-50">
                         Publicar
                     </button>
                 </div>

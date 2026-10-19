@@ -2,16 +2,18 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import NeonBackground from "../components/NeonBackground";
+import { useAppData } from "../context/AppDataContext";
 
 function Login() {
     const [correo, setCorreo] = useState("");
     const [contrasenia, setContrasenia] = useState("");
 
     const navigate = useNavigate();
+    const { updateUser } = useAppData();
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        console.log('Submited Data:', { correo, contrasenia });
+        updateUser({ correo });
         navigate("/feed");
     }
 
@@ -24,7 +26,7 @@ function Login() {
                 initial={{ scale: 0.5, x: -50 }}
                 animate={{ scale: 1, x: 0 }}
                 transition={{ type: "spring", duration: 1.5 }}
-                className="relative z-10 w-full max-w-5xl h-150 flex items-center justify-end p-8 lg:p-12"
+                className="relative z-10 flex min-h-[calc(100dvh-2rem)] w-full max-w-5xl items-center justify-center py-4 sm:p-8 lg:justify-end lg:p-12"
             >
                 <div className="relative z-20 w-full max-w-md bg-surface-dark/20% backdrop-blur-md border border-border-dark rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.8)] p-8">
 

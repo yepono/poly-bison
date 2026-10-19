@@ -118,16 +118,16 @@ function Calendario() {
                 className="w-full bg-surface-dark/20 backdrop-blur-md border border-border-dark rounded-2xl p-6 md:p-8 shadow-lg overflow-hidden"
             >
                 {/* Header del Calendario */}
-                <div className="flex justify-between items-center mb-6 border-b border-border-dark pb-4">
-                    <h1 className="text-3xl font-bold text-text-title-dark drop-shadow-[0_0_8px_var(--color-neon-blue)]">
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border-dark pb-4">
+                    <h1 className="theme-glow text-2xl font-bold text-text-title-dark sm:text-3xl">
                         Septiembre 2026
                     </h1>
                     {!fechaSeleccionada && (
-                        <div className="flex gap-2">
-                            <button className="p-2 px-4 border border-border-dark rounded-lg hover:bg-surface-dark transition-colors text-text-title-dark font-bold">
+                        <div className="flex flex-wrap gap-2">
+                            <button className="min-h-11 rounded-lg border border-border-dark px-3 py-2 text-sm font-bold text-text-title-dark transition-colors hover:bg-surface-dark sm:px-4 sm:text-base">
                                 &lt; Anterior
                             </button>
-                            <button className="p-2 px-4 border border-border-dark rounded-lg hover:bg-surface-dark transition-colors text-text-title-dark font-bold">
+                            <button className="min-h-11 rounded-lg border border-border-dark px-3 py-2 text-sm font-bold text-text-title-dark transition-colors hover:bg-surface-dark sm:px-4 sm:text-base">
                                 Siguiente &gt;
                             </button>
                         </div>
@@ -209,8 +209,8 @@ function Calendario() {
                     >
                         <div className="w-full h-full bg-surface-dark/20 backdrop-blur-md border border-border-dark rounded-2xl p-6 md:p-8 shadow-lg flex flex-col">
 
-                            <div className="flex justify-between items-center border-b border-border-dark pb-4 mb-6">
-                                <h2 className="text-2xl font-bold text-text-title-dark flex items-center gap-3">
+                            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border-dark pb-4">
+                                <h2 className="flex min-w-0 items-center gap-3 text-xl font-bold text-text-title-dark sm:text-2xl">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-neon-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>

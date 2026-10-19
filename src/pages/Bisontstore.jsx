@@ -51,7 +51,7 @@ function Bisontstore() {
         <div className="w-full max-w-3xl mx-auto">
 
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
-                <h1 className="text-3xl font-bold text-text-title-dark drop-shadow-[0_0_8px_var(--color-neon-blue)]">
+                <h1 className="theme-glow text-3xl font-bold text-text-title-dark">
                     Bisontstore
                 </h1>
 

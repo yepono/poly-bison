@@ -71,14 +71,14 @@ function Mapa() {
     );
 
     return (
-        <div className="w-full max-w-6xl mx-auto flex flex-col lg:flex-row gap-6 h-[calc(100vh-6rem)] min-h-[600px]">
+        <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full max-w-6xl flex-col gap-6 lg:h-[calc(100dvh-6rem)] lg:min-h-[600px] lg:flex-row">
 
             {/* PANEL IZQUIERDO: Directorio y Controles */}
-            <div className="w-full lg:w-80 flex flex-col gap-6">
+            <div className="flex w-full flex-col gap-6 lg:w-80 lg:shrink-0">
 
                 {/* Selector de Niveles */}
                 <div className="bg-surface-dark/20 backdrop-blur-md border border-border-dark rounded-2xl p-5 shadow-lg">
-                    <h1 className="text-2xl font-bold text-text-title-dark drop-shadow-[0_0_8px_var(--color-neon-blue)] mb-4">
+                    <h1 className="theme-glow mb-4 text-2xl font-bold text-text-title-dark">
                         Navegación
                     </h1>
                     <div className="flex flex-col gap-2">
@@ -101,7 +101,7 @@ function Mapa() {
                 </div>
 
                 {/* Directorio con Buscador */}
-                <div className="bg-surface-dark/20 backdrop-blur-md border border-border-dark rounded-2xl p-5 shadow-lg flex-1 flex flex-col overflow-hidden">
+                <div className="flex max-h-[32rem] flex-1 flex-col overflow-hidden rounded-2xl border border-border-dark bg-surface-dark/20 p-5 shadow-lg backdrop-blur-md lg:max-h-none">
                     <h2 className="text-lg font-bold text-text-title-dark mb-4 flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-neon-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -150,7 +150,7 @@ function Mapa() {
             </div>
 
             {/* PANEL DERECHO: Visor del Mapa */}
-            <div className="flex-1 bg-surface-dark/20 backdrop-blur-md border border-border-dark rounded-2xl shadow-lg flex flex-col overflow-hidden relative">
+            <div className="relative flex min-h-[24rem] flex-1 flex-col overflow-hidden rounded-2xl border border-border-dark bg-surface-dark/20 shadow-lg backdrop-blur-md lg:min-h-0">
 
                 {/* Cabecera del Visor */}
                 <div className="p-4 md:p-6 border-b border-border-dark flex justify-between items-center bg-surface-dark/50 z-10">
@@ -180,7 +180,7 @@ function Mapa() {
                             src={datosActuales.imagen}
                             alt={`Mapa de ${datosActuales.titulo}`}
                             // Min-width asegura que la imagen no se encoja en móviles, obligando al usuario a hacer scroll para ver detalles
-                            className="min-w-[600px] md:min-w-full h-auto object-contain rounded-xl border border-border-dark shadow-2xl bg-surface-dark"
+                            className="h-auto min-w-[600px] rounded-xl border border-border-dark bg-surface-dark object-contain shadow-2xl md:min-w-full"
                         />
                     </AnimatePresence>
                 </div>
