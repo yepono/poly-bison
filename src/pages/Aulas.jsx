@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAppData } from "../context/AppDataContext";
 
 function Aulas() {
+    const { schedules, addReservation, user } = useAppData();
     const [paso, setPaso] = useState(1);
     const [reserva, setReserva] = useState({ aula: null, fecha: "", hora: "" });
     const [asistentes, setAsistentes] = useState([{ nombre: "", matricula: "" }]);
 
     // Datos simulados
-    const horarios = ["10:00 - 11:00", "11:00 - 12:00", "12:00 - 13:00", "14:00 - 15:00", "15:00 - 16:00"];
+    const horarios = schedules;
 
     const handleAulaSelect = (aulaId) => setReserva(prev => ({ ...prev, aula: aulaId }));
 
@@ -23,6 +25,18 @@ function Aulas() {
         if (asistentes.length > 1) {
             setAsistentes(asistentes.filter((_, i) => i !== index));
         }
+    };
+
+    const generarTicket = () => {
+        const nombresAulas = { A1: "Sala de Estudio A", A2: "Sala de Estudio B", A3: "Laboratorio Web" };
+        addReservation({
+            aula: nombresAulas[reserva.aula],
+            alias: user.alias,
+            matricula: asistentes[0]?.matricula || "Sin matrícula",
+            fecha: reserva.fecha,
+            hora: reserva.hora,
+        });
+        setPaso(3);
     };
 
     return (
@@ -153,7 +167,7 @@ function Aulas() {
 
                             <div className="flex gap-4 mt-8">
                                 <button onClick={() => setPaso(1)} className="flex-1 border border-border-dark text-text-body-dark font-bold py-3 px-4 rounded-lg hover:bg-bg-dark transition-colors">Atrás</button>
-                                <button onClick={() => setPaso(3)} className="flex-1 bg-primary hover:bg-primary-hover text-white font-bold py-3 px-4 rounded-lg transition-colors">Generar Ticket</button>
+                                <button onClick={generarTicket} className="flex-1 bg-primary hover:bg-primary-hover text-white font-bold py-3 px-4 rounded-lg transition-colors">Generar Ticket</button>
                             </div>
                         </div>
                     </motion.div>

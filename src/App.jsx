@@ -10,6 +10,7 @@ import Mapa from "./pages/Mapa";
 import Configuracion from "./pages/Configuracion";
 import Perfil from "./pages/Perfil";
 import Publicacion from "./pages/Publicacion";
+import Admin from "./pages/Admin";
 
 function App() {
   const location = useLocation();
@@ -26,7 +27,9 @@ function App() {
         <Route path="/feed" element={<Feed />} />
         <Route path="/publicacion/:postId" element={<Publicacion />} />
         <Route path="/perfil" element={<Perfil />} />
+        <Route path="/perfil/:userId" element={<Perfil />} />
         <Route path="/configuracion" element={<Configuracion />} />
+        <Route path="/admin" element={<Admin />} />
         <Route path="/aulas" element={<Aulas />} />
         <Route path="Bisontstore" element={<Bisontstore />} />
         <Route path="Calendario" element={<Calendario />} />

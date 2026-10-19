@@ -143,4 +143,24 @@
   .action-button-secondary {
     @apply border border-border-dark bg-transparent text-text-title-dark hover:bg-surface-dark;
   }
+
+  .admin-metric {
+    @apply flex min-h-36 flex-col justify-between rounded-xl border border-border-dark bg-surface-dark/70 p-5;
+  }
+
+  .admin-metric > p { @apply text-sm font-semibold text-text-muted-dark; }
+  .admin-metric > strong { @apply text-4xl font-bold leading-none text-text-title-dark; }
+  .admin-metric > span { @apply text-xs text-text-muted-dark; }
+  .admin-metric-blue { @apply border-t-4 border-t-neon-blue; }
+  .admin-metric-green { @apply border-t-4 border-t-green-600; }
+  .admin-metric-amber { @apply border-t-4 border-t-amber-500; }
+  .admin-metric-red { @apply border-t-4 border-t-neon-red; }
+  .admin-metric-dark { @apply border-t-4 border-t-primary; }
+
+  .admin-filters { @apply grid gap-4 sm:grid-cols-2 lg:grid-cols-4; }
+  .admin-table-wrap { @apply w-full overflow-x-auto rounded-xl border border-border-dark; }
+  .admin-table { @apply w-full min-w-[760px] border-collapse text-left text-sm; }
+  .admin-table th { @apply whitespace-nowrap bg-surface-dark px-4 py-3 font-bold text-text-title-dark; }
+  .admin-table td { @apply border-t border-border-dark px-4 py-3 align-middle text-text-body-dark; }
+  .admin-table td small { @apply mt-1 block text-xs text-text-muted-dark; }
 }

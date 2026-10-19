@@ -1,11 +1,18 @@
 import { motion } from "framer-motion";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAppData } from "../context/AppDataContext";
 
 function PostCard({ post }) {
     const { autor, avatar, fecha, titulo, contenido, imagen, likes, comentarios, liked } = post;
-    const { toggleLike } = useAppData();
+    const { toggleLike, deletePost, user } = useAppData();
     const location = useLocation();
+    const navigate = useNavigate();
+
+    const handleDelete = () => {
+        if (!window.confirm("¿Eliminar esta publicación?")) return;
+        deletePost(post.id);
+        if (location.pathname.startsWith("/publicacion/")) navigate("/feed", { replace: true });
+    };
 
 
     return (
@@ -57,7 +64,7 @@ function PostCard({ post }) {
                     {contenido}
                 </p>
 
-                <div className="flex items-center gap-6 pt-4 border-t border-border-dark">
+                <div className="flex flex-wrap items-center gap-4 border-t border-border-dark pt-4">
                     <button type="button" aria-label={liked ? "Quitar me gusta" : "Dar me gusta"} aria-pressed={Boolean(liked)} onClick={() => toggleLike(post.id)} className={`flex min-h-11 items-center gap-2 transition-colors ${liked ? "text-neon-red" : "text-text-muted-dark hover:text-neon-blue"}`}>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -70,6 +77,7 @@ function PostCard({ post }) {
                         </svg>
                         <span className="text-sm font-semibold">{comentarios?.length ?? comentarios ?? 0}</span>
                     </Link>
+                    {(user.rol === "Administrador" || user.rol === "Moderador") && <button type="button" onClick={handleDelete} className="ml-auto min-h-11 rounded-lg px-3 text-sm font-semibold text-neon-red transition-colors hover:bg-secondary/10" aria-label={`Eliminar publicación de ${autor}`}>Eliminar publicación</button>}
                 </div>
             </div>
         </motion.div>

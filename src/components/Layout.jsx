@@ -14,6 +14,7 @@ function Layout() {
         ["/calendario", "Calendario"],
         ["/perfil", "Mi perfil"],
         ["/configuracion", "Configuración"],
+        ...((user.rol === "Administrador" || user.rol === "Moderador") ? [["/admin", "Administración"]] : []),
     ];
     const avatar = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.alias || user.nombre)}&background=003366&color=fff`;
     const navigation = (

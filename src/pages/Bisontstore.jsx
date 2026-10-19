@@ -2,48 +2,10 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import TechTag from "../components/TechTag";
 import ProductModal from "../components/ProductModal";
-
-
-const mockProductos = [
-    {
-        id: 1,
-        titulo: "Sudadera Oficial Bizonte",
-        precio: "$450 MXN",
-        categoria: "Ropa",
-        imagen: "https://shop.chamarra.com/wp-content/uploads/2022/08/Chamarra-College-FCFM-UANL-2.jpg",
-        descripcionCorta: "Sudadera azul marino con logo bordado.",
-        descripcionLarga: "Sudadera 100% algodón con interior afelpado. Diseño oficial de la facultad con el bizonte bordado en el pecho izquierdo. Disponible en tallas S, M, L y XL. Ideal para el clima de los laboratorios."
-    },
-    {
-        id: 2,
-        titulo: "Termo Inteligente FCFM",
-        precio: "$280 MXN",
-        categoria: "Accesorios",
-        imagen: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?q=80&w=600&auto=format&fit=crop",
-        descripcionCorta: "Termo de acero inoxidable con indicador de temperatura.",
-        descripcionLarga: "Termo de 500ml con pantalla LED táctil en la tapa que muestra la temperatura de tu bebida. Mantiene el calor por 12 horas y el frío por 24 horas. Grabado láser con el escudo de Ciencias Físico Matemáticas."
-    },
-    {
-        id: 3,
-        titulo: "Paquete de Stickers",
-        precio: "$50 MXN",
-        categoria: "Papelería",
-        imagen: "https://images.unsplash.com/photo-1572375992501-4b0892d50c69?q=80&w=600&auto=format&fit=crop",
-        descripcionCorta: "Colección de 5 stickers holográficos.",
-        descripcionLarga: "Personaliza tu laptop o libretas con este paquete que incluye a la mascota oficial, logos de las carreras (LSTI, LMAD, LCC, etc.) y diseños exclusivos de la facultad. Resistentes al agua."
-    },
-    {
-        id: 4,
-        titulo: "Libreta Profesional Universitaria",
-        precio: "$120 MXN",
-        categoria: "Papelería",
-        imagen: "https://images.unsplash.com/photo-1531346878377-a541e4ba1eb2?q=80&w=600&auto=format&fit=crop",
-        descripcionCorta: "Cuaderno de 100 hojas de cuadro chico.",
-        descripcionLarga: "Libreta de pasta dura con diseño minimalista de la facultad. Hojas de alto gramaje ideales para apuntes de cálculo o programación. Incluye separador y bolsillo interno."
-    }
-];
+import { useAppData } from "../context/AppDataContext";
 
 function Bisontstore() {
+    const { products } = useAppData();
     const [busqueda, setBusqueda] = useState("");
     const [productoSeleccionado, setProductoSeleccionado] = useState(null);
 
@@ -71,7 +33,7 @@ function Bisontstore() {
 
             {/* Cuadrícula de Productos con efecto Flip */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {mockProductos.map((producto, index) => (
+                {products.map((producto, index) => (
                     <motion.div
                         key={producto.id}
                         initial={{ opacity: 0, y: 20 }}

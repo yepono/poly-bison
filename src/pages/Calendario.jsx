@@ -1,49 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import TechTag from "../components/TechTag";
-
-// Datos simulados
-const mockEventos = [
-    {
-        id_evento: 1,
-        titulo: "Examen Medio Término",
-        descripcion: "Examen parcial de Ecuaciones Diferenciales. Traer formulario impreso y calculadora no programable.",
-        tipo: "Examen",
-        fecha_inicio: "2026-09-18T10:00:00",
-        fecha_fin: "2026-09-18T12:00:00",
-        lugar: "Aula 105",
-        id_creador: 1,
-        fecha_publicacion: "2026-09-01T08:00:00",
-        visible: true
-    },
-    {
-        id_evento: 2,
-        titulo: "Feria de Software FCFM",
-        descripcion: "Presentación de proyectos finales de las carreras LMAD y LSTI.",
-        tipo: "Académico",
-        fecha_inicio: "2026-09-24T14:00:00",
-        fecha_fin: "2026-09-24T18:00:00",
-        lugar: "Explanada Principal",
-        id_creador: 2,
-        fecha_publicacion: "2026-09-10T09:00:00",
-        visible: true
-    },
-    {
-        id_evento: 3,
-        titulo: "Torneo de Ajedrez",
-        descripcion: "Torneo relámpago inter-facultades.",
-        tipo: "Deportivo",
-        fecha_inicio: "2026-09-24T10:00:00",
-        fecha_fin: "2026-09-24T13:00:00",
-        lugar: "Cafetería",
-        id_creador: 3,
-        fecha_publicacion: "2026-09-12T10:00:00",
-        visible: true
-    }
-];
+import { useAppData } from "../context/AppDataContext";
 
 function Calendario() {
     const [fechaSeleccionada, setFechaSeleccionada] = useState(null);
+    const { events } = useAppData();
 
     const diasMes = 30; // Septiembre tiene 30 días[cite: 9]
     const diaInicio = 2; // Septiembre 2026 empieza en Martes (0=Dom, 1=Lun, 2=Mar)[cite: 9]
@@ -59,7 +21,7 @@ function Calendario() {
 
     // Eventos del día seleccionado para el Panel[cite: 9]
     const eventosDelDia = fechaSeleccionada
-        ? mockEventos.filter(evento => new Date(evento.fecha_inicio).getDate() === fechaSeleccionada)
+        ? events.filter(evento => evento.visible && new Date(evento.fecha_inicio).getDate() === fechaSeleccionada)
         : [];
 
     // Estilos dinámicos para las etiquetas de eventos[cite: 9]
@@ -151,7 +113,7 @@ function Calendario() {
 
                         const dia = celda.dia;
                         const esSeleccionado = dia === fechaSeleccionada;
-                        const eventosHoy = mockEventos.filter(e => new Date(e.fecha_inicio).getDate() === dia);
+                        const eventosHoy = events.filter((event) => event.visible && new Date(event.fecha_inicio).getDate() === dia);
 
                         return (
                             <motion.div

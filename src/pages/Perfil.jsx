@@ -1,10 +1,14 @@
 import { useAppData } from "../context/AppDataContext";
 import PostCard from "../components/PostCard";
 import { getCareerName } from "../utils/careers";
+import { Link, useParams } from "react-router-dom";
 
 function Perfil() {
-    const { user, posts } = useAppData();
-    const ownPosts = posts.filter((post) => post.authorId === "current-user");
+    const { user: currentUser, users, posts } = useAppData();
+    const { userId } = useParams();
+    const user = userId ? users.find((record) => String(record.id) === userId) : currentUser;
+    if (!user) return <section className="settings-section mx-auto max-w-xl text-center"><h1 className="text-2xl font-bold text-text-title-dark">Perfil no encontrado</h1><Link to="/admin" className="action-button mt-5">Volver al panel</Link></section>;
+    const ownPosts = posts.filter((post) => post.authorId === (user.id || "current-user") || post.autor === user.alias || post.autor === user.nombre);
     const totalLikes = ownPosts.reduce((total, post) => total + post.likes, 0);
     const careerName = getCareerName(user.carrera);
     const isLsti = careerName === "Lic. en Seguridad y Tecnologías de la Información";

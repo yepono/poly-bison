@@ -9,12 +9,13 @@ import { CAREERS } from "../utils/careers";
 function Registro() {
     const [paso, setPaso] = useState(1);
     const [previewFoto, setPreviewFoto] = useState(null);
-    const { updateUser } = useAppData();
+    const { registerStudent } = useAppData();
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
         nombre: "",
         alias: "",
+        correo: "",
         matricula: "",
         contrasenia: "",
         carrera: "",
@@ -51,9 +52,11 @@ function Registro() {
 
     const handleSubmitFinal = (e) => {
         e.preventDefault();
-        updateUser({
+        registerStudent({
             nombre: formData.nombre,
             alias: formData.alias,
+            correo: formData.correo,
+            matricula: formData.matricula,
             carrera: formData.carrera,
             semestre: formData.semestre,
             avatar: previewFoto || "",
@@ -96,6 +99,10 @@ function Registro() {
                             <div className="flex flex-col gap-1.5">
                                 <label htmlFor="alias" className="text-sm font-semibold text-text-body-dark">Alias</label>
                                 <input type="text" id="alias" required value={formData.alias} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <label htmlFor="correo" className="text-sm font-semibold text-text-body-dark">Correo electrónico</label>
+                                <input type="email" id="correo" required value={formData.correo} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
                             </div>
                             <div className="flex flex-col gap-1.5">
                                 <label htmlFor="matricula" className="text-sm font-semibold text-text-body-dark">Matrícula</label>
@@ -154,9 +161,7 @@ function Registro() {
 
                             <div className="flex gap-4 mt-6">
                                 <button type="button" onClick={handleAnterior} className="flex-1 border border-border-dark text-text-body-dark font-bold py-3 px-4 rounded-lg hover:bg-bg-dark transition-colors">Atrás</button>
-                                <button type="submit" className="flex-1 bg-linear-to-r from-primary to-neon-blue hover:from-primary-hover text-text-title-dark font-bold py-3 px-4 rounded-lg transition-colors">
-                                    <Link to="/login">Finalizar</Link>
-                                </button>
+                                <button type="submit" className="flex-1 bg-linear-to-r from-primary to-neon-blue hover:from-primary-hover text-text-title-dark font-bold py-3 px-4 rounded-lg transition-colors">Finalizar</button>
                             </div>
                         </form>
                     )}
