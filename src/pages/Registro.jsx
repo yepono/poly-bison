@@ -9,14 +9,16 @@ import { CAREERS } from "../utils/careers";
 function Registro() {
     const [paso, setPaso] = useState(1);
     const [previewFoto, setPreviewFoto] = useState(null);
-    const { registerStudent } = useAppData();
+    const [enviando, setEnviando] = useState(false);
+    const [error, setError] = useState("");
+    const { updateUser } = useAppData();
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
         nombre: "",
         alias: "",
-        correo: "",
         matricula: "",
+        correo: "",
         contrasenia: "",
         carrera: "",
         semestre: "1",
@@ -33,16 +35,27 @@ function Registro() {
 
     const handleCambioFoto = (e) => {
         const file = e.target.files[0];
-        if (file) {
-            setFormData(prev => ({ ...prev, foto: file }));
-            const reader = new FileReader();
-            reader.onload = () => setPreviewFoto(reader.result);
-            reader.readAsDataURL(file);
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) {
+            setError("La foto no puede pesar más de 2 MB");
+            e.target.value = "";
+            return;
         }
+        setError("");
+        setFormData(prev => ({ ...prev, foto: file }));
+        const reader = new FileReader();
+        reader.onload = () => setPreviewFoto(reader.result);
+        reader.readAsDataURL(file);
     };
 
     const handleSiguiente = (e) => {
         e.preventDefault();
+        if (paso === 2 && !formData.carrera) {
+            setError("Selecciona una carrera");
+            return;
+        }
+        setError("");
         setPaso(prev => prev + 1);
     };
 
@@ -50,19 +63,49 @@ function Registro() {
         setPaso(prev => prev - 1);
     };
 
-    const handleSubmitFinal = (e) => {
+    const handleSubmitFinal = async (e) => {
         e.preventDefault();
-        registerStudent({
-            nombre: formData.nombre,
-            alias: formData.alias,
-            correo: formData.correo,
-            matricula: formData.matricula,
-            carrera: formData.carrera,
-            semestre: formData.semestre,
-            avatar: previewFoto || "",
-            fechaRegistro: new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" }),
-        });
-        navigate("/feed");
+        setError("");
+        setEnviando(true);
+
+        try {
+            const body = new FormData();
+            body.append("nombre", formData.nombre);
+            body.append("alias", formData.alias);
+            body.append("matricula", formData.matricula);
+            body.append("correo", formData.correo);
+            body.append("contrasenia", formData.contrasenia);
+            body.append("carrera", formData.carrera);
+            body.append("semestre", formData.semestre);
+            if (formData.foto) body.append("foto", formData.foto);
+
+            const res = await fetch("http://localhost/api/register.php", {
+                method: "POST",
+                body,
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                setError(data.message || "No se pudo completar el registro");
+                if (["nombre", "alias", "matricula", "correo"].includes(data.field)) setPaso(1);
+                else if (["carrera", "contrasenia"].includes(data.field)) setPaso(2);
+                return;
+            }
+
+            updateUser({
+                nombre: formData.nombre,
+                alias: formData.alias,
+                carrera: formData.carrera,
+                semestre: formData.semestre,
+                avatar: previewFoto || "",
+                fechaRegistro: new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" }),
+            });
+            navigate("/login", { state: { registroExitoso: true } });
+        } catch {
+            setError("No se pudo conectar con el servidor");
+        } finally {
+            setEnviando(false);
+        }
     };
 
     return (
@@ -88,6 +131,11 @@ function Registro() {
                         <span className={`h-0.5 w-8 transition-colors ${paso >= 3 ? 'bg-primary' : 'bg-border-dark'}`}></span>
                         <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${paso >= 3 ? 'bg-primary text-white shadow-[0_0_10px_var(--color-primary)]' : 'bg-border-dark text-text-muted-dark'}`}>3</span>
                     </div>
+                    {error && (
+                        <p className="mb-4 rounded-lg border border-red-500 bg-red-500/20 p-3 text-center text-sm text-red-300">
+                            {error}
+                        </p>
+                    )}
 
 
                     {paso === 1 && (
@@ -112,6 +160,14 @@ function Registro() {
                             <button type="submit" className="mt-4 w-full bg-primary hover:bg-primary-hover text-text-title-dark font-bold py-3 px-4 rounded-lg transition-colors">
                                 Siguiente
                             </button>
+
+                            {/* <button
+                                type="submit"
+                                disabled={enviando}
+                                className="flex-1 bg-linear-to-r from-primary to-neon-blue hover:from-primary-hover text-text-title-dark font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-60"
+                            >
+                                {enviando ? "Registrando..." : "Finalizar"}
+                            </button>*/}
                         </form>
                     )}
 
@@ -161,7 +217,13 @@ function Registro() {
 
                             <div className="flex gap-4 mt-6">
                                 <button type="button" onClick={handleAnterior} className="flex-1 border border-border-dark text-text-body-dark font-bold py-3 px-4 rounded-lg hover:bg-bg-dark transition-colors">Atrás</button>
-                                <button type="submit" className="flex-1 bg-linear-to-r from-primary to-neon-blue hover:from-primary-hover text-text-title-dark font-bold py-3 px-4 rounded-lg transition-colors">Finalizar</button>
+                                <button
+                                    type="submit"
+                                    disabled={enviando}
+                                    className="flex-1 bg-linear-to-r from-primary to-neon-blue hover:from-primary-hover text-text-title-dark font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-60"
+                                >
+                                    {enviando ? "Registrando..." : "Finalizar"}
+                                </button>
                             </div>
                         </form>
                     )}

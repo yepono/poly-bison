@@ -1,10 +1,11 @@
 export const CAREERS = [
-    "Lic. en Multimedia y Animación Digital",
-    "Lic. en Seguridad y Tecnologías de la Información",
-    "Lic. en Física",
-    "Lic. en Matemáticas",
-    "Lic. en Actuaría",
-    "Lic. en Ciencias Computacionales",
+    "LMAD",
+    "LSTI",
+    "LF",
+    "LM",
+    "LA",
+    "LCC",
+    "IC"
 ];
 
 const LEGACY_CAREERS = {
