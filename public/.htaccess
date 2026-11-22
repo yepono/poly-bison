@@ -1,0 +1,22 @@
+# ============================================================
+# .htaccess del front (se copia a dist/ al compilar y va en la raíz
+# del dominio en IONOS: https://poly-bison.com)
+# ============================================================
+Options -Indexes
+RewriteEngine On
+RewriteBase /
+
+# 1. Forzar HTTPS (la cookie de sesión es "secure")
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# 2. La API (/api) la atiende PHP: no se reescribe
+RewriteRule ^api(/|$) - [L]
+
+# 3. Archivos y carpetas que existen (JS, CSS, imágenes) se sirven tal cual
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# 4. Cualquier otra ruta (/feed, /perfil/5, ...) la resuelve React
+RewriteRule ^ index.html [L]

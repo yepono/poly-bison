@@ -1,6 +1,6 @@
 -- ============================================================
 -- procedures.sql - Rutinas globales: UNA por entidad, acciones con CASE
--- Se puede ejecutar más de una vez. MySQL Server 8.0 (Workbench, como root)
+-- Se puede ejecutar más de una vez. MySQL 8.0.19+ (local, Workbench) o MariaDB 10.5+ (hosting, phpMyAdmin)
 -- Requiere: alter_schema.sql, functions.sql, triggers.sql
 --
 -- Reglas comunes:
@@ -14,7 +14,8 @@
 --    llamadas (o varias tablas), PHP la envuelve en una transacción.
 --  * Cada acción termina con un SELECT (id creado o filas afectadas).
 -- ============================================================
-USE poly_bison;
+-- Ejecutar con la base de datos destino seleccionada (ver table_creation.sql).
+SELECT DATABASE() AS base_de_datos_actual;
 
 DROP PROCEDURE IF EXISTS sp_usuario;
 DROP PROCEDURE IF EXISTS sp_publicacion;
@@ -880,5 +881,5 @@ END$$
 DELIMITER ;
 
 -- Verificación: deben aparecer 9 procedimientos
-SELECT ROUTINE_NAME FROM information_schema.ROUTINES
-WHERE ROUTINE_SCHEMA = 'poly_bison' AND ROUTINE_TYPE = 'PROCEDURE';
+-- (SHOW en lugar del catálogo del sistema: ver nota en functions.sql)
+SHOW PROCEDURE STATUS WHERE Db = DATABASE();

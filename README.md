@@ -52,15 +52,19 @@ src/
 
 ### Requisitos
 - XAMPP (solo **Apache** con PHP 8.2; la extensión `curl` viene activa).
-- MySQL Server 8.0 (por ejemplo, administrado con MySQL Workbench) en el puerto 3306.
+- MySQL Server 8.0.19 o superior (por ejemplo, administrado con MySQL Workbench) en el puerto 3306.
 - Node.js 20.19 o superior (o 22.12+), requerido por Vite 8.
 
 ### 1. Base de datos
-En MySQL Workbench, **conectado como root**, ejecutar en este orden:
+Los scripts funcionan en **MySQL 8.0.19+** (local) y en **MariaDB 10.5+** (hosting). En MySQL Workbench, **conectado como root**:
+
+1. Ejecuta `sql/00_local_bd_y_usuario.sql` (crea el esquema `poly_bison` y el usuario de MySQL de la app). **Antes, cambia `CAMBIA_ESTA_CLAVE` por una contraseña propia** y pon la misma en `config.local.php`.
+2. Haz doble clic en `poly_bison` para dejarlo como esquema por defecto (los demás scripts no llevan `USE`, para poder ejecutarse también en el hosting).
+3. Ejecuta en este orden:
 
 | # | Script | Contenido |
 |---|---|---|
-| 1 | `sql/table_creation.sql` | Tablas, catálogos iniciales y usuario de MySQL de la app. **Antes de ejecutarlo, cambia `CAMBIA_ESTA_CLAVE` por una contraseña propia.** |
+| 1 | `sql/table_creation.sql` | Tablas (utf8mb4) y catálogos iniciales |
 | 2 | `sql/alter_schema.sql` | Ajustes al esquema (rol por defecto, semestre 1–10, horarios activos, borrado lógico, contraseñas temporales) |
 | 3 | `sql/seed.sql` | Etiquetas, aulas y categorías de la tienda |
 | 4 | `sql/functions.sql` | 4 funciones |
@@ -94,7 +98,7 @@ Necesario para dar de alta moderadores y para "Olvidé mi contraseña"; sin él,
 npm install
 npm run dev
 ```
-Abrir `http://localhost:5173/poly-bison/`. La URL de la API se toma de `VITE_API_URL` (`.env.development` → `http://localhost/api`).
+Abrir `http://localhost:5173/poly-bison/`. La URL de la API y la ruta base se toman de `.env.development` (`VITE_API_URL=http://localhost/api`, `VITE_BASE=/poly-bison/`); el build de producción usa `.env.production` (`/api` y `/`).
 
 ## Roles
 
@@ -164,11 +168,11 @@ Cada objeto incluye en su script un comentario con su propósito y el PHP que lo
 | `npm run dev` | Servidor de desarrollo |
 | `npm run build` | Build de producción en `dist/` |
 | `npm run lint` | ESLint |
-| `npm run deploy` | Publica `dist/` en GitHub Pages (solo el frontend; GitHub Pages no ejecuta PHP ni MySQL) |
+| `npm run deploy` | Publica `dist/` en GitHub Pages. **Ya no aplica:** el sitio se publica en IONOS con la ruta base `/`, y GitHub Pages no ejecuta PHP ni MySQL |
 
-## Pendiente
+## Despliegue
 
-- **Despliegue en línea:** GitHub Pages solo sirve el frontend. Para que la app funcione en línea, la API y la base de datos deben alojarse en un servicio con PHP y MySQL que permita triggers, funciones y procedimientos, y con salida HTTPS (cURL) para Brevo.
+El sitio se publica en **IONOS Web Hosting** (https://poly-bison.com): front y API en el mismo dominio, base de datos MariaDB 11. Pasos completos en [docs/DESPLIEGUE_IONOS.md](docs/DESPLIEGUE_IONOS.md).
 
 ## Licencia
 

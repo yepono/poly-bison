@@ -1,7 +1,20 @@
-CREATE DATABASE IF NOT EXISTS poly_bison
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-USE poly_bison;
+-- ============================================================
+-- table_creation.sql - Tablas y catálogos iniciales de PolyBison
+-- Compatible con MySQL 8.0.19+ y MariaDB 10.5+ (IONOS: MariaDB 11).
+--
+-- ANTES DE EJECUTAR: selecciona la base de datos destino.
+--   * Local (Workbench): ejecuta primero 00_local_bd_y_usuario.sql y
+--     haz doble clic en "poly_bison" para dejarla como esquema por defecto.
+--   * Hosting (phpMyAdmin): abre la base de datos que te asignó el panel.
+-- Pensado para una base de datos VACÍA (instalación nueva).
+-- ============================================================
+
+-- Base de datos actual (debe mostrar la BD destino, no NULL)
+SELECT DATABASE() AS base_de_datos_actual;
+
+-- Juego de caracteres de la BD: utf8mb4 (acentos y emojis).
+-- Va ANTES de crear rutinas para que sus parámetros también sean utf8mb4.
+ALTER DATABASE CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 1. Carreras
@@ -10,7 +23,7 @@ CREATE TABLE Carreras (
   id_carrera INT AUTO_INCREMENT PRIMARY KEY,
   nombre     VARCHAR(200) NOT NULL UNIQUE,
   activo     BOOL NOT NULL DEFAULT TRUE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 2. Rol
@@ -19,7 +32,7 @@ CREATE TABLE Rol (
   id_rol      INT AUTO_INCREMENT PRIMARY KEY,
   nombre      VARCHAR(50) NOT NULL UNIQUE,
   descripcion VARCHAR(200)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 3. Usuario
@@ -42,11 +55,13 @@ CREATE TABLE Usuario (
   motivo          VARCHAR(300) NULL,              -- motivo de rechazo o baneo
   id_revisor      INT NULL,                       -- admin que aprobó/rechazó/baneó
   fecha_revision  DATETIME NULL,
-  CONSTRAINT fk_usuario_rol      FOREIGN KEY (id_rol)     REFERENCES Rol(id_rol),
+  foto_blob       LONGBLOB NULL,                  -- foto de perfil
+  foto_mime       VARCHAR(50) NULL,
+  CONSTRAINT fk_usuario_rol     FOREIGN KEY (id_rol)     REFERENCES Rol(id_rol),
   CONSTRAINT fk_usuario_carrera  FOREIGN KEY (id_carrera) REFERENCES Carreras(id_carrera),
   CONSTRAINT fk_usuario_revisor  FOREIGN KEY (id_revisor) REFERENCES Usuario(id_usuario),
   CONSTRAINT chk_usuario_semestre CHECK (semestre IS NULL OR semestre BETWEEN 1 AND 12)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 4. Publicacion
@@ -61,7 +76,7 @@ CREATE TABLE Publicacion (
   CONSTRAINT fk_pub_usuario FOREIGN KEY (id_usuario) REFERENCES Usuario(id_usuario),
   INDEX idx_pub_feed (estado, fecha_creacion),
   INDEX idx_pub_usuario (id_usuario)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 5. Etiqueta
@@ -71,7 +86,7 @@ CREATE TABLE Etiqueta (
   nombre      VARCHAR(150) NOT NULL UNIQUE,
   color       VARCHAR(7) NOT NULL DEFAULT '#1E3A8A',   -- formato #RRGGBB
   activo      BOOL NOT NULL DEFAULT TRUE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 6. Publicacion_Etiqueta (PK compuesta)
@@ -82,7 +97,7 @@ CREATE TABLE Publicacion_Etiqueta (
   PRIMARY KEY (id_publicacion, id_etiqueta),
   CONSTRAINT fk_pe_pub FOREIGN KEY (id_publicacion) REFERENCES Publicacion(id_publicacion) ON DELETE CASCADE,
   CONSTRAINT fk_pe_eti FOREIGN KEY (id_etiqueta)    REFERENCES Etiqueta(id_etiqueta)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 7. Multimedia
@@ -104,7 +119,7 @@ CREATE TABLE Multimedia (
     (tipo = 'Video'  AND video_url IS NOT NULL AND mult_blob IS NULL)
   ),
   INDEX idx_mult_pub (id_publicacion)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 8. Comentario
@@ -120,7 +135,7 @@ CREATE TABLE Comentario (
   CONSTRAINT fk_com_usuario FOREIGN KEY (id_usuario)     REFERENCES Usuario(id_usuario),
   INDEX idx_com_pub (id_publicacion, fecha_creacion),
   INDEX idx_com_usuario (id_usuario)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 9. Reaccion (likes/dislikes) - alimenta "mayor interacción"
@@ -134,7 +149,7 @@ CREATE TABLE Reaccion (
   CONSTRAINT fk_reac_usuario FOREIGN KEY (id_usuario)     REFERENCES Usuario(id_usuario),
   CONSTRAINT fk_reac_pub     FOREIGN KEY (id_publicacion) REFERENCES Publicacion(id_publicacion) ON DELETE CASCADE,
   INDEX idx_reac_pub (id_publicacion)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 10. Ubicacion (mapa interactivo)
@@ -149,7 +164,7 @@ CREATE TABLE Ubicacion (
   coord_y      DECIMAL(6,2) NULL,
   activo       BOOL NOT NULL DEFAULT TRUE,
   INDEX idx_ubic_tipo (tipo)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 11. Aula (inventario de 3 aulas de estudio)
@@ -162,7 +177,7 @@ CREATE TABLE Aula (
   activo       BOOL NOT NULL DEFAULT TRUE,
   CONSTRAINT fk_aula_ubic FOREIGN KEY (id_ubicacion) REFERENCES Ubicacion(id_ubicacion),
   CONSTRAINT chk_aula_cap CHECK (capacidad > 0)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 12. Bloque_Horario
@@ -173,7 +188,7 @@ CREATE TABLE Bloque_Horario (
   hora_fin    TIME NOT NULL,
   UNIQUE (hora_inicio, hora_fin),
   CONSTRAINT chk_bloque CHECK (hora_fin > hora_inicio)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 13. Reservacion
@@ -199,7 +214,7 @@ CREATE TABLE Reservacion (
   UNIQUE KEY uq_aula_slot (id_aula, fecha_reserva, id_bloque, ocupa),
   UNIQUE KEY uq_user_dia  (id_usuario, fecha_reserva, ocupa),
   INDEX idx_res_fecha (fecha_reserva)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 14. Estudiantes_Reservacion (asistentes)
@@ -212,7 +227,7 @@ CREATE TABLE Estudiantes_Reservacion (
   nombre         VARCHAR(250) NOT NULL,
   UNIQUE (id_reservacion, matricula),
   CONSTRAINT fk_asis_res FOREIGN KEY (id_reservacion) REFERENCES Reservacion(id_reservacion) ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 15. Eventos (calendario)
@@ -231,7 +246,7 @@ CREATE TABLE Eventos (
   CONSTRAINT fk_evento_creador FOREIGN KEY (id_creador) REFERENCES Usuario(id_usuario),
   CONSTRAINT chk_evento_fechas CHECK (fecha_fin >= fecha_inicio),
   INDEX idx_evento_fecha (fecha_inicio)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 16. Categoria_Producto
@@ -240,7 +255,7 @@ CREATE TABLE Categoria_Producto (
   id_categoria INT AUTO_INCREMENT PRIMARY KEY,
   nombre       VARCHAR(100) NOT NULL UNIQUE,
   activo       BOOL NOT NULL DEFAULT TRUE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 17. Productos (Bison Store - solo catálogo)
@@ -259,7 +274,7 @@ CREATE TABLE Productos (
   CONSTRAINT chk_prod_precio CHECK (precio >= 0),
   CONSTRAINT chk_prod_stock  CHECK (stock >= 0),
   INDEX idx_prod_cat (id_categoria)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- 18. Event_Log (bitácora)
@@ -275,7 +290,7 @@ CREATE TABLE Event_Log (
   fecha                DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_log_usuario FOREIGN KEY (id_usuario) REFERENCES Usuario(id_usuario),
   INDEX idx_log_fecha (fecha)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
 -- Datos iniciales
@@ -291,23 +306,8 @@ INSERT INTO Bloque_Horario (hora_inicio, hora_fin) VALUES
   ('14:00:00','15:00:00'), ('15:00:00','16:00:00'), ('16:00:00','17:00:00'),
   ('17:00:00','18:00:00'), ('18:00:00','19:00:00'), ('19:00:00','20:00:00');
 
-  INSERT INTO Carreras (nombre, activo) VALUES
+INSERT INTO Carreras (nombre, activo) VALUES
   ('IC', 1), ('LA', 1),  ('LCC', 1),  ('LF', 1),  ('LM', 1),  ('LMAD', 1),  ('LSTI', 1);
 
-
--- La contraseña real va SOLO en php/config.local.php (no se sube a git).
-CREATE USER 'Bison'@'localhost' IDENTIFIED BY 'CAMBIA_ESTA_CLAVE';
-GRANT ALL PRIVILEGES ON poly_bison.* TO 'Bison'@'localhost';
-FLUSH PRIVILEGES;
-
--- foto de perfil 
-USE poly_bison;
-
-ALTER TABLE Usuario
-  ADD COLUMN foto_blob LONGBLOB NULL,
-  ADD COLUMN foto_mime VARCHAR(50) NULL;
-
-
-
-
-
+-- El usuario de MySQL de la app (solo local) está en 00_local_bd_y_usuario.sql.
+-- Siguiente script: alter_schema.sql

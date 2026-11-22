@@ -14,6 +14,8 @@ dist-ssr
 
 # Credenciales de la API (usar php/config.example.php como plantilla)
 php/config.local.php
+php/config.production.php
+
 
 # Editor directories and files
 .vscode/*

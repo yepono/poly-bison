@@ -1,11 +1,12 @@
 -- ============================================================
 -- views.sql - Vistas (lecturas de la API)
--- Se puede ejecutar más de una vez. MySQL Server 8.0 (Workbench, como root)
+-- Se puede ejecutar más de una vez. MySQL 8.0.19+ (local, Workbench) o MariaDB 10.5+ (hosting, phpMyAdmin)
 -- Requiere functions.sql (fn_total_reacciones, fn_asistentes_reservacion).
 -- Ninguna vista expone contraseñas ni BLOBs; solo indican "tiene_foto".
 -- (Las vistas no necesitan DELIMITER: cada una es una sola sentencia.)
 -- ============================================================
-USE poly_bison;
+-- Ejecutar con la base de datos destino seleccionada (ver table_creation.sql).
+SELECT DATABASE() AS base_de_datos_actual;
 
 -- ------------------------------------------------------------
 -- 1. vw_usuario_publico
@@ -291,5 +292,5 @@ FROM Event_Log l
 LEFT JOIN Usuario u ON u.id_usuario = l.id_usuario;
 
 -- Verificación: deben aparecer 12 vistas
-SELECT TABLE_NAME FROM information_schema.VIEWS
-WHERE TABLE_SCHEMA = 'poly_bison';
+-- (SHOW en lugar del catálogo del sistema: ver nota en functions.sql)
+SHOW FULL TABLES WHERE Table_type = 'VIEW';

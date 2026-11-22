@@ -1,13 +1,14 @@
 -- ============================================================
 -- triggers.sql - Triggers
--- Se puede ejecutar más de una vez. MySQL Server 8.0 (Workbench, como root)
+-- Se puede ejecutar más de una vez. MySQL 8.0.19+ (local, Workbench) o MariaDB 10.5+ (hosting, phpMyAdmin)
 -- Requiere functions.sql (fn_asistentes_reservacion).
 --
 -- Convención de errores (igual en procedures.sql):
 --   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '<código HTTP>|<mensaje para el usuario>'
 --   El PHP separa el código y responde con ese status y ese mensaje.
 -- ============================================================
-USE poly_bison;
+-- Ejecutar con la base de datos destino seleccionada (ver table_creation.sql).
+SELECT DATABASE() AS base_de_datos_actual;
 
 DROP TRIGGER IF EXISTS trg_usuario_estado_au;
 DROP TRIGGER IF EXISTS trg_asistente_capacidad_bi;
@@ -85,6 +86,5 @@ END$$
 DELIMITER ;
 
 -- Verificación: deben aparecer 3 triggers
-SELECT TRIGGER_NAME, EVENT_MANIPULATION, EVENT_OBJECT_TABLE
-FROM information_schema.TRIGGERS
-WHERE TRIGGER_SCHEMA = 'poly_bison';
+-- (SHOW en lugar del catálogo del sistema: ver nota en functions.sql)
+SHOW TRIGGERS;

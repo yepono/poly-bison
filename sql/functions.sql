@@ -1,10 +1,11 @@
 -- ============================================================
 -- functions.sql - Funciones (CREATE FUNCTION)
--- Se puede ejecutar más de una vez. MySQL Server 8.0 (Workbench, como root)
+-- Se puede ejecutar más de una vez. MySQL 8.0.19+ (local, Workbench) o MariaDB 10.5+ (hosting, phpMyAdmin)
 -- Orden de ejecución: alter_schema.sql -> seed.sql -> functions.sql
 --                     -> views.sql -> triggers.sql -> procedures.sql
 -- ============================================================
-USE poly_bison;
+-- Ejecutar con la base de datos destino seleccionada (ver table_creation.sql).
+SELECT DATABASE() AS base_de_datos_actual;
 
 DROP FUNCTION IF EXISTS fn_total_reacciones;
 DROP FUNCTION IF EXISTS fn_aula_disponible;
@@ -104,5 +105,6 @@ END$$
 DELIMITER ;
 
 -- Verificación: deben aparecer 4 funciones
-SELECT ROUTINE_NAME FROM information_schema.ROUTINES
-WHERE ROUTINE_SCHEMA = 'poly_bison' AND ROUTINE_TYPE = 'FUNCTION';
+-- (SHOW en lugar de consultar el catálogo del sistema: phpMyAdmin cambia
+-- la BD activa al catálogo si el script lo menciona, y el CREATE falla con #1044)
+SHOW FUNCTION STATUS WHERE Db = DATABASE();

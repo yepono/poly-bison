@@ -1,9 +1,15 @@
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(), tailwindcss(),],
-  base: '/poly-bison/',
+// La ruta base sale de VITE_BASE (.env.development / .env.production):
+//   local:      /poly-bison/  -> http://localhost:5173/poly-bison/
+//   producción: /             -> https://poly-bison.com/
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  return {
+    plugins: [react(), tailwindcss(),],
+    base: env.VITE_BASE || '/',
+  }
 })

@@ -2,6 +2,6 @@
 Options -Indexes
 
 # Archivos que no son endpoints: no se pueden pedir por URL
-<FilesMatch "^(config(\.local|\.example)?|correo)\.php$">
+<FilesMatch "^(config(\.local|\.example|\.production\.example)?|correo)\.php$">
     Require all denied
 </FilesMatch>

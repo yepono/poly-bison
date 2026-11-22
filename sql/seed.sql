@@ -3,7 +3,8 @@
 -- Se puede ejecutar más de una vez (no duplica filas).
 -- Ejecutar DESPUÉS de alter_schema.sql.
 -- ============================================================
-USE poly_bison;
+-- Ejecutar con la base de datos destino seleccionada (ver table_creation.sql).
+SELECT DATABASE() AS base_de_datos_actual;
 
 -- ------------------------------------------------------------
 -- [D6] Etiquetas de publicaciones (las 4 del front)
@@ -13,8 +14,8 @@ INSERT INTO Etiqueta (nombre, color, activo) VALUES
   ('General',   '#828282', TRUE),
   ('Académico', '#002791', TRUE),
   ('Ayuda',     '#FFD92E', TRUE),
-  ('Aviso',     '#960000', TRUE) AS nuevo
-ON DUPLICATE KEY UPDATE color = nuevo.color, activo = TRUE;
+  ('Aviso',     '#960000', TRUE)
+ON DUPLICATE KEY UPDATE color = VALUES(color), activo = TRUE;
 
 -- ------------------------------------------------------------
 -- [D8] Aulas de estudio (las 3 del front) con su capacidad
@@ -23,8 +24,8 @@ ON DUPLICATE KEY UPDATE color = nuevo.color, activo = TRUE;
 INSERT INTO Aula (nombre, capacidad, id_ubicacion, activo) VALUES
   ('Sala de Estudio A', 8,  NULL, TRUE),
   ('Sala de Estudio B', 8,  NULL, TRUE),
-  ('Laboratorio Web',   15, NULL, TRUE) AS nuevo
-ON DUPLICATE KEY UPDATE capacidad = nuevo.capacidad, activo = TRUE;
+  ('Laboratorio Web',   15, NULL, TRUE)
+ON DUPLICATE KEY UPDATE capacidad = VALUES(capacidad), activo = TRUE;
 
 -- ------------------------------------------------------------
 -- [D10] Categorías de la Bisontstore

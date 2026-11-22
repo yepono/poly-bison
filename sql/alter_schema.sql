@@ -1,10 +1,12 @@
 -- ============================================================
 -- alter_schema.sql - Cambios al esquema existente (table_creation.sql)
--- Se puede ejecutar más de una vez. MySQL Server 8.0 (Workbench, como root)
--- MySQL 8 no tiene "ADD COLUMN IF NOT EXISTS" ni "DROP CONSTRAINT IF EXISTS",
--- así que cada cambio revisa information_schema y arma el ALTER dinámico.
+-- Se puede ejecutar más de una vez. MySQL 8.0.19+ (local, Workbench) o MariaDB 10.5+ (hosting, phpMyAdmin)
+-- MySQL 8 no tiene "ADD COLUMN IF NOT EXISTS" ni "DROP CONSTRAINT IF EXISTS"
+-- (MariaDB sí); para servir en ambos motores, cada cambio revisa
+-- information_schema y arma el ALTER dinámico.
 -- ============================================================
-USE poly_bison;
+-- Ejecutar con la base de datos destino seleccionada (ver table_creation.sql).
+SELECT DATABASE() AS base_de_datos_actual;
 
 -- ------------------------------------------------------------
 -- [Paso 1] Rol por defecto = 'Estudiante' (rol "Usuario" de la app)
@@ -29,10 +31,10 @@ FROM Usuario WHERE semestre > 10;
 
 -- Quita el CHECK anterior solo si existe
 SET @existe := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
-                WHERE CONSTRAINT_SCHEMA = 'poly_bison' AND TABLE_NAME = 'Usuario'
+                WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'Usuario'
                   AND CONSTRAINT_NAME = 'chk_usuario_semestre' AND CONSTRAINT_TYPE = 'CHECK');
 SET @sql := IF(@existe > 0,
-               'ALTER TABLE Usuario DROP CHECK chk_usuario_semestre',
+               'ALTER TABLE Usuario DROP CONSTRAINT chk_usuario_semestre',
                'DO 0');
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -48,7 +50,7 @@ ALTER TABLE Usuario
 -- Lo usan: sp_bloque_horario, fn_aula_disponible, reservaciones.php
 -- ------------------------------------------------------------
 SET @existe := (SELECT COUNT(*) FROM information_schema.COLUMNS
-                WHERE TABLE_SCHEMA = 'poly_bison' AND TABLE_NAME = 'Bloque_Horario'
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Bloque_Horario'
                   AND COLUMN_NAME = 'activo');
 SET @sql := IF(@existe = 0,
                'ALTER TABLE Bloque_Horario ADD COLUMN activo BOOL NOT NULL DEFAULT TRUE',
@@ -74,7 +76,7 @@ ALTER TABLE Usuario
 -- La leen: vw_usuario_publico -> usuarios.php (me, login, requireLogin)
 -- ------------------------------------------------------------
 SET @existe := (SELECT COUNT(*) FROM information_schema.COLUMNS
-                WHERE TABLE_SCHEMA = 'poly_bison' AND TABLE_NAME = 'Usuario'
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Usuario'
                   AND COLUMN_NAME = 'debe_cambiar_contrasena');
 SET @sql := IF(@existe = 0,
                'ALTER TABLE Usuario ADD COLUMN debe_cambiar_contrasena BOOL NOT NULL DEFAULT FALSE',
@@ -93,7 +95,7 @@ DEALLOCATE PREPARE stmt;
 --          CAMBIAR_CONTRASENA) -> usuarios.php (recuperar_contrasena, login)
 -- ------------------------------------------------------------
 SET @existe := (SELECT COUNT(*) FROM information_schema.COLUMNS
-                WHERE TABLE_SCHEMA = 'poly_bison' AND TABLE_NAME = 'Usuario'
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Usuario'
                   AND COLUMN_NAME = 'contrasena_temporal');
 SET @sql := IF(@existe = 0,
                'ALTER TABLE Usuario ADD COLUMN contrasena_temporal VARCHAR(255) NULL',
@@ -103,7 +105,7 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 SET @existe := (SELECT COUNT(*) FROM information_schema.COLUMNS
-                WHERE TABLE_SCHEMA = 'poly_bison' AND TABLE_NAME = 'Usuario'
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Usuario'
                   AND COLUMN_NAME = 'temporal_expira');
 SET @sql := IF(@existe = 0,
                'ALTER TABLE Usuario ADD COLUMN temporal_expira DATETIME NULL',
@@ -117,14 +119,14 @@ DEALLOCATE PREPARE stmt;
 -- ------------------------------------------------------------
 SELECT COLUMN_NAME, COLUMN_DEFAULT, COLUMN_TYPE
 FROM information_schema.COLUMNS
-WHERE TABLE_SCHEMA = 'poly_bison'
+WHERE TABLE_SCHEMA = DATABASE()
   AND ((TABLE_NAME = 'Usuario' AND COLUMN_NAME IN ('id_rol', 'estado', 'debe_cambiar_contrasena',
                                                    'contrasena_temporal', 'temporal_expira'))
     OR (TABLE_NAME = 'Bloque_Horario' AND COLUMN_NAME = 'activo'));
 
 SELECT CONSTRAINT_NAME, CHECK_CLAUSE
 FROM information_schema.CHECK_CONSTRAINTS
-WHERE CONSTRAINT_SCHEMA = 'poly_bison' AND CONSTRAINT_NAME = 'chk_usuario_semestre';
+WHERE CONSTRAINT_SCHEMA = DATABASE() AND CONSTRAINT_NAME = 'chk_usuario_semestre';
 
 -- ------------------------------------------------------------
 -- [Paso 1 - OPCIONAL, recomendado] Cambiar la contraseña del usuario MySQL

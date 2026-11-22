@@ -90,6 +90,9 @@ function getConnection(): mysqli {
     $db = appConfig()["db"];
     $conn = new mysqli($db["host"], $db["user"], $db["pass"], $db["name"], (int)$db["port"]);
     $conn->set_charset("utf8mb4");
+    // Misma zona horaria que PHP para NOW()/CURDATE() de las rutinas y triggers
+    // (el hosting puede estar en otra; IONOS usa America/New_York).
+    $conn->query("SET time_zone = '" . date("P") . "'");
     return $conn;
 }
 

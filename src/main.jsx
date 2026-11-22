@@ -7,7 +7,8 @@ import { AppDataProvider } from './context/AppDataContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter basename='poly-bison'>
+    {/* basename = ruta base de Vite (VITE_BASE): /poly-bison/ en local, / en producción */}
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || '/'}>
       <AppDataProvider>
         <App />
       </AppDataProvider>
