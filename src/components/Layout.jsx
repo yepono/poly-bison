@@ -4,8 +4,13 @@ import { useAppData } from "../context/AppDataContext";
 
 function Layout() {
     const [menuAbierto, setMenuAbierto] = useState(false);
-    const { user } = useAppData();
+    const { user, logout } = useAppData();
     const navigate = useNavigate();
+    const cerrarSesion = async () => {
+        setMenuAbierto(false);
+        await logout();
+        navigate("/login", { replace: true });
+    };
     const links = [
         ["/feed", "Feed Global"],
         ["/aulas", "Aulas"],
@@ -28,7 +33,7 @@ function Layout() {
                 {links.map(([to, label]) => <NavLink key={to} to={to} onClick={() => setMenuAbierto(false)} className={({ isActive }) => `min-h-11 rounded-lg border px-3 py-2.5 font-semibold transition-colors ${isActive ? "border-neon-blue/40 bg-primary/40 text-neon-blue" : "border-transparent text-text-title-dark hover:border-border-dark hover:bg-surface-dark/80 hover:text-neon-blue"}`}>{label}</NavLink>)}
             </nav>
             <div className="mt-auto pt-6">
-                <button type="button" onClick={() => { setMenuAbierto(false); navigate("/login"); }} className="min-h-11 w-full rounded-lg border border-transparent p-3 text-left font-semibold text-neon-red transition-colors hover:border-secondary/50 hover:bg-secondary/20">Cerrar sesión</button>
+                <button type="button" onClick={cerrarSesion} className="min-h-11 w-full rounded-lg border border-transparent p-3 text-left font-semibold text-neon-red transition-colors hover:border-secondary/50 hover:bg-secondary/20">Cerrar sesión</button>
             </div>
         </>
     );

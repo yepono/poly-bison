@@ -1,13 +1,28 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import TechTag from "../components/TechTag";
 import ProductModal from "../components/ProductModal";
-import { useAppData } from "../context/AppDataContext";
+import { api, mapProducto } from "../api/client";
 
 function Bisontstore() {
-    const { products } = useAppData();
+    // Catálogo desde la BD (productos.php?accion=listar -> vw_catalogo_productos)
+    const [products, setProducts] = useState(null);
+    const [error, setError] = useState("");
     const [busqueda, setBusqueda] = useState("");
     const [productoSeleccionado, setProductoSeleccionado] = useState(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        api("productos", "listar")
+            .then((response) => { if (!cancelled) setProducts(response.productos.map(mapProducto)); })
+            .catch((err) => { if (!cancelled) { setProducts([]); setError(err.message); } });
+        return () => { cancelled = true; };
+    }, []);
+
+    // Búsqueda por nombre, categoría o descripción
+    const termino = busqueda.trim().toLowerCase();
+    const productosFiltrados = (products ?? []).filter((producto) => !termino
+        || `${producto.titulo} ${producto.categoria} ${producto.descripcionCorta}`.toLowerCase().includes(termino));
 
     return (
         <div className="w-full max-w-3xl mx-auto">
@@ -21,6 +36,8 @@ function Bisontstore() {
                     <input
                         type="text"
                         placeholder="Buscar mercancía oficial..."
+                        aria-label="Buscar productos"
+                        maxLength={100}
                         value={busqueda}
                         onChange={(e) => setBusqueda(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-border-dark rounded-lg bg-surface-dark text-text-title-dark focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-all"
@@ -31,9 +48,15 @@ function Bisontstore() {
                 </div>
             </div>
 
+            {products === null && <p className="py-10 text-center text-text-muted-dark" aria-busy="true">Cargando catálogo...</p>}
+            {error && <p role="alert" className="py-4 text-center text-neon-red">{error}</p>}
+            {products !== null && !error && !productosFiltrados.length && (
+                <p className="py-10 text-center text-text-muted-dark">{termino ? "No hay productos que coincidan con tu búsqueda." : "Aún no hay productos en el catálogo."}</p>
+            )}
+
             {/* Cuadrícula de Productos con efecto Flip */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {products.map((producto, index) => (
+                {productosFiltrados.map((producto, index) => (
                     <motion.div
                         key={producto.id}
                         initial={{ opacity: 0, y: 20 }}

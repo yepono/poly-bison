@@ -1,15 +1,39 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import NeonBackground from "../components/NeonBackground";
 import CustomSelect from "../components/CustomSelect";
-import { useAppData } from "../context/AppDataContext";
-import { CAREERS } from "../utils/careers";
+import { api, CORREO_UANL, MATRICULA, validarImagen } from "../api/client";
+import { getCareerName } from "../utils/careers";
+
+// Paso del formulario donde está cada campo (para regresar al que tiene error)
+const PASO_DE_CAMPO = { nombre: 1, alias: 1, correo: 1, matricula: 1, carrera: 2, semestre: 2, contrasenia: 2, foto: 3 };
+
+function validarPaso(paso, datos) {
+    if (paso === 1) {
+        if (!datos.nombre.trim()) return "Escribe tu nombre completo.";
+        if (datos.nombre.trim().length > 250) return "El nombre es demasiado largo.";
+        if (!datos.alias.trim()) return "Escribe un alias.";
+        if (datos.alias.trim().length > 50) return "El alias no puede tener más de 50 caracteres.";
+        if (!CORREO_UANL.test(datos.correo.trim())) return "Usa tu correo institucional @uanl.edu.mx.";
+        if (!MATRICULA.test(datos.matricula.trim())) return "La matrícula debe tener 7 dígitos.";
+    }
+    if (paso === 2) {
+        if (!datos.carrera) return "Selecciona tu carrera.";
+        const semestre = Number(datos.semestre);
+        if (!Number.isInteger(semestre) || semestre < 1 || semestre > 10) return "Selecciona un semestre válido.";
+        if (datos.contrasenia.length < 8) return "La contraseña debe tener al menos 8 caracteres.";
+        if (datos.contrasenia.length > 72) return "La contraseña no puede tener más de 72 caracteres.";
+    }
+    return "";
+}
 
 function Registro() {
     const [paso, setPaso] = useState(1);
     const [previewFoto, setPreviewFoto] = useState(null);
-    const { registerStudent } = useAppData();
+    const [carreras, setCarreras] = useState([]);
+    const [error, setError] = useState("");
+    const [enviando, setEnviando] = useState(false);
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
@@ -18,10 +42,17 @@ function Registro() {
         correo: "",
         matricula: "",
         contrasenia: "",
-        carrera: "",
+        carrera: "", // id_carrera de la BD
         semestre: "1",
         foto: null
     });
+
+    // Catálogo de carreras desde la BD
+    useEffect(() => {
+        api("usuarios", "carreras", { skipAuthHandler: true })
+            .then((response) => setCarreras(response.carreras))
+            .catch(() => setError("No se pudieron cargar las carreras. Recarga la página."));
+    }, []);
 
     const handleChange = (e) => {
         const { id, value } = e.target;
@@ -34,6 +65,15 @@ function Registro() {
     const handleCambioFoto = (e) => {
         const file = e.target.files[0];
         if (file) {
+            const problema = validarImagen(file);
+            if (problema) {
+                setError(problema);
+                e.target.value = "";
+                setFormData(prev => ({ ...prev, foto: null }));
+                setPreviewFoto(null);
+                return;
+            }
+            setError("");
             setFormData(prev => ({ ...prev, foto: file }));
             const reader = new FileReader();
             reader.onload = () => setPreviewFoto(reader.result);
@@ -43,26 +83,45 @@ function Registro() {
 
     const handleSiguiente = (e) => {
         e.preventDefault();
-        setPaso(prev => prev + 1);
+        const problema = validarPaso(paso, formData);
+        setError(problema);
+        if (!problema) setPaso(prev => prev + 1);
     };
 
     const handleAnterior = () => {
+        setError("");
         setPaso(prev => prev - 1);
     };
 
-    const handleSubmitFinal = (e) => {
+    const handleSubmitFinal = async (e) => {
         e.preventDefault();
-        registerStudent({
-            nombre: formData.nombre,
-            alias: formData.alias,
-            correo: formData.correo,
-            matricula: formData.matricula,
-            carrera: formData.carrera,
-            semestre: formData.semestre,
-            avatar: previewFoto || "",
-            fechaRegistro: new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" }),
-        });
-        navigate("/feed");
+        const problema = validarPaso(1, formData) || validarPaso(2, formData);
+        if (problema) {
+            setError(problema);
+            return;
+        }
+
+        const body = new FormData();
+        body.append("nombre", formData.nombre.trim());
+        body.append("alias", formData.alias.trim());
+        body.append("correo", formData.correo.trim().toLowerCase());
+        body.append("matricula", formData.matricula.trim());
+        body.append("contrasenia", formData.contrasenia);
+        body.append("id_carrera", formData.carrera);
+        body.append("semestre", formData.semestre);
+        if (formData.foto) body.append("foto", formData.foto);
+
+        setEnviando(true);
+        setError("");
+        try {
+            const response = await api("usuarios", "registro", { method: "POST", body, skipAuthHandler: true });
+            navigate("/login", { replace: true, state: { mensaje: response.message } });
+        } catch (err) {
+            setError(err.message);
+            if (err.field && PASO_DE_CAMPO[err.field]) setPaso(PASO_DE_CAMPO[err.field]);
+        } finally {
+            setEnviando(false);
+        }
     };
 
     return (
@@ -89,24 +148,25 @@ function Registro() {
                         <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${paso >= 3 ? 'bg-primary text-white shadow-[0_0_10px_var(--color-primary)]' : 'bg-border-dark text-text-muted-dark'}`}>3</span>
                     </div>
 
+                    {error && <p role="alert" className="mb-4 text-sm text-neon-red">{error}</p>}
 
                     {paso === 1 && (
-                        <form className="flex flex-col gap-4" onSubmit={handleSiguiente}>
+                        <form className="flex flex-col gap-4" onSubmit={handleSiguiente} noValidate>
                             <div className="flex flex-col gap-1.5">
                                 <label htmlFor="nombre" className="text-sm font-semibold text-text-body-dark">Nombre Completo</label>
-                                <input type="text" id="nombre" required value={formData.nombre} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
+                                <input type="text" id="nombre" required maxLength={250} autoComplete="name" value={formData.nombre} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
                             </div>
                             <div className="flex flex-col gap-1.5">
                                 <label htmlFor="alias" className="text-sm font-semibold text-text-body-dark">Alias</label>
-                                <input type="text" id="alias" required value={formData.alias} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
+                                <input type="text" id="alias" required maxLength={50} value={formData.alias} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
                             </div>
                             <div className="flex flex-col gap-1.5">
                                 <label htmlFor="correo" className="text-sm font-semibold text-text-body-dark">Correo electrónico</label>
-                                <input type="email" id="correo" required value={formData.correo} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
+                                <input type="email" id="correo" required maxLength={150} placeholder="usuario@uanl.edu.mx" autoComplete="email" value={formData.correo} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
                             </div>
                             <div className="flex flex-col gap-1.5">
                                 <label htmlFor="matricula" className="text-sm font-semibold text-text-body-dark">Matrícula</label>
-                                <input type="text" id="matricula" required value={formData.matricula} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
+                                <input type="text" id="matricula" required maxLength={7} inputMode="numeric" pattern="[0-9]{7}" value={formData.matricula} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
                             </div>
 
                             <button type="submit" className="mt-4 w-full bg-primary hover:bg-primary-hover text-text-title-dark font-bold py-3 px-4 rounded-lg transition-colors">
@@ -116,12 +176,12 @@ function Registro() {
                     )}
 
                     {paso === 2 && (
-                        <form className="flex flex-col gap-4" onSubmit={handleSiguiente}>
+                        <form className="flex flex-col gap-4" onSubmit={handleSiguiente} noValidate>
                             <CustomSelect
                                 label="Carrera"
                                 value={formData.carrera}
                                 onChange={(val) => setFormData((prev) => ({ ...prev, carrera: val }))}
-                                options={CAREERS.map((career) => ({ value: career, label: career }))}
+                                options={carreras.map((carrera) => ({ value: String(carrera.id_carrera), label: getCareerName(carrera.nombre) }))}
                             />
 
                             <CustomSelect
@@ -135,7 +195,7 @@ function Registro() {
                             />
                             <div className="flex flex-col gap-1.5">
                                 <label htmlFor="contrasenia" className="text-sm font-semibold text-text-body-dark">Contraseña</label>
-                                <input type="password" id="contrasenia" required value={formData.contrasenia} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
+                                <input type="password" id="contrasenia" required minLength={8} maxLength={72} autoComplete="new-password" value={formData.contrasenia} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
                             </div>
 
                             <div className="flex gap-4 mt-4">
@@ -147,10 +207,10 @@ function Registro() {
 
                     {/* PASO 3: Foto de Perfil */}
                     {paso === 3 && (
-                        <form className="flex flex-col gap-4" onSubmit={handleSubmitFinal}>
+                        <form className="flex flex-col gap-4" onSubmit={handleSubmitFinal} noValidate>
                             <div className="flex flex-col gap-1.5">
                                 <label htmlFor="foto" className="text-sm font-semibold text-text-body-dark text-center">Sube tu Foto de Perfil</label>
-                                <input type="file" id="foto" accept="image/*" onChange={handleCambioFoto} className="w-full p-2 border border-border-dark rounded-lg bg-bg-dark text-text-body-dark file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover transition-all" />
+                                <input type="file" id="foto" accept="image/jpeg,image/png,image/webp" onChange={handleCambioFoto} className="w-full p-2 border border-border-dark rounded-lg bg-bg-dark text-text-body-dark file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover transition-all" />
                             </div>
 
                             {previewFoto && (
@@ -161,7 +221,7 @@ function Registro() {
 
                             <div className="flex gap-4 mt-6">
                                 <button type="button" onClick={handleAnterior} className="flex-1 border border-border-dark text-text-body-dark font-bold py-3 px-4 rounded-lg hover:bg-bg-dark transition-colors">Atrás</button>
-                                <button type="submit" className="flex-1 bg-linear-to-r from-primary to-neon-blue hover:from-primary-hover text-text-title-dark font-bold py-3 px-4 rounded-lg transition-colors">Finalizar</button>
+                                <button type="submit" disabled={enviando} className="flex-1 bg-linear-to-r from-primary to-neon-blue hover:from-primary-hover text-text-title-dark font-bold py-3 px-4 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50">{enviando ? "Enviando..." : "Finalizar"}</button>
                             </div>
                         </form>
                     )}

@@ -5,8 +5,10 @@ export const CAREERS = [
     "Lic. en Matemáticas",
     "Lic. en Actuaría",
     "Lic. en Ciencias Computacionales",
+    "Ingeniería en Ciberseguridad",
 ];
 
+// Código guardado en la BD (tabla Carreras) -> nombre para mostrar
 const LEGACY_CAREERS = {
     LSTI: CAREERS[1],
     LMAD: CAREERS[0],
@@ -14,6 +16,7 @@ const LEGACY_CAREERS = {
     LM: CAREERS[3],
     LA: CAREERS[4],
     LCC: CAREERS[5],
+    IC: CAREERS[6],
 };
 
 export function getCareerName(career = "") {

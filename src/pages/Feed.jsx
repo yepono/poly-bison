@@ -5,7 +5,7 @@ import PostCard from "../components/PostCard";
 import { useAppData } from "../context/AppDataContext";
 
 function Feed() {
-    const { posts } = useAppData();
+    const { posts, postsStatus, postsError, loadPosts } = useAppData();
     const [mostrarBotonFlotante, setMostrarBotonFlotante] = useState(false);
     const [modalAbierto, setModalAbierto] = useState(false);
 
@@ -28,6 +28,14 @@ function Feed() {
             <CreatePost />
 
             <div className="flex flex-col gap-2 mt-4">
+                {postsStatus === "loading" && <p className="py-10 text-center text-text-muted-dark" aria-busy="true">Cargando publicaciones...</p>}
+                {postsStatus === "error" && (
+                    <div role="alert" className="py-10 text-center">
+                        <p className="text-neon-red">{postsError}</p>
+                        <button type="button" onClick={loadPosts} className="mt-3 text-neon-blue underline">Reintentar</button>
+                    </div>
+                )}
+                {postsStatus === "ready" && !posts.length && <p className="py-10 text-center text-text-muted-dark">Aún no hay publicaciones. ¡Sé el primero en publicar!</p>}
                 {posts.map((post) => (
                     <PostCard key={post.id} post={post} />
                 ))}
@@ -68,7 +76,7 @@ function Feed() {
                                 </svg>
                             </button>
 
-                            <CreatePost />
+                            <CreatePost onDone={() => setModalAbierto(false)} />
                         </motion.div>
                     </div>
                 )}

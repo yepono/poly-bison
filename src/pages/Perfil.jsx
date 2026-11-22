@@ -1,14 +1,51 @@
+import { useEffect, useState } from "react";
 import { useAppData } from "../context/AppDataContext";
 import PostCard from "../components/PostCard";
 import { getCareerName } from "../utils/careers";
+import { api, mapPost, mapUser } from "../api/client";
 import { Link, useParams } from "react-router-dom";
 
 function Perfil() {
-    const { user: currentUser, users, posts } = useAppData();
+    const { user: currentUser } = useAppData();
     const { userId } = useParams();
-    const user = userId ? users.find((record) => String(record.id) === userId) : currentUser;
+    const esOtroUsuario = Boolean(userId) && String(currentUser.id) !== userId;
+    // { id, user } del perfil consultado; user null = no encontrado
+    const [perfilConsultado, setPerfilConsultado] = useState(null);
+    // { id, lista } publicaciones del perfil (publicaciones.php?accion=por_usuario)
+    const [publicaciones, setPublicaciones] = useState(null);
+    const perfilId = String(esOtroUsuario ? userId : currentUser.id);
+
+    useEffect(() => {
+        let cancelled = false;
+        api("publicaciones", "por_usuario", { params: { id: perfilId } })
+            .then((response) => { if (!cancelled) setPublicaciones({ id: perfilId, lista: response.publicaciones.map(mapPost) }); })
+            .catch(() => { if (!cancelled) setPublicaciones({ id: perfilId, lista: [] }); });
+        return () => { cancelled = true; };
+    }, [perfilId]);
+
+    const actualizarPublicacion = (actualizada) => setPublicaciones((current) => ({
+        ...current,
+        lista: current.lista.map((item) => item.id === actualizada.id ? actualizada : item),
+    }));
+    const quitarPublicacion = (id) => setPublicaciones((current) => ({
+        ...current,
+        lista: current.lista.filter((item) => item.id !== id),
+    }));
+
+    useEffect(() => {
+        if (!esOtroUsuario) return undefined;
+        let cancelled = false;
+        api("usuarios", "perfil", { params: { id: userId } })
+            .then((response) => { if (!cancelled) setPerfilConsultado({ id: userId, user: mapUser(response.user) }); })
+            .catch(() => { if (!cancelled) setPerfilConsultado({ id: userId, user: null }); });
+        return () => { cancelled = true; };
+    }, [esOtroUsuario, userId]);
+
+    const cargando = esOtroUsuario && perfilConsultado?.id !== userId;
+    if (cargando) return <section className="settings-section mx-auto max-w-xl text-center" aria-busy="true"><p className="text-text-muted-dark">Cargando perfil...</p></section>;
+    const user = esOtroUsuario ? perfilConsultado.user : currentUser;
     if (!user) return <section className="settings-section mx-auto max-w-xl text-center"><h1 className="text-2xl font-bold text-text-title-dark">Perfil no encontrado</h1><Link to="/admin" className="action-button mt-5">Volver al panel</Link></section>;
-    const ownPosts = posts.filter((post) => post.authorId === (user.id || "current-user") || post.autor === user.alias || post.autor === user.nombre);
+    const ownPosts = publicaciones?.id === perfilId ? publicaciones.lista : [];
     const totalLikes = ownPosts.reduce((total, post) => total + post.likes, 0);
     const careerName = getCareerName(user.carrera);
     const isLsti = careerName === "Lic. en Seguridad y Tecnologías de la Información";
@@ -44,7 +81,7 @@ function Perfil() {
                 <p className="text-sm text-text-muted-dark">{totalLikes} likes en total</p>
             </div>
             {ownPosts.length ? (
-                <div className="mt-5 flex flex-col gap-2">{ownPosts.map((post) => <PostCard key={post.id} post={post} />)}</div>
+                <div className="mt-5 flex flex-col gap-2">{ownPosts.map((post) => <PostCard key={post.id} post={post} onPostChange={actualizarPublicacion} onPostDeleted={quitarPublicacion} />)}</div>
             ) : (
                 <p className="py-10 text-center text-text-muted-dark">Todavía no has publicado. Tus publicaciones aparecerán aquí.</p>
             )}

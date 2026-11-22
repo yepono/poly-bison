@@ -1,0 +1,7 @@
+# Sin listado de directorio
+Options -Indexes
+
+# Archivos que no son endpoints: no se pueden pedir por URL
+<FilesMatch "^(config(\.local|\.example)?|correo)\.php$">
+    Require all denied
+</FilesMatch>

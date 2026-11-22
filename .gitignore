@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Credenciales de la API (usar php/config.example.php como plantilla)
+php/config.local.php
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

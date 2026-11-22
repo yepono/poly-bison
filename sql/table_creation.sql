@@ -295,7 +295,8 @@ INSERT INTO Bloque_Horario (hora_inicio, hora_fin) VALUES
   ('IC', 1), ('LA', 1),  ('LCC', 1),  ('LF', 1),  ('LM', 1),  ('LMAD', 1),  ('LSTI', 1);
 
 
-CREATE USER 'Bison'@'localhost' IDENTIFIED BY 'MySQLsuck5455';
+-- La contraseña real va SOLO en php/config.local.php (no se sube a git).
+CREATE USER 'Bison'@'localhost' IDENTIFIED BY 'CAMBIA_ESTA_CLAVE';
 GRANT ALL PRIVILEGES ON poly_bison.* TO 'Bison'@'localhost';
 FLUSH PRIVILEGES;
 
@@ -306,9 +307,7 @@ ALTER TABLE Usuario
   ADD COLUMN foto_blob LONGBLOB NULL,
   ADD COLUMN foto_mime VARCHAR(50) NULL;
 
-SELECT * FROM Usuario;
 
-UPDATE Usuario SET estado = 'Aprobado' WHERE correo = 'luzma.garciah@uanl.edu.mx';
-UPDATE Usuario SET estado = 'Aprobado' WHERE correo = 'estudiante@uanl.edu.mx';
+
 
 

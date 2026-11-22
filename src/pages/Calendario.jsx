@@ -1,14 +1,51 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import TechTag from "../components/TechTag";
-import { useAppData } from "../context/AppDataContext";
+import { api, parseFechaMySQL } from "../api/client";
+
+const NOMBRE_MES = (anio, mes) => new Date(anio, mes, 1).toLocaleDateString("es-MX", { month: "long" });
+const capitalizar = (texto) => texto.charAt(0).toUpperCase() + texto.slice(1);
 
 function Calendario() {
     const [fechaSeleccionada, setFechaSeleccionada] = useState(null);
-    const { events } = useAppData();
+    // Mes mostrado (D11): inicia en el mes actual
+    const [mesActual, setMesActual] = useState(() => {
+        const hoy = new Date();
+        return { anio: hoy.getFullYear(), mes: hoy.getMonth() };
+    });
+    // { clave: "AAAA-MM", lista } eventos visibles del mes (eventos.php?accion=listar)
+    const [eventosMes, setEventosMes] = useState(null);
+    const [error, setError] = useState("");
 
-    const diasMes = 30; // Septiembre tiene 30 días[cite: 9]
-    const diaInicio = 2; // Septiembre 2026 empieza en Martes (0=Dom, 1=Lun, 2=Mar)[cite: 9]
+    const claveMes = `${mesActual.anio}-${String(mesActual.mes + 1).padStart(2, "0")}`;
+    const events = eventosMes?.clave === claveMes ? eventosMes.lista : [];
+
+    useEffect(() => {
+        let cancelled = false;
+        api("eventos", "listar", { params: { mes: claveMes } })
+            .then((response) => { if (!cancelled) { setEventosMes({ clave: claveMes, lista: response.eventos }); setError(""); } })
+            .catch((err) => { if (!cancelled) setError(err.message); });
+        return () => { cancelled = true; };
+    }, [claveMes]);
+
+    const diasMes = new Date(mesActual.anio, mesActual.mes + 1, 0).getDate();
+    const diaInicio = new Date(mesActual.anio, mesActual.mes, 1).getDay(); // 0 = domingo
+    const nombreMes = capitalizar(NOMBRE_MES(mesActual.anio, mesActual.mes));
+
+    const cambiarMes = (delta) => {
+        setFechaSeleccionada(null);
+        setMesActual(({ anio, mes }) => {
+            const fecha = new Date(anio, mes + delta, 1);
+            return { anio: fecha.getFullYear(), mes: fecha.getMonth() };
+        });
+    };
+
+    // Eventos que ocurren en un día del mes (incluye los de varios días)
+    const eventosDelDiaDe = (dia) => {
+        const inicioDia = new Date(mesActual.anio, mesActual.mes, dia, 0, 0, 0);
+        const finDia = new Date(mesActual.anio, mesActual.mes, dia, 23, 59, 59);
+        return events.filter((evento) => parseFechaMySQL(evento.fecha_inicio) <= finDia && parseFechaMySQL(evento.fecha_fin) >= inicioDia);
+    };
 
     // Abre el panel inferior o lo cierra si se da clic en el mismo día
     const toggleDia = (dia) => {
@@ -20,9 +57,7 @@ function Calendario() {
     };
 
     // Eventos del día seleccionado para el Panel[cite: 9]
-    const eventosDelDia = fechaSeleccionada
-        ? events.filter(evento => evento.visible && new Date(evento.fecha_inicio).getDate() === fechaSeleccionada)
-        : [];
+    const eventosDelDia = fechaSeleccionada ? eventosDelDiaDe(fechaSeleccionada) : [];
 
     // Estilos dinámicos para las etiquetas de eventos[cite: 9]
     const getEstilosPorTipo = (tipo) => {
@@ -82,14 +117,14 @@ function Calendario() {
                 {/* Header del Calendario */}
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border-dark pb-4">
                     <h1 className="theme-glow text-2xl font-bold text-text-title-dark sm:text-3xl">
-                        Septiembre 2026
+                        {nombreMes} {mesActual.anio}
                     </h1>
                     {!fechaSeleccionada && (
                         <div className="flex flex-wrap gap-2">
-                            <button className="min-h-11 rounded-lg border border-border-dark px-3 py-2 text-sm font-bold text-text-title-dark transition-colors hover:bg-surface-dark sm:px-4 sm:text-base">
+                            <button type="button" onClick={() => cambiarMes(-1)} className="min-h-11 rounded-lg border border-border-dark px-3 py-2 text-sm font-bold text-text-title-dark transition-colors hover:bg-surface-dark sm:px-4 sm:text-base">
                                 &lt; Anterior
                             </button>
-                            <button className="min-h-11 rounded-lg border border-border-dark px-3 py-2 text-sm font-bold text-text-title-dark transition-colors hover:bg-surface-dark sm:px-4 sm:text-base">
+                            <button type="button" onClick={() => cambiarMes(1)} className="min-h-11 rounded-lg border border-border-dark px-3 py-2 text-sm font-bold text-text-title-dark transition-colors hover:bg-surface-dark sm:px-4 sm:text-base">
                                 Siguiente &gt;
                             </button>
                         </div>
@@ -100,6 +135,8 @@ function Calendario() {
                         </button>
                     )}
                 </div>
+
+                {error && <p role="alert" className="mb-4 text-sm text-neon-red">{error}</p>}
 
                 <div className="grid grid-cols-7 gap-2 md:gap-4 mb-4 text-center text-sm font-bold text-text-muted-dark uppercase tracking-wider">
                     <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div>
@@ -113,7 +150,7 @@ function Calendario() {
 
                         const dia = celda.dia;
                         const esSeleccionado = dia === fechaSeleccionada;
-                        const eventosHoy = events.filter((event) => event.visible && new Date(event.fecha_inicio).getDate() === dia);
+                        const eventosHoy = eventosDelDiaDe(dia);
 
                         return (
                             <motion.div
@@ -176,7 +213,7 @@ function Calendario() {
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-neon-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
-                                    Eventos del {fechaSeleccionada} de Sept.
+                                    Eventos del {fechaSeleccionada} de {nombreMes}
                                 </h2>
                                 <button onClick={() => setFechaSeleccionada(null)} className="text-text-muted-dark hover:text-white transition-colors bg-bg-dark rounded-full p-2 border border-border-dark">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -198,11 +235,11 @@ function Calendario() {
                                             <div className="text-sm text-text-muted-dark mb-4 space-y-1.5 border-l-2 border-border-dark pl-3 flex-1">
                                                 <p className="flex items-center gap-2">
                                                     <strong className="text-text-body-dark">Horario:</strong>
-                                                    {new Date(evento.fecha_inicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(evento.fecha_fin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {parseFechaMySQL(evento.fecha_inicio).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })} - {parseFechaMySQL(evento.fecha_fin).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}
                                                 </p>
                                                 <p className="flex items-center gap-2">
                                                     <strong className="text-text-body-dark">Lugar:</strong>
-                                                    {evento.lugar}
+                                                    {evento.lugar || "Por definir"}
                                                 </p>
                                             </div>
 
