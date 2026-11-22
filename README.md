@@ -2,14 +2,17 @@
 
 Plataforma social exclusiva para estudiantes de la Facultad de Ciencias Físico Matemáticas (UANL): feed de publicaciones con imágenes y video, comentarios y likes, reservación de aulas de estudio, calendario de eventos, tienda (catálogo) y panel de administración con reportes.
 
+**Sitio en línea:** https://poly-bison.com (IONOS Web Hosting; registro con correo `@uanl.edu.mx`).
+
 ## Tecnologías
 
 | Capa | Tecnología |
 |---|---|
 | Frontend | React 19, Vite, Tailwind CSS v4, Framer Motion, React Router |
-| Backend | API en PHP 8.2 (mysqli con consultas preparadas), servida por Apache (XAMPP) |
-| Base de datos | MySQL Server 8.0 (`poly_bison`) con vistas, funciones, triggers y procedimientos almacenados |
+| Backend | API en PHP 8.2+ (mysqli con consultas preparadas), servida por Apache (XAMPP en local, IONOS en producción) |
+| Base de datos | MySQL 8.0 en local / MariaDB 11 en producción, con vistas, funciones, triggers y procedimientos almacenados |
 | API externa | [Brevo](https://www.brevo.com/) (envío de correos transaccionales) |
+| Hosting | IONOS Web Hosting Essential: front, API y base de datos en el mismo dominio con HTTPS |
 
 ## Arquitectura
 
@@ -35,7 +38,8 @@ php/usuarios.php ──cURL──▶ API de Brevo (correo con contraseña tempor
 ```
 php/                 API (un archivo por sección)
   config.php           conexión, sesión, CORS, helpers, requireLogin()/requireRole()
-  config.example.php   plantilla de configuración (copiar como config.local.php)
+  config.example.php   plantilla de configuración local (copiar como config.local.php)
+  config.production.example.php   plantilla de producción (en el servidor: api/config.local.php)
   correo.php           cliente de la API de Brevo + plantillas de correo
   usuarios.php  publicaciones.php  comentarios.php  reacciones.php  multimedia.php
   reservaciones.php  eventos.php  productos.php  reportes.php
@@ -154,7 +158,8 @@ Cada objeto incluye en su script un comentario con su propósito y el PHP que lo
 - Consultas preparadas en todo el PHP (sin SQL concatenado con datos del usuario).
 - Contraseñas con `password_hash` / `password_verify`; las respuestas JSON nunca incluyen hashes.
 - Sesión en el servidor con `session_regenerate_id`, cookie `HttpOnly` y `SameSite`; control de sesión y rol en cada endpoint (`requireLogin` / `requireRole`).
-- Credenciales fuera del repositorio (`config.local.php` en `.gitignore`); `.htaccess` bloquea el acceso por URL a los archivos de configuración y al cliente de correo.
+- Credenciales fuera del repositorio: solo se versionan las plantillas (`config.example.php`, `config.production.example.php`); los archivos con datos reales (`config.local.php`, `config.production.php`) están en `.gitignore`. `.htaccess` bloquea el acceso por URL a los archivos de configuración y al cliente de correo.
+- En producción: HTTPS obligatorio (redirección en `.htaccess`) y cookie de sesión `secure`.
 - Errores sin detalles internos (`display_errors` apagado; el detalle va al log de Apache).
 - CORS limitado a los orígenes configurados.
 - Imágenes validadas por contenido real (`finfo` + `getimagesize`), JPG/PNG/WebP, máximo 2 MB; se guardan como BLOB.
@@ -172,7 +177,18 @@ Cada objeto incluye en su script un comentario con su propósito y el PHP que lo
 
 ## Despliegue
 
-El sitio se publica en **IONOS Web Hosting** (https://poly-bison.com): front y API en el mismo dominio, base de datos MariaDB 11. Pasos completos en [docs/DESPLIEGUE_IONOS.md](docs/DESPLIEGUE_IONOS.md).
+El sitio está publicado en **IONOS Web Hosting Essential**: **https://poly-bison.com**
+
+| Componente | En el servidor |
+|---|---|
+| Frontend | Build de Vite (`npm run build` → `dist/`) en la raíz del dominio, con `.htaccess` para HTTPS y rutas de React |
+| API | Contenido de `php/` en `/api` (mismo dominio: sin CORS ni cookies de terceros) |
+| Base de datos | MariaDB 11 administrada desde phpMyAdmin; los mismos scripts de `sql/` (excepto `00_local_bd_y_usuario.sql`) |
+| Configuración | `api/config.local.php` creado en el servidor a partir de `config.production.example.php` (nunca se sube a git) |
+
+Pasos completos, pruebas y solución de problemas en [docs/DESPLIEGUE_IONOS.md](docs/DESPLIEGUE_IONOS.md).
+
+**Actualizar el sitio:** cambios en el front → `npm run build` y subir `dist/` (reemplazar `index.html` y `assets/`); cambios en la API → subir solo los `.php` modificados a `api/`.
 
 ## Licencia
 
