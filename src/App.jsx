@@ -45,9 +45,9 @@ function App() {
         <Route path="/configuracion" element={<Configuracion />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/aulas" element={<Aulas />} />
-        <Route path="Bisontstore" element={<Bisontstore />} />
-        <Route path="Calendario" element={<Calendario />} />
-        <Route path="Mapa" element={<Mapa />} />
+        <Route path="/bisontstore" element={<Bisontstore />} />
+        <Route path="/calendario" element={<Calendario />} />
+        <Route path="/mapa" element={<Mapa />} />
       </Route>
     </Routes>
     {backgroundLocation && (
