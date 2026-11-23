@@ -1,3 +1,4 @@
+// Secciones del panel de administración.
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useDialogos } from "./Dialogos";
@@ -14,8 +15,7 @@ import { api, formatDia, formatFechaHora, formatHora, formatPrecio, formatRangoF
 
 const EVENT_TYPES = ["Académico", "Examen", "Asueto", "Cultural", "Deportivo"];
 
-// Franja de cifras neutra (misma idea que las cifras del perfil). Reemplaza las tarjetas con
-// borde de color, que no se usaban en ningún otro lugar de la app.
+// Franja de cifras sencilla, con el mismo estilo que las cifras del perfil
 export function FranjaCifras({ cifras, cargando = false, etiqueta }) {
     return (
         <dl className="stat-strip" aria-label={etiqueta} aria-busy={cargando || undefined}>
@@ -57,7 +57,7 @@ function FilasCargando({ filas = 4 }) {
     );
 }
 
-// Estados de cuenta -> colores de estado (reservados para esto), siempre con etiqueta y cifra
+// Color de cada estado de cuenta; siempre se muestra junto con su nombre y su cifra
 const ESTADOS = [
     { campo: "usuarios_activos", estado: "Aprobado", nombre: "Aprobados", color: "var(--success)", punto: "bg-success" },
     { campo: "pendientes", estado: "Pendiente", nombre: "Pendientes", color: "var(--warning)", punto: "bg-warning" },
@@ -65,9 +65,7 @@ const ESTADOS = [
     { campo: "baneados", estado: "Baneado", nombre: "Baneados", color: "var(--danger)", punto: "bg-danger" },
 ];
 
-// ---------- Resumen / Dashboard (solo Administrador) ----------
-// Datos: reportes.php -> vw_resumen_usuarios, vw_usuarios_mas_activos,
-// vw_publicaciones_mayor_interaccion
+// Resumen (solo administrador). Los datos vienen de reportes.php
 export function AdminResumen({ setNotice, onIrA }) {
     const [resumen, setResumen] = useState(null);
     const [masActivos, setMasActivos] = useState(null);
@@ -97,14 +95,15 @@ export function AdminResumen({ setNotice, onIrA }) {
 
     const cargando = resumen === null;
     const r = resumen ?? {};
-    const num = (campo) => Number(r[campo]) || 0;
+    const valor = (campo) => (resumen ? r[campo] : "—");
 
-    const porEstado = ESTADOS.map((e) => ({
-        ...e,
-        clave: e.campo,
-        total: num(e.campo),
-        onClick: onIrA ? () => onIrA("Estudiantes", e.estado) : undefined,
-    }));
+    // Gráfica (R2-B): una sola serie -> un solo color, sin leyenda; etiqueta directa con el valor
+    const porEstado = [
+        { estado: "Aprobados", total: r.usuarios_activos ?? 0 },
+        { estado: "Pendientes", total: r.pendientes ?? 0 },
+        { estado: "Rechazados", total: r.rechazados ?? 0 },
+        { estado: "Baneados", total: r.baneados ?? 0 },
+    ];
     const totalUsuarios = porEstado.reduce((suma, item) => suma + item.total, 0);
 
     return <>
@@ -145,163 +144,48 @@ export function AdminResumen({ setNotice, onIrA }) {
     </>;
 }
 
-// =====================================================================================
-// Patrón común de las pestañas con tabla:
-//   tarjeta -> título + conteo -> barra (búsqueda a la izquierda, filtros, botón principal a la
-//   derecha) -> tabla de solo lectura con estados (cargando / error / vacío).
-//   Crear y editar abren el MISMO <PanelLateral>. Cambios de un solo valor (estado, visible,
-//   activo) se hacen en la fila. Acciones secundarias van en el menú "⋯"; eliminar siempre pide
-//   confirmación.
-// =====================================================================================
-
-// Carga una lista: datos = null mientras carga. `cargar` debe ser estable (función de módulo).
-function useLista(cargar) {
-    const [datos, setDatos] = useState(null);
-    const [error, setError] = useState("");
-    const recargar = useCallback(() => cargar()
-        .then((lista) => { setDatos(lista); setError(""); })
-        .catch((err) => { setError(err.message); setDatos((actual) => actual ?? []); }), [cargar]);
-    useEffect(() => { recargar(); }, [recargar]);
-    // "Reintentar": vuelve a mostrar el esqueleto
-    const reintentar = () => { setDatos(null); setError(""); recargar(); };
-    return { datos, setDatos, error, recargar, reintentar };
-}
-
-export function SeccionAdmin({ titulo, detalle, busqueda, onBusqueda, placeholder = "Buscar…", filtros, accion, children }) {
-    return (
-        <section className="card">
-            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-                <div>
-                    <h2 className="text-lg font-bold text-ink">{titulo}</h2>
-                    {detalle && <p className="mt-0.5 text-sm text-ink-muted">{detalle}</p>}
-                </div>
-            </div>
-            <div className="mt-4 flex flex-wrap items-end gap-3">
-                {onBusqueda && (
-                    <div className="relative min-w-48 flex-1 sm:max-w-sm">
-                        <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                            <path strokeLinecap="round" d="M21 21l-5-5m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
-                        </svg>
-                        <input type="search" aria-label={placeholder} placeholder={placeholder} value={busqueda} onChange={(e) => onBusqueda(e.target.value)} className="form-input pl-9" />
-                    </div>
-                )}
-                {filtros}
-                {accion && <div className="ml-auto">{accion}</div>}
-            </div>
-            {children}
-        </section>
-    );
-}
-
-export function TablaAdmin({ columnas, cargando, error, onReintentar, hayFilas, vacio, children }) {
-    return (
-        <div className="admin-table-wrap mt-4" aria-busy={cargando || undefined}>
-            <table className="admin-table">
-                <thead><tr>{columnas.map((c) => <th key={c} className={c === "Acciones" ? "w-px text-right" : undefined}>{c}</th>)}</tr></thead>
-                <tbody>{cargando ? <EsqueletoFilas columnas={columnas.length} /> : children}</tbody>
-            </table>
-            {cargando && <span className="sr-only" role="status">Cargando…</span>}
-            {!cargando && error && <EstadoError compacto mensaje={error} onReintentar={onReintentar} />}
-            {!cargando && !error && !hayFilas && <EstadoVacio compacto {...vacio} />}
-        </div>
-    );
-}
-
-// Botón "Editar" + menú "⋯" (última columna de todas las tablas)
-function AccionesFila({ nombre, onEditar, extra = [] }) {
-    return (
-        <div className="flex items-center justify-end gap-1">
-            {onEditar && (
-                <button type="button" onClick={onEditar} aria-label={`Editar ${nombre}`} className="min-h-9 rounded-lg px-3 text-sm font-semibold text-accent hover:bg-accent/10">
-                    Editar
-                </button>
-            )}
-            <MenuAcciones etiqueta={`Más acciones para ${nombre}`} acciones={extra} />
-        </div>
-    );
-}
-
-// Fila oculta/inactiva: se atenúan los datos, no los controles (interruptor y acciones)
-const ATENUADA = "[&>td:not(:nth-last-child(-n+2))]:opacity-55";
-const coincide = (texto, busqueda) => texto.toLowerCase().includes(busqueda.trim().toLowerCase());
-const vacioBusqueda = (limpiar) => ({ icono: "buscar", titulo: "Sin resultados", detalle: "Prueba con otra búsqueda o quita los filtros.", accion: { texto: "Limpiar filtros", onClick: limpiar } });
-
-// ---------- Bitácora (solo Administrador) ----------
+// ---------- Bitácora (solo Administrador, D18) ----------
 // Datos: reportes.php?accion=bitacora -> vw_bitacora (Event_Log que llenan los triggers)
-const cargarBitacora = () => api("reportes", "bitacora").then((r) => r.registros);
+export function AdminBitacora({ search, setSearch, setNotice }) {
+    const [registros, setRegistros] = useState(null);
 
-export function AdminBitacora({ search, setSearch }) {
-    const { datos, error, reintentar } = useLista(cargarBitacora);
-    const lista = (datos ?? []).filter((item) => coincide(`${item.accion} ${item.detalle || ""} ${item.realizado_por} ${item.tabla_afectada}`, search));
+    useEffect(() => {
+        let cancelled = false;
+        api("reportes", "bitacora")
+            .then((response) => { if (!cancelled) setRegistros(response.registros); })
+            .catch((err) => { if (!cancelled) { setRegistros([]); setNotice(err.message); } });
+        return () => { cancelled = true; };
+    }, [setNotice]);
 
-    return (
-        <SeccionAdmin titulo="Bitácora del sistema" detalle={datos && !error ? `Últimos ${datos.length} movimientos registrados` : " "} busqueda={search} onBusqueda={setSearch} placeholder="Acción, detalle o usuario">
-            <TablaAdmin
-                columnas={["Fecha", "Acción", "Detalle", "Realizado por"]}
-                cargando={datos === null} error={error} onReintentar={reintentar} hayFilas={lista.length > 0}
-                vacio={search ? vacioBusqueda(() => setSearch("")) : { icono: "reloj", titulo: "Sin movimientos", detalle: "Aquí aparecerán los cambios que se hagan en el sistema." }}
-            >
-                {lista.map((item) => (
-                    <tr key={item.id_log}>
-                        <td className="whitespace-nowrap">{formatFechaHora(item.fecha)}</td>
-                        <td>{item.accion}<small>{item.tabla_afectada}{item.id_registro_afectado ? ` #${item.id_registro_afectado}` : ""}</small></td>
-                        <td>{item.detalle}</td>
-                        <td>{item.realizado_por === "Sistema" ? "Sistema" : `@${item.realizado_por}`}</td>
-                    </tr>
-                ))}
-            </TablaAdmin>
-        </SeccionAdmin>
-    );
+    const lista = (registros ?? []).filter((item) => `${item.accion} ${item.detalle || ""} ${item.realizado_por}`.toLowerCase().includes(search.toLowerCase()));
+
+    return <section className="settings-section"><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-lg font-bold text-text-title-dark">Bitácora del sistema</h2><p className="mt-1 text-sm text-text-muted-dark">{registros === null ? "Cargando..." : `Últimos ${registros.length} movimientos registrados`}</p></div><label className="form-label w-full sm:max-w-sm">Buscar<input className="form-input" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Acción, detalle o usuario"/></label></div><div className="admin-table-wrap mt-4"><table className="admin-table"><thead><tr><th>Fecha</th><th>Acción</th><th>Detalle</th><th>Realizado por</th></tr></thead><tbody>{lista.map((item) => <tr key={item.id_log}><td>{parseFechaMySQL(item.fecha).toLocaleString("es-MX")}</td><td>{item.accion}<small>{item.tabla_afectada}{item.id_registro_afectado ? ` #${item.id_registro_afectado}` : ""}</small></td><td>{item.detalle}</td><td>{item.realizado_por === "Sistema" ? "Sistema" : `@${item.realizado_por}`}</td></tr>)}</tbody></table>{registros !== null && !lista.length && <p className="p-6 text-center text-text-muted-dark">No hay movimientos que coincidan.</p>}</div></section>;
 }
+const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
+const PRECIO = /^\d{1,6}(\.\d{1,2})?$/;
 
 // ---------- Rentas: historial global (Administrador y Moderador) ----------
-const cargarRentas = () => api("reservaciones", "historial").then((r) => r.reservaciones);
+export function AdminRentas({ search, setSearch, setNotice }) {
+    const [reservations, setReservations] = useState(null);
 
-export function AdminRentas({ search, setSearch }) {
-    const { datos, error, reintentar } = useLista(cargarRentas);
-    const [estado, setEstado] = useState("");
-    const estados = [...new Set((datos ?? []).map((r) => r.estado))].sort();
-    const lista = (datos ?? []).filter((item) => (!estado || item.estado === estado)
-        && coincide(`${item.aula} ${item.alias} ${item.matricula || ""} ${item.codigo_ticket}`, search));
-    const limpiar = () => { setSearch(""); setEstado(""); };
+    useEffect(() => {
+        let cancelled = false;
+        api("reservaciones", "historial")
+            .then((response) => { if (!cancelled) setReservations(response.reservaciones); })
+            .catch((err) => { if (!cancelled) { setReservations([]); setNotice(err.message); } });
+        return () => { cancelled = true; };
+    }, [setNotice]);
 
-    return (
-        <SeccionAdmin
-            titulo="Historial de rentas de aulas"
-            detalle={datos && !error ? `${datos.length} reservaciones registradas` : " "}
-            busqueda={search} onBusqueda={setSearch} placeholder="Alias, matrícula, aula o ticket"
-            filtros={estados.length > 1 && <CustomSelect ariaLabel="Filtrar por estado" className="w-44" value={estado} onChange={setEstado} options={[{ value: "", label: "Todos los estados" }, ...estados.map((e) => ({ value: e, label: e }))]} />}
-        >
-            <TablaAdmin
-                columnas={["Aula", "Usuario", "Matrícula", "Fecha", "Horario", "Ticket", "Estado"]}
-                cargando={datos === null} error={error} onReintentar={reintentar} hayFilas={lista.length > 0}
-                vacio={search || estado ? vacioBusqueda(limpiar) : { icono: "calendario", titulo: "Aún no hay reservaciones", detalle: "Cuando alguien aparte un aula aparecerá aquí." }}
-            >
-                {lista.map((item) => (
-                    <tr key={item.id_reservacion}>
-                        <td>{item.aula}<small>{item.total_asistentes} asistente(s)</small></td>
-                        <td>@{item.alias}</td>
-                        <td>{item.matricula || "—"}</td>
-                        <td className="whitespace-nowrap">{formatDia(item.fecha_reserva)}</td>
-                        <td className="whitespace-nowrap">{formatRangoHoras(item.hora_inicio, item.hora_fin)}</td>
-                        <td className="font-mono">{item.codigo_ticket}</td>
-                        <td>{item.estado}</td>
-                    </tr>
-                ))}
-            </TablaAdmin>
-        </SeccionAdmin>
-    );
+    const lista = (reservations ?? []).filter((item) => `${item.aula} ${item.alias} ${item.matricula || ""} ${item.codigo_ticket}`.toLowerCase().includes(search.toLowerCase()));
+
+    return <section className="settings-section"><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-lg font-bold text-text-title-dark">Historial global de rentas de aulas</h2><p className="mt-1 text-sm text-text-muted-dark">{reservations === null ? "Cargando..." : `${reservations.length} reservaciones registradas`}</p></div><label className="form-label w-full sm:max-w-sm">Buscar usuario, aula o ticket<input className="form-input" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Alias, matrícula, aula o ticket"/></label></div><div className="admin-table-wrap mt-4"><table className="admin-table"><thead><tr><th>Aula</th><th>Usuario</th><th>Matrícula</th><th>Fecha</th><th>Horario</th><th>Ticket</th><th>Estado</th></tr></thead><tbody>{lista.map((item) => <tr key={item.id_reservacion}><td>{item.aula}<small>{item.total_asistentes} asistente(s)</small></td><td>@{item.alias}</td><td>{item.matricula || "-"}</td><td>{item.fecha_reserva}</td><td>{item.hora_inicio} - {item.hora_fin}</td><td className="font-mono">{item.codigo_ticket}</td><td>{item.estado}</td></tr>)}</tbody></table>{reservations !== null && !lista.length && <p className="p-6 text-center text-text-muted-dark">No hay reservaciones que coincidan.</p>}</div></section>;
 }
 
-// ---------- Horarios (solo Administrador) ----------
-const cargarBloques = () => api("reservaciones", "bloques", { params: { todos: 1 } }).then((r) => r.bloques);
-// Horas cada 30 minutos de 06:00 a 22:00
-const HORAS_BLOQUE = Array.from({ length: 33 }, (_, i) => `${String(6 + Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`);
-
+// ---------- Horarios (solo Administrador, D9) ----------
 export function AdminHorarios({ setNotice }) {
     const { avisar } = useDialogos();
     const { datos, error, recargar, reintentar } = useLista(cargarBloques);
-    const [panel, setPanel] = useState(null); // { bloque?, inicio, fin }
+    const [panel, setPanel] = useState(null); // datos del panel abierto, o null si está cerrado
     const [errorPanel, setErrorPanel] = useState("");
     const [guardando, setGuardando] = useState(false);
     const [cambiando, setCambiando] = useState(null);
@@ -391,10 +275,7 @@ export function AdminHorarios({ setNotice }) {
     );
 }
 
-const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
-const PRECIO = /^\d{1,6}(\.\d{1,2})?$/;
-
-// ---------- Tienda (solo Administrador ----------
+// ---------- Tienda (solo Administrador, D10) ----------
 const productoVacio = { titulo: "", precio: "", id_categoria: "", stock: "0", descripcionCorta: "" };
 const cargarProductos = () => api("productos", "listar").then((r) => r.productos.map(mapProducto));
 const cargarCategorias = () => api("productos", "categorias").then((r) => r.categorias);
@@ -409,14 +290,12 @@ function validarProducto({ titulo, precio, stock, descripcionCorta, id_categoria
     return "";
 }
 
-export function AdminTienda() {
-    const { confirmar, avisar } = useDialogos();
-    const { datos, error, recargar, reintentar } = useLista(cargarProductos);
-    const { datos: categorias } = useLista(cargarCategorias);
-    const [busqueda, setBusqueda] = useState("");
-    const [categoria, setCategoria] = useState("");
-    const [panel, setPanel] = useState(null); // { producto?, form, imagen, vista }
-    const [errorPanel, setErrorPanel] = useState("");
+export function AdminTienda({ setNotice }) {
+    const [products, setProducts] = useState([]);
+    const [categorias, setCategorias] = useState([]);
+    const [productForm, setProductForm] = useState(productoVacio);
+    const [imagen, setImagen] = useState(null);
+    const [borradores, setBorradores] = useState({}); // ediciones por fila sin guardar
     const [guardando, setGuardando] = useState(false);
 
     const abrir = (producto = null) => {
@@ -552,11 +431,11 @@ export function AdminTienda() {
     );
 }
 
-// ---------- Eventos (Administrador y Moderador) ----------
+// ---------- Eventos (Administrador y Moderador, D15) ----------
 const eventoVacio = { titulo: "", descripcion: "", tipo: "Académico", fecha_inicio: "", fecha_fin: "", lugar: "" };
 const cargarEventos = () => api("eventos", "admin_listar").then((r) => r.eventos);
 
-// "AAAA-MM-DDTHH:MM" + 1 hora (sin pasar de las 23:45 del mismo día)
+// Suma una hora a la fecha de inicio, sin pasar de las 23:45 del mismo día
 function unaHoraDespues(valor) {
     const [fecha, hora] = valor.split("T");
     const [h, m] = hora.split(":").map(Number);
@@ -579,7 +458,7 @@ export function AdminEventos() {
     const { datos, setDatos, error, recargar, reintentar } = useLista(cargarEventos);
     const [busqueda, setBusqueda] = useState("");
     const [tipo, setTipo] = useState("");
-    const [panel, setPanel] = useState(null); // { evento?, form }
+    const [panel, setPanel] = useState(null); // datos del panel abierto, o null si está cerrado
     const [errorPanel, setErrorPanel] = useState("");
     const [guardando, setGuardando] = useState(false);
 
@@ -613,7 +492,7 @@ export function AdminEventos() {
         }
     };
 
-    // Visible: cambio de un solo valor, se guarda al momento (optimista)
+    // El interruptor de Visible se guarda al momento, sin esperar la respuesta del servidor
     const alternarVisible = async (item, visible) => {
         setDatos((lista) => lista.map((e) => (e.id_evento === item.id_evento ? { ...e, visible } : e)));
         try {
