@@ -88,8 +88,23 @@
 }
 
 @layer components {
+  /* Barra de desplazamiento discreta (la clase se usaba pero no estaba definida) */
+  .custom-scrollbar { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+
+  /* Anchos estándar de página (ver PageHeader.jsx) */
+  .pagina-angosta { @apply mx-auto w-full max-w-3xl space-y-6; }
+  .pagina-media { @apply mx-auto w-full max-w-5xl space-y-6; }
+  .pagina-ancha { @apply mx-auto w-full max-w-6xl space-y-6; }
+
+  /* Tarjeta estándar: TODAS las superficies de contenido usan esta (settings-section es un alias) */
+  .card,
   .settings-section {
-    @apply rounded-xl border border-line bg-surface/50 p-5 sm:p-6;
+    @apply rounded-2xl border border-line bg-surface/50 p-5 shadow-card sm:p-6;
+  }
+
+  /* Tarjeta de las pantallas de acceso (sobre el fondo animado: vidrio) */
+  .auth-card {
+    @apply relative z-20 w-full max-w-md rounded-2xl border border-line bg-surface/20 p-6 shadow-pop backdrop-blur-md sm:p-8;
   }
 
   .form-label {
@@ -101,11 +116,16 @@
   }
 
   .action-button {
-    @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 py-2 font-semibold text-white transition hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 font-semibold text-on-brand transition hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50;
   }
 
+  /* Variantes: -secondary (borde), -danger (rojo, texto blanco), -sm (barras y tarjetas pequeñas) */
   .action-button-danger {
-    @apply bg-danger-solid hover:bg-danger-solid-hover;
+    @apply bg-danger-solid text-white hover:bg-danger-solid-hover;
+  }
+
+  .action-button-sm {
+    @apply min-h-9 px-3 py-1.5 text-sm;
   }
 
   .profile-header {
@@ -146,21 +166,15 @@
   }
 
   .action-button-secondary {
-    @apply border border-line bg-transparent text-ink hover:bg-surface;
+    @apply border border-line bg-transparent text-ink hover:bg-field;
   }
 
-  .admin-metric {
-    @apply flex min-h-36 flex-col justify-between rounded-xl border border-line bg-surface/70 p-5;
-  }
-
-  .admin-metric > p { @apply text-sm font-semibold text-ink-muted; }
-  .admin-metric > strong { @apply text-4xl font-bold leading-none text-ink; }
-  .admin-metric > span { @apply text-xs text-ink-muted; }
-  .admin-metric-blue { @apply border-t-4 border-t-accent; }
-  .admin-metric-green { @apply border-t-4 border-t-success; }
-  .admin-metric-amber { @apply border-t-4 border-t-warning; }
-  .admin-metric-red { @apply border-t-4 border-t-danger; }
-  .admin-metric-dark { @apply border-t-4 border-t-brand; }
+  /* Franja de cifras (misma idea que .profile-stats): neutra, sin bordes de color */
+  .stat-strip { @apply grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-surface/50 shadow-card sm:grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))]; }
+  .stat-strip > div { @apply -mb-px -mr-px border-b border-r border-line px-4 py-3; }
+  .stat-strip > div:last-child:nth-child(odd) { @apply max-sm:col-span-2; }
+  .stat-strip dt { @apply text-xs font-medium text-ink-muted; }
+  .stat-strip dd { @apply mt-0.5 text-2xl font-bold tabular-nums text-ink; }
 
   .admin-filters { @apply grid gap-4 sm:grid-cols-2 lg:grid-cols-4; }
   .admin-table-wrap { @apply w-full overflow-x-auto rounded-xl border border-line; }

@@ -1,11 +1,11 @@
 import { useAppData } from "../context/AppDataContext";
+import Avatar from "./Avatar";
 
 // Barra de una línea que abre el formulario de publicación (en un modal).
 // Sustituye al formulario completo que antes ocupaba la parte superior del feed.
 function PostComposerBar({ onOpen }) {
     const { user } = useAppData();
     const nombre = user.alias || user.nombre;
-    const avatar = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=003366&color=fff`;
 
     return (
         <button
@@ -13,7 +13,7 @@ function PostComposerBar({ onOpen }) {
             onClick={onOpen}
             className="flex w-full items-center gap-3 rounded-2xl border border-line bg-surface/50 p-4 text-left shadow-card transition-colors hover:border-accent/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
-            <img src={avatar} alt="" className="h-10 w-10 shrink-0 rounded-full border border-line object-cover" />
+            <Avatar src={user.avatar} nombre={nombre} decorativo className="h-10 w-10 border border-line" />
             <span className="min-w-0 flex-1 truncate rounded-full border border-line bg-field px-4 py-2.5 text-ink-muted">
                 ¿Qué quieres compartir, {nombre}?
             </span>

@@ -4,6 +4,7 @@ import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import NeonBackground from "../components/NeonBackground";
 import { useAppData } from "../context/AppDataContext";
 import { CORREO_UANL } from "../api/client";
+import { useDialogos } from "../components/Dialogos";
 
 function Login() {
     const [correo, setCorreo] = useState("");
@@ -14,6 +15,7 @@ function Login() {
     const navigate = useNavigate();
     const location = useLocation();
     const { login, authStatus } = useAppData();
+    const { avisar } = useDialogos();
     const avisoRegistro = location.state?.mensaje;
 
     if (authStatus === "authenticated") return <Navigate to="/feed" replace />;
@@ -33,7 +35,7 @@ function Login() {
         try {
             const sessionUser = await login(correo.trim(), contrasenia);
             if (sessionUser.debeCambiarContrasena) {
-                window.alert("Estás usando una contraseña temporal. Debes cambiarla antes de continuar.");
+                avisar("Estás usando una contraseña temporal. Debes cambiarla antes de continuar.", "info");
                 navigate("/configuracion", { replace: true });
                 return;
             }
@@ -56,7 +58,7 @@ function Login() {
                 transition={{ type: "spring", duration: 1.5 }}
                 className="relative z-10 flex min-h-[calc(100dvh-2rem)] w-full max-w-5xl items-center justify-center py-4 sm:p-8 lg:justify-end lg:p-12"
             >
-                <div className="relative z-20 w-full max-w-md bg-surface/20 backdrop-blur-md border border-line rounded-2xl shadow-pop p-8">
+                <div className="auth-card">
 
                     <h1 className="text-3xl font-bold text-center text-ink mb-8">
                         Bienvenido
@@ -78,7 +80,7 @@ function Login() {
                                 autoComplete="email"
                                 value={correo}
                                 onChange={(e) => setCorreo(e.target.value)}
-                                className="w-full p-3 border border-line rounded-lg bg-field text-ink focus:outline-none focus:ring-2 focus:ring-accent transition-all"
+                                className="form-input"
                             />
                         </div>
 
@@ -93,16 +95,16 @@ function Login() {
                                 autoComplete="current-password"
                                 value={contrasenia}
                                 onChange={(e) => setContrasenia(e.target.value)}
-                                className="w-full p-3 border border-line rounded-lg bg-field text-ink focus:outline-none focus:ring-2 focus:ring-accent transition-all"
+                                className="form-input"
                             />
                         </div>
 
                         <button
                             type="submit"
                             disabled={cargando}
-                            className="mt-4 w-full bg-linear-to-r from-brand to-accent hover:from-brand-hover hover:to-brand text-ink font-bold py-3 px-4 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                            className="action-button mt-4 w-full"
                         >
-                            {cargando ? "Ingresando..." : "Iniciar Sesión"}
+                            {cargando ? "Ingresando..." : "Iniciar sesión"}
                         </button>
                     </form>
                     <p className="text-center text-sm mt-4">

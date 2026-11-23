@@ -5,6 +5,7 @@ import { getCareerName } from "../utils/careers";
 import { api, mapPost, mapUser } from "../api/client";
 import { Link, useParams } from "react-router-dom";
 import { useCambioFoto } from "../components/useCambioFoto";
+import Avatar from "../components/Avatar";
 
 const ICONO_LSTI = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path strokeLinecap="round" d="M8 21h8m-4-4v4m-5-9 2-2 2 2 3-4 2 2"/></svg>;
 const ICONO_CARRERA = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path strokeLinejoin="round" d="m3 9 9-5 9 5-9 5-9-5Z"/><path strokeLinecap="round" strokeLinejoin="round" d="M7 11.5V16c0 1 2.2 2.5 5 2.5s5-1.5 5-2.5v-4.5M21 9v5"/></svg>;
@@ -55,16 +56,15 @@ function Perfil() {
     const totalLikes = ownPosts.reduce((total, post) => total + (Number(post.likes) || 0), 0);
     const careerName = getCareerName(user.carrera);
     const isLsti = careerName === "Lic. en Seguridad y Tecnologías de la Información";
-    const avatar = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.alias || user.nombre)}&background=003366&color=fff`;
 
     const nombreVisible = user.alias || user.nombre;
 
     return (
-        <section className="mx-auto w-full max-w-4xl">
+        <section className="pagina-media">
             <header className="profile-hero">
                 <div className="flex items-center gap-4 sm:gap-5">
                     <div className="relative shrink-0">
-                        <img src={avatar} alt={`Foto de ${nombreVisible}`} className="h-20 w-20 rounded-full border-4 border-on-brand/70 object-cover shadow-lg sm:h-24 sm:w-24" />
+                        <Avatar src={user.avatar} nombre={nombreVisible} className="h-20 w-20 border-4 border-on-brand/70 shadow-lg sm:h-24 sm:w-24" />
                         {!esOtroUsuario && (
                             <button type="button" onClick={foto.seleccionar} className="profile-avatar-edit" aria-label={user.avatar ? "Cambiar foto de perfil" : "Agregar foto de perfil"} title={user.avatar ? "Cambiar foto" : "Agregar foto"}>
                                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -107,7 +107,7 @@ function Perfil() {
                 <h2 className="text-xl font-bold text-ink">Publicaciones</h2>
             </div>
             {ownPosts.length ? (
-                <div className="mt-5 flex flex-col gap-2">{ownPosts.map((post) => <PostCard key={post.id} post={post} onPostChange={actualizarPublicacion} onPostDeleted={quitarPublicacion} />)}</div>
+                <div className="mt-5 flex flex-col gap-4">{ownPosts.map((post) => <PostCard key={post.id} post={post} onPostChange={actualizarPublicacion} onPostDeleted={quitarPublicacion} />)}</div>
             ) : (
                 <p className="py-10 text-center text-ink-muted">{esOtroUsuario ? "Este usuario todavía no ha publicado." : "Todavía no has publicado. Tus publicaciones aparecerán aquí."}</p>
             )}

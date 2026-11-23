@@ -127,7 +127,7 @@ const EDIFICIO_POR_ID = Object.fromEntries(EDIFICIOS.map((e) => [e.id, e]));
 
 // ---------------------------------------------------------------- vistas
 export const VISTA_GENERAL = {
-    id: "general", titulo: "Vista General", nivel: "Panorámica", edificio: null, piso: null,
+    id: "general", titulo: "Vista general", nivel: "Panorámica", edificio: null, piso: null,
     subtitulo: "Campus FCFM",
 };
 
@@ -231,4 +231,14 @@ export function encuadreVista(vista) {
 
 export function encuadreLugar(lugar) {
     return encuadre(lugar.bbox, lugar.y, 40);
+}
+
+// ---------------------------------------------------------------- lugares destacados
+// Tesorería: ahí se pagan los productos de la Bisontstore. Se busca por nombre (no por id)
+// porque los ids dependen del orden de extracción de los planos.
+export const TESORERIA = LUGARES.find((l) => l.nombre === "Tesorería") ?? null;
+
+// Enlace al mapa 3D enfocando un lugar (lo lee Mapa.jsx con ?lugar=)
+export function rutaMapaLugar(lugar) {
+    return lugar ? `/mapa?lugar=${encodeURIComponent(lugar.id)}` : "/mapa";
 }

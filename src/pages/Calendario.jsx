@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { estilosTipoEvento, colorPuntoEvento } from "../utils/eventStyles";
 import TechTag from "../components/TechTag";
-import { api, parseFechaMySQL } from "../api/client";
+import PageHeader from "../components/PageHeader";
+import { api, formatRangoFechaHora, parseFechaMySQL } from "../api/client";
 
 const NOMBRE_MES = (anio, mes) => new Date(anio, mes, 1).toLocaleDateString("es-MX", { month: "long" });
 const capitalizar = (texto) => texto.charAt(0).toUpperCase() + texto.slice(1);
@@ -32,6 +33,13 @@ function Calendario() {
     const diasMes = new Date(mesActual.anio, mesActual.mes + 1, 0).getDate();
     const diaInicio = new Date(mesActual.anio, mesActual.mes, 1).getDay(); // 0 = domingo
     const nombreMes = capitalizar(NOMBRE_MES(mesActual.anio, mesActual.mes));
+    const hoy = new Date();
+    const esMesActual = hoy.getFullYear() === mesActual.anio && hoy.getMonth() === mesActual.mes;
+
+    const irAHoy = () => {
+        setFechaSeleccionada(null);
+        setMesActual({ anio: hoy.getFullYear(), mes: hoy.getMonth() });
+    };
 
     const cambiarMes = (delta) => {
         setFechaSeleccionada(null);
@@ -86,28 +94,34 @@ function Calendario() {
         : todasLasCeldas;
 
     return (
-        <div className="w-full flex flex-col relative gap-6">
+        <div className="pagina-ancha relative flex flex-col">
+            <PageHeader titulo="Calendario" subtitulo="Exámenes, asuetos y eventos de la facultad." />
             <motion.div
                 layout
-                className="w-full bg-surface/20 backdrop-blur-md border border-line rounded-2xl p-6 md:p-8 shadow-lg overflow-hidden"
+                className="card w-full overflow-hidden"
             >
                 {/* Header del Calendario */}
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
-                    <h1 className="theme-glow text-2xl font-bold text-ink sm:text-3xl">
+                    <h2 className="text-xl font-bold text-ink sm:text-2xl" aria-live="polite">
                         {nombreMes} {mesActual.anio}
-                    </h1>
+                    </h2>
                     {!fechaSeleccionada && (
-                        <div className="flex flex-wrap gap-2">
-                            <button type="button" onClick={() => cambiarMes(-1)} className="min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-bold text-ink transition-colors hover:bg-surface sm:px-4 sm:text-base">
-                                &lt; Anterior
+                        <div className="flex items-center gap-2">
+                            {!esMesActual && (
+                                <button type="button" onClick={irAHoy} className="min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-bold text-ink transition-colors hover:bg-surface">
+                                    Hoy
+                                </button>
+                            )}
+                            <button type="button" onClick={() => cambiarMes(-1)} aria-label="Mes anterior" className="flex h-11 w-11 items-center justify-center rounded-lg border border-line text-ink transition-colors hover:bg-surface">
+                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                             </button>
-                            <button type="button" onClick={() => cambiarMes(1)} className="min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-bold text-ink transition-colors hover:bg-surface sm:px-4 sm:text-base">
-                                Siguiente &gt;
+                            <button type="button" onClick={() => cambiarMes(1)} aria-label="Mes siguiente" className="flex h-11 w-11 items-center justify-center rounded-lg border border-line text-ink transition-colors hover:bg-surface">
+                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                             </button>
                         </div>
                     )}
                     {fechaSeleccionada && (
-                        <button onClick={() => setFechaSeleccionada(null)} className="text-ink-muted hover:text-ink font-bold text-sm underline transition-colors">
+                        <button type="button" onClick={() => setFechaSeleccionada(null)} className="min-h-11 text-ink-muted hover:text-ink font-bold text-sm underline transition-colors">
                             Ver mes completo
                         </button>
                     )}
@@ -122,30 +136,46 @@ function Calendario() {
                 <motion.div layout className="grid grid-cols-7 gap-2 md:gap-4">
                     {celdasRenderizadas.map((celda) => {
                         if (celda.tipo === 'vacio') {
-                            return <div key={celda.key} className="min-h-[100px] md:min-h-[140px] rounded-xl bg-transparent border border-transparent"></div>;
+                            return <div key={celda.key} aria-hidden="true" className="min-h-16 md:min-h-[140px] rounded-xl bg-transparent border border-transparent"></div>;
                         }
 
                         const dia = celda.dia;
                         const esSeleccionado = dia === fechaSeleccionada;
                         const eventosHoy = eventosDelDiaDe(dia);
+                        const esHoy = esMesActual && dia === hoy.getDate();
+                        const totalEventos = eventosHoy.length;
 
                         return (
-                            <motion.div
+                            <motion.button
+                                type="button"
                                 layout
                                 key={celda.key}
                                 onClick={() => toggleDia(dia)}
-                                className={`min-h-[100px] md:min-h-[140px] rounded-xl border p-2 md:p-3 cursor-pointer transition-colors flex flex-col relative overflow-hidden group shadow-sm hover:shadow-glow
+                                aria-pressed={esSeleccionado}
+                                aria-label={`${dia} de ${nombreMes}${esHoy ? ", hoy" : ""}: ${totalEventos ? `${totalEventos} ${totalEventos === 1 ? "evento" : "eventos"}` : "sin eventos"}`}
+                                className={`min-h-16 md:min-h-[140px] rounded-xl border p-1.5 md:p-3 text-left cursor-pointer transition-colors flex flex-col relative overflow-hidden group shadow-sm hover:shadow-glow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent
                                     ${esSeleccionado
                                         ? 'border-cal-selected bg-cal-selected/10 shadow-glow'
-                                        : 'border-cal-grid bg-cal-cell/40 hover:bg-cal-cell-hover hover:border-cal-selected/50'
+                                        : esHoy
+                                            ? 'border-cal-today/60 bg-cal-cell/40 hover:bg-cal-cell-hover'
+                                            : 'border-cal-grid bg-cal-cell/40 hover:bg-cal-cell-hover hover:border-cal-selected/50'
                                     }`}
                             >
-                                <span className={`text-sm font-bold mb-2 transition-colors ${esSeleccionado ? 'text-cal-selected' : 'text-ink-soft group-hover:text-cal-selected'}`}>
+                                <span className={`mb-1 md:mb-2 inline-flex h-6 min-w-6 items-center justify-center self-start rounded-full px-1 text-sm font-bold transition-colors ${esHoy
+                                    ? 'bg-cal-today text-on-accent'
+                                    : esSeleccionado ? 'text-cal-selected' : 'text-ink-soft group-hover:text-cal-selected'}`}>
                                     {dia}
                                 </span>
 
-                                {/* Lógica condicional: Puntitos o Etiquetas */}
+                                {/* Vista de semana o celular: puntitos. Mes completo en pantallas medianas: etiquetas */}
                                 <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pr-1 mt-auto">
+                                    {!fechaSeleccionada && totalEventos > 0 && (
+                                        <div className="flex flex-wrap gap-1 md:hidden" aria-hidden="true">
+                                            {eventosHoy.map((evento) => (
+                                                <span key={evento.id_evento} className={`h-2 w-2 rounded-full ${colorPuntoEvento(evento.tipo)}`} />
+                                            ))}
+                                        </div>
+                                    )}
                                     {fechaSeleccionada ? (
                                         <div className="flex flex-wrap gap-1.5 mt-2">
                                             {eventosHoy.map((evento, idx) => (
@@ -160,7 +190,7 @@ function Calendario() {
                                         eventosHoy.map((evento, idx) => (
                                             <div
                                                 key={idx}
-                                                className={`text-2xs md:text-xs font-semibold px-2 py-1 rounded border truncate ${estilosTipoEvento(evento.tipo)}`}
+                                                className={`hidden md:block text-xs font-semibold px-2 py-1 rounded border truncate ${estilosTipoEvento(evento.tipo)}`}
                                                 title={evento.titulo}
                                             >
                                                 {evento.titulo}
@@ -168,7 +198,7 @@ function Calendario() {
                                         ))
                                     )}
                                 </div>
-                            </motion.div>
+                            </motion.button>
                         );
                     })}
                 </motion.div>
@@ -183,16 +213,16 @@ function Calendario() {
                         transition={{ duration: 0.4, ease: "easeInOut" }}
                         className="w-full overflow-hidden"
                     >
-                        <div className="w-full h-full bg-surface/20 backdrop-blur-md border border-line rounded-2xl p-6 md:p-8 shadow-lg flex flex-col">
+                        <div className="card flex h-full w-full flex-col">
 
                             <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
                                 <h2 className="flex min-w-0 items-center gap-3 text-xl font-bold text-ink sm:text-2xl">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
-                                    Eventos del {fechaSeleccionada} de {nombreMes}
+                                    Eventos del {fechaSeleccionada} de {nombreMes.toLowerCase()}
                                 </h2>
-                                <button onClick={() => setFechaSeleccionada(null)} className="text-ink-muted hover:text-ink transition-colors bg-field rounded-full p-2 border border-line">
+                                <button type="button" onClick={() => setFechaSeleccionada(null)} aria-label="Cerrar eventos del día" className="text-ink-muted hover:text-ink transition-colors bg-field rounded-full p-2 border border-line">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
@@ -212,7 +242,7 @@ function Calendario() {
                                             <div className="text-sm text-ink-muted mb-4 space-y-1.5 border-l-2 border-line pl-3 flex-1">
                                                 <p className="flex items-center gap-2">
                                                     <strong className="text-ink-soft">Horario:</strong>
-                                                    {parseFechaMySQL(evento.fecha_inicio).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })} - {parseFechaMySQL(evento.fecha_fin).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}
+                                                    {formatRangoFechaHora(evento.fecha_inicio, evento.fecha_fin)}
                                                 </p>
                                                 <p className="flex items-center gap-2">
                                                     <strong className="text-ink-soft">Lugar:</strong>
@@ -220,9 +250,11 @@ function Calendario() {
                                                 </p>
                                             </div>
 
-                                            <p className="text-sm text-ink-soft leading-relaxed bg-surface/50 p-3 rounded-lg border border-line/50">
-                                                {evento.descripcion}
-                                            </p>
+                                            {evento.descripcion && (
+                                                <p className="text-sm text-ink-soft leading-relaxed bg-surface/50 p-3 rounded-lg border border-line/50">
+                                                    {evento.descripcion}
+                                                </p>
+                                            )}
                                         </div>
                                     ))
                                 ) : (

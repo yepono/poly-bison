@@ -98,6 +98,40 @@ export function formatFechaHora(fecha) {
     return new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
+// ---------------------------------------------------------------- formatos de fecha y hora
+// Toda la app usa estos (es-MX). Ejemplos:
+//   formatFecha       "20 de noviembre de 2026"     (registro, perfil)
+//   formatFechaHora   "20 nov 2026, 9:30 a.m."      (publicaciones, bitácora, eventos)
+//   formatDia         "jue, 26 de nov de 2026"      (reservaciones: fecha sin hora)
+//   formatHora        "09:00"                       (bloques de horario; quita los segundos)
+
+// "AAAA-MM-DD" -> "jue, 26 nov 2026"
+export function formatDia(iso) {
+    if (!iso) return "";
+    const [a, m, d] = String(iso).slice(0, 10).split("-").map(Number);
+    const fecha = new Date(a, m - 1, d);
+    if (Number.isNaN(fecha.getTime())) return String(iso);
+    return fecha.toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).replace(/\./g, "");
+}
+
+// "09:00:00" -> "09:00"
+export function formatHora(hora) {
+    const m = String(hora ?? "").match(/^(\d{1,2}):(\d{2})/);
+    return m ? `${m[1].padStart(2, "0")}:${m[2]}` : String(hora ?? "");
+}
+
+export const formatRangoHoras = (inicio, fin) => `${formatHora(inicio)} – ${formatHora(fin)}`;
+
+// Inicio y fin de un evento: si es el mismo día no repite la fecha
+export function formatRangoFechaHora(inicio, fin) {
+    const a = new Date(String(inicio).replace(" ", "T"));
+    const b = new Date(String(fin).replace(" ", "T"));
+    if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return "";
+    const hora = (d) => d.toLocaleTimeString("es-MX", { hour: "numeric", minute: "2-digit" });
+    if (a.toDateString() === b.toDateString()) return `${formatFechaHora(inicio)} – ${hora(b)}`;
+    return `${formatFechaHora(inicio)} – ${formatFechaHora(fin)}`;
+}
+
 // Publicación de la API (vw_feed_publicaciones) -> forma que usan PostCard y Feed
 export function mapPost(p) {
     return {
@@ -148,9 +182,8 @@ export function mapProducto(p) {
         stock: p.stock,
         idCategoria: p.id_categoria,
         categoria: p.categoria,
-        imagen: p.tiene_foto
-            ? fileUrl("productos", "foto", p.id_producto)
-            : `https://ui-avatars.com/api/?name=${encodeURIComponent(p.nombre)}&size=512&background=003366&color=fff`,
+        // Sin foto -> null; la tienda dibuja un marcador local (no se envía el nombre a terceros)
+        imagen: p.tiene_foto ? fileUrl("productos", "foto", p.id_producto) : null,
         tieneFoto: p.tiene_foto,
         descripcionCorta: p.descripcion || "",
         descripcionLarga: p.descripcion || "",

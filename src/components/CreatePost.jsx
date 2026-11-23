@@ -8,7 +8,7 @@ const CONTENIDO_MAX = 600;
 
 // Crear publicación, o editarla si recibe `post` (solo el autor).
 // onDone(post) se llama al guardar correctamente.
-function CreatePost({ post = null, onDone }) {
+function CreatePost({ post = null, onDone, enModal = false, autoFocus = false }) {
     const { createPost, updatePost } = useAppData();
     const editando = Boolean(post);
     const [etiquetas, setEtiquetas] = useState([]);
@@ -119,7 +119,7 @@ function CreatePost({ post = null, onDone }) {
     };
 
     return (
-        <div className="bg-surface/50 border border-line rounded-2xl p-6 shadow-card mb-8">
+        <div className={enModal ? "p-6" : "card mb-8"}>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
 
 
@@ -155,6 +155,7 @@ function CreatePost({ post = null, onDone }) {
                         maxLength={TITULO_MAX}
                         required
                         aria-label="Título de la publicación"
+                        autoFocus={autoFocus}
                         onChange={(e) => setTitulo(e.target.value)}
                         className={`w-full bg-transparent font-bold focus:outline-none relative z-10 transition-all
                             ${previewURL
@@ -192,15 +193,15 @@ function CreatePost({ post = null, onDone }) {
 
                     <div className="flex items-center gap-4 w-full sm:w-auto">
 
-                        <label className="cursor-pointer text-ink-soft hover:text-accent transition-colors flex items-center gap-2 p-2 rounded-lg hover:bg-brand/50">
+                        <label className="cursor-pointer text-ink-soft hover:text-accent transition-colors flex items-center gap-2 p-2 rounded-lg hover:bg-accent/10 focus-within:outline-2 focus-within:outline-accent">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            <span className="text-sm font-semibold hidden sm:inline">Añadir Foto</span>
-                            <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImagen} />
+                            <span className="text-sm font-semibold hidden sm:inline">Añadir foto</span>
+                            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={handleImagen} />
                         </label>
 
-                        <button type="button" onClick={alternarVideo} aria-pressed={mostrarVideo} className="cursor-pointer text-ink-soft hover:text-accent transition-colors flex items-center gap-2 p-2 rounded-lg hover:bg-brand/50">
+                        <button type="button" onClick={alternarVideo} aria-pressed={mostrarVideo} className="cursor-pointer text-ink-soft hover:text-accent transition-colors flex items-center gap-2 p-2 rounded-lg hover:bg-accent/10">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
@@ -213,11 +214,12 @@ function CreatePost({ post = null, onDone }) {
                                 onChange={(val) => setEtiqueta(val)}
                                 options={etiquetas.map((item) => ({ value: String(item.id_etiqueta), label: item.nombre }))}
                                 placeholder="Etiqueta"
+                                ariaLabel="Etiqueta de la publicación"
                             />
                         </div>
                     </div>
 
-                    <button type="submit" disabled={!contenido.trim() || !titulo.trim() || enviando} className="min-h-11 bg-linear-to-r from-brand to-danger-solid hover:from-brand-hover hover:to-danger-solid-hover text-on-brand font-bold py-2 px-6 rounded-lg transition-colors w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-50">
+                    <button type="submit" disabled={!contenido.trim() || !titulo.trim() || enviando} className="action-button w-full px-6 sm:w-auto">
                         {enviando ? "Guardando..." : editando ? "Guardar cambios" : "Publicar"}
                     </button>
                 </div>

@@ -5,18 +5,22 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAppData } from "../context/AppDataContext";
 import { youtubeId } from "../api/client";
 import CreatePost from "./CreatePost";
+import Avatar from "./Avatar";
+import { useDialogos } from "./Dialogos";
 
 // onPostChange / onPostDeleted: para listas que no son el feed (perfil, detalle)
 function PostCard({ post, onPostChange, onPostDeleted }) {
-    const { autor, avatar, fecha, titulo, contenido, imagen, videoUrl, likes, comentarios, liked } = post;
+    const { autor, avatar, fecha, titulo, contenido, imagen, videoUrl, likes, comentarios, liked, etiqueta, etiquetaColor } = post;
     const { toggleLike, deletePost, user } = useAppData();
     const location = useLocation();
     const navigate = useNavigate();
+    const { confirmar, avisar } = useDialogos();
     const [editando, setEditando] = useState(false);
     const [procesando, setProcesando] = useState(false);
     const esAutor = user.id === post.authorId;
     const esStaff = user.rol === "Administrador" || user.rol === "Moderador";
     const videoId = youtubeId(videoUrl);
+    const rutaAutor = esAutor ? "/perfil" : `/perfil/${post.authorId}`;
 
     const handleLike = async () => {
         if (procesando) return;
@@ -25,20 +29,27 @@ function PostCard({ post, onPostChange, onPostDeleted }) {
             const resultado = await toggleLike(post.id);
             onPostChange?.({ ...post, ...resultado });
         } catch (err) {
-            window.alert(err.message);
+            avisar(err.message, "error");
         } finally {
             setProcesando(false);
         }
     };
 
     const handleDelete = async () => {
-        if (!window.confirm("¿Eliminar esta publicación?")) return;
+        const ok = await confirmar({
+            titulo: "¿Eliminar esta publicación?",
+            mensaje: esAutor ? "Se quitará del feed junto con sus comentarios." : `Se quitará del feed la publicación de @${autor}.`,
+            accion: "Eliminar",
+            peligro: true,
+        });
+        if (!ok) return;
         try {
             await deletePost(post.id);
             onPostDeleted?.(post.id);
+            avisar("Publicación eliminada.", "exito");
             if (location.pathname.startsWith("/publicacion/")) navigate("/feed", { replace: true });
         } catch (err) {
-            window.alert(err.message);
+            avisar(err.message, "error");
         }
     };
 
@@ -51,7 +62,7 @@ function PostCard({ post, onPostChange, onPostDeleted }) {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-surface/50 border border-line rounded-2xl shadow-card mb-6 overflow-hidden"
+            className="bg-surface/50 border border-line rounded-2xl shadow-card overflow-hidden"
         >
             {imagen && (
                 <div className="relative w-full h-64 sm:h-72">
@@ -77,19 +88,21 @@ function PostCard({ post, onPostChange, onPostDeleted }) {
                     </h2>
                 )}
 
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                        <img
-                            src={avatar || "https://ui-avatars.com/api/?name=" + encodeURIComponent(autor) + "&background=003366&color=fff"}
-                            alt={autor}
-                            className="w-10 h-10 rounded-full object-cover border border-line"
-                        />
-                        <div>
-                            <h3 className="text-sm font-bold text-ink">{autor}</h3>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                    <Link to={rutaAutor} className="group flex min-w-0 items-center gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                        <Avatar src={avatar} nombre={autor} decorativo className="h-10 w-10 border border-line" />
+                        <div className="min-w-0">
+                            <h3 className="truncate text-sm font-bold text-ink group-hover:text-accent group-hover:underline">{autor}</h3>
                             <p className="text-xs text-ink-muted">{fecha}</p>
                         </div>
-                    </div>
-
+                    </Link>
+                    {/* La etiqueta que se eligió al publicar (antes no se mostraba) */}
+                    {etiqueta && (
+                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-field px-2.5 py-1 text-2xs font-semibold uppercase tracking-wider text-ink-soft">
+                            <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ backgroundColor: etiquetaColor || "var(--accent)" }} />
+                            {etiqueta}
+                        </span>
+                    )}
                 </div>
 
                 <p className="text-ink-soft text-sm sm:text-base whitespace-pre-wrap mb-6">
@@ -124,7 +137,7 @@ function PostCard({ post, onPostChange, onPostDeleted }) {
                         <span className="text-sm font-semibold">{comentarios ?? 0}</span>
                     </Link>
                     {esAutor && <button type="button" onClick={() => setEditando(true)} className="ml-auto min-h-11 rounded-lg px-3 text-sm font-semibold text-accent transition-colors hover:bg-brand/10" aria-label={`Editar publicación ${titulo || ""}`}>Editar</button>}
-                    {(esAutor || esStaff) && <button type="button" onClick={handleDelete} className={`${esAutor ? "" : "ml-auto "}min-h-11 rounded-lg px-3 text-sm font-semibold text-danger transition-colors hover:bg-danger/10`} aria-label={`Eliminar publicación de ${autor}`}>Eliminar publicación</button>}
+                    {(esAutor || esStaff) && <button type="button" onClick={handleDelete} className={`${esAutor ? "" : "ml-auto "}min-h-11 rounded-lg px-3 text-sm font-semibold text-danger transition-colors hover:bg-danger/10`} aria-label={`Eliminar publicación de ${autor}`}>Eliminar</button>}
                 </div>
             </div>
 

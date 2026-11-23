@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import PostCard from "../components/PostCard";
+import Avatar from "../components/Avatar";
 import { useAppData } from "../context/AppDataContext";
 import { api, mapComentario, mapPost } from "../api/client";
+import { useDialogos } from "../components/Dialogos";
 
 const COMENTARIO_MAX = 500;
 
 function Publicacion({ modal = false }) {
     const { postId } = useParams();
+    const { confirmar } = useDialogos();
     const { user, posts, setPostCommentCount } = useAppData();
     const [comment, setComment] = useState("");
     const [enviando, setEnviando] = useState(false);
@@ -100,7 +103,7 @@ function Publicacion({ modal = false }) {
     };
 
     const deleteComment = async (item) => {
-        if (!window.confirm("¿Eliminar este comentario?")) return;
+        if (!(await confirmar({ titulo: "¿Eliminar este comentario?", accion: "Eliminar", peligro: true }))) return;
         try {
             await api("comentarios", "eliminar", { method: "POST", body: { id_comentario: item.id } });
             const lista = listaComentarios.filter((comentario) => comentario.id !== item.id);
@@ -140,13 +143,13 @@ function Publicacion({ modal = false }) {
                 <form onSubmit={submitComment} className="mt-5 flex flex-col gap-3 sm:flex-row">
                     <label htmlFor="comment-input" className="sr-only">Escribe un comentario</label>
                     <textarea id="comment-input" value={comment} onChange={(event) => setComment(event.target.value)} maxLength={COMENTARIO_MAX} rows={2} placeholder="Escribe un comentario..." className="form-input min-h-12 flex-1 resize-y" />
-                    <button type="submit" disabled={!comment.trim() || enviando} className="action-button disabled:cursor-not-allowed disabled:opacity-50">{enviando ? "Enviando..." : "Comentar"}</button>
+                    <button type="submit" disabled={!comment.trim() || enviando} className="action-button">{enviando ? "Enviando..." : "Comentar"}</button>
                 </form>
                 {(errorComentario || comentarios?.error) && <p role="alert" className="mt-3 text-sm text-danger">{errorComentario || comentarios.error}</p>}
                 <div className="mt-6 divide-y divide-line">
                     {listaComentarios.length ? listaComentarios.map((item) => (
                         <article key={item.id} className="flex gap-3 py-4 first:pt-0">
-                            <img src={item.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.alias || item.autor)}&background=003366&color=fff`} alt="" className="h-10 w-10 shrink-0 rounded-full border border-line object-cover" />
+                            <Avatar src={item.avatar} nombre={item.alias || item.autor} decorativo className="h-10 w-10 border border-line" />
                             <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-baseline justify-between gap-2">
                                 <h2 className="font-semibold text-ink">@{item.alias || item.autor}</h2>

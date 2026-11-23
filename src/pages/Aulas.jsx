@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppData } from "../context/AppDataContext";
-import { api, hoyISO, MATRICULA } from "../api/client";
+import { api, formatDia, formatHora, formatRangoHoras, hoyISO, MATRICULA } from "../api/client";
+import { useDialogos } from "../components/Dialogos";
+import PageHeader from "../components/PageHeader";
+import Pasos from "../components/Pasos";
+import SelectorFecha, { fechaLarga } from "../components/SelectorFecha";
+
 
 // Íconos de las tarjetas de aula (se asignan en orden)
 const ICONOS_AULA = [
@@ -14,6 +19,7 @@ const reservaVacia = { aula: null, fecha: "", bloque: null };
 
 function Aulas() {
     const { user } = useAppData();
+    const { confirmar, avisar } = useDialogos();
     const [paso, setPaso] = useState(1);
     const [aulas, setAulas] = useState([]);
     const [reserva, setReserva] = useState(reservaVacia);
@@ -147,9 +153,17 @@ function Aulas() {
     };
 
     const cancelarReservacion = async (item) => {
-        if (!window.confirm(`¿Cancelar la reservación de ${item.aula} el ${item.fecha_reserva} (${item.hora_inicio} - ${item.hora_fin})?`)) return;
+        const ok = await confirmar({
+            titulo: "¿Cancelar la reservación?",
+            mensaje: `${item.aula} · ${fechaLarga(item.fecha_reserva)}, de ${formatHora(item.hora_inicio)} a ${formatHora(item.hora_fin)}. El horario quedará libre para otros estudiantes.`,
+            accion: "Cancelar reservación",
+            cancelar: "Conservar",
+            peligro: true,
+        });
+        if (!ok) return;
         try {
             await api("reservaciones", "cancelar", { method: "POST", body: { id_reservacion: item.id_reservacion } });
+            avisar("Reservación cancelada.", "exito");
             cargarMisReservaciones();
             if (reserva.aula && reserva.fecha) cargarDisponibilidad(reserva.aula, reserva.fecha);
         } catch (err) {
@@ -158,25 +172,10 @@ function Aulas() {
     };
 
     return (
-        <div className="w-full max-w-4xl mx-auto">
-
-
-            <div className="mb-8 text-center">
-                <h1 className="theme-glow mb-4 text-3xl font-bold text-ink">
-                    Reserva de Aulas
-                </h1>
-
-                <div className="flex items-center justify-center gap-2">
-                    {[1, 2, 3].map((num) => (
-                        <div key={num} className="flex items-center gap-2">
-                            <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${paso >= num ? 'bg-brand text-on-brand shadow-glow-brand' : 'bg-surface border border-line text-ink-muted'}`}>
-                                {num}
-                            </span>
-                            {num < 3 && <span className={`h-0.5 w-8 transition-colors ${paso > num ? 'bg-brand' : 'bg-line'}`}></span>}
-                        </div>
-                    ))}
-                </div>
-            </div>
+        <div className="pagina-media">
+            <PageHeader titulo="Reserva de aulas" subtitulo="Aparta un aula por una hora para estudiar o trabajar en equipo.">
+                <Pasos actual={paso} />
+            </PageHeader>
 
             {error && <p role="alert" className="mb-4 text-center text-sm text-danger">{error}</p>}
 
@@ -184,9 +183,9 @@ function Aulas() {
 
                 {paso === 1 && (
                     <motion.div key="paso1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-                        <div className="bg-surface/50 border border-line rounded-2xl p-6 shadow-lg mb-6">
+                        <div className="card">
 
-                            <h2 className="text-xl font-bold text-ink mb-4">1. Selecciona un Aula</h2>
+                            <h2 className="text-xl font-bold text-ink mb-4">1. Selecciona un aula</h2>
 
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                                 {aulas.map((aula, index) => (
@@ -209,17 +208,15 @@ function Aulas() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div>
                                     <label htmlFor="fecha-reserva" className="text-sm font-semibold text-ink-soft mb-1.5 block">Fecha</label>
-                                    <input
+                                    <SelectorFecha
                                         id="fecha-reserva"
-                                        type="date"
                                         min={hoyISO()}
                                         value={reserva.fecha}
-                                        onChange={(e) => { setReserva({ ...reserva, fecha: e.target.value, bloque: null }); setError(""); }}
-                                        className="w-full p-2.5 border border-line rounded-lg bg-field text-ink focus:outline-none focus:ring-2 focus:ring-accent"
+                                        onChange={(fecha) => { setReserva({ ...reserva, fecha, bloque: null }); setError(""); }}
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-sm font-semibold text-ink-soft mb-1.5 block">Horario (Max 1 hora)</label>
+                                    <label className="text-sm font-semibold text-ink-soft mb-1.5 block">Horario (máx. 1 hora)</label>
                                     {!claveDisponibilidad && <p className="text-sm text-ink-muted">Selecciona un aula y una fecha para ver los horarios.</p>}
                                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
                                         {horarios.map(bloque => (
@@ -231,7 +228,7 @@ function Aulas() {
                                                 onClick={() => setReserva({ ...reserva, bloque: bloque.id_bloque })}
                                                 className={`py-2 text-sm rounded-lg border transition-colors disabled:cursor-not-allowed disabled:opacity-40 disabled:line-through ${reserva.bloque === bloque.id_bloque ? 'bg-accent text-canvas font-bold border-accent' : 'bg-field border-line text-ink-soft hover:border-ink-muted'}`}
                                             >
-                                                {bloque.hora_inicio} - {bloque.hora_fin}
+                                                {formatRangoHoras(bloque.hora_inicio, bloque.hora_fin)}
                                             </button>
                                         ))}
                                     </div>
@@ -242,7 +239,7 @@ function Aulas() {
                                 type="button"
                                 disabled={!reserva.aula || !reserva.fecha || !reserva.bloque}
                                 onClick={continuar}
-                                className="mt-8 w-full bg-brand hover:bg-brand-hover text-on-brand font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="action-button mt-8 w-full"
                             >
                                 Continuar
                             </button>
@@ -253,7 +250,7 @@ function Aulas() {
 
                 {paso === 2 && (
                     <motion.div key="paso2" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-                        <div className="bg-surface/50 border border-line rounded-2xl p-6 shadow-lg mb-6">
+                        <div className="card">
                             <h2 className="text-xl font-bold text-ink mb-2">2. Asistentes</h2>
                             <p className="text-ink-muted text-sm mb-6">Tú quedas registrado como titular. Agrega a los estudiantes que te acompañarán (máximo {maxAcompanantes}).</p>
 
@@ -271,7 +268,7 @@ function Aulas() {
                                 {asistentes.map((asistente, index) => (
                                     <div key={index} className="flex flex-col sm:flex-row gap-4 items-end bg-field p-4 rounded-lg border border-line">
                                         <div className="flex-1 w-full">
-                                            <label htmlFor={`asistente-nombre-${index}`} className="text-xs font-semibold text-ink-soft mb-1 block">Nombre Completo</label>
+                                            <label htmlFor={`asistente-nombre-${index}`} className="text-xs font-semibold text-ink-soft mb-1 block">Nombre completo</label>
                                             <input
                                                 id={`asistente-nombre-${index}`}
                                                 type="text"
@@ -307,8 +304,8 @@ function Aulas() {
                             )}
 
                             <div className="flex gap-4 mt-8">
-                                <button type="button" onClick={() => { setError(""); setPaso(1); }} className="flex-1 border border-line text-ink-soft font-bold py-3 px-4 rounded-lg hover:bg-field transition-colors">Atrás</button>
-                                <button type="button" disabled={enviando} onClick={generarTicket} className="flex-1 bg-brand hover:bg-brand-hover text-on-brand font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{enviando ? "Reservando..." : "Generar Ticket"}</button>
+                                <button type="button" onClick={() => { setError(""); setPaso(1); }} className="action-button action-button-secondary flex-1">Atrás</button>
+                                <button type="button" disabled={enviando} onClick={generarTicket} className="action-button flex-1">{enviando ? "Reservando..." : "Generar ticket"}</button>
                             </div>
                         </div>
                     </motion.div>
@@ -316,11 +313,11 @@ function Aulas() {
 
                 {paso === 3 && ticket && (
                     <motion.div key="paso3" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-                        <div className="bg-surface/50 border border-accent/50 rounded-2xl p-0 shadow-glow mb-6 overflow-hidden relative">
+                        <div className="relative overflow-hidden rounded-2xl border border-accent/50 bg-surface/50 shadow-glow">
 
                             <div className="bg-linear-to-r from-brand to-accent p-6 text-center">
-                                <h2 className="text-2xl font-bold text-on-brand tracking-widest uppercase">Ticket de Acceso</h2>
-                                <p className="text-on-brand/80 text-sm">Reserva Confirmada · <span className="font-mono font-bold">{ticket.reservacion.codigo_ticket}</span></p>
+                                <h2 className="text-2xl font-bold text-on-brand tracking-widest uppercase">Ticket de acceso</h2>
+                                <p className="text-on-brand/80 text-sm">Reserva confirmada · <span className="font-mono font-bold">{ticket.reservacion.codigo_ticket}</span></p>
                             </div>
 
                             <div className="p-6">
@@ -331,13 +328,13 @@ function Aulas() {
                                     </div>
                                     <div className="text-right">
                                         <p className="text-ink-muted text-xs uppercase tracking-wider">Fecha y Hora</p>
-                                        <p className="text-ink font-bold text-lg">{ticket.reservacion.fecha_reserva}</p>
-                                        <p className="text-accent font-bold">{ticket.reservacion.hora_inicio} - {ticket.reservacion.hora_fin}</p>
+                                        <p className="text-ink font-bold text-lg">{formatDia(ticket.reservacion.fecha_reserva)}</p>
+                                        <p className="text-accent font-bold">{formatRangoHoras(ticket.reservacion.hora_inicio, ticket.reservacion.hora_fin)}</p>
                                     </div>
                                 </div>
 
                                 <div className="mb-6 border-b border-line pb-6">
-                                    <p className="text-ink-muted text-xs uppercase tracking-wider mb-3">Asistentes Autorizados</p>
+                                    <p className="text-ink-muted text-xs uppercase tracking-wider mb-3">Asistentes autorizados</p>
                                     <div className="space-y-2">
                                         {ticket.asistentes.map((asistente) => (
                                             <div key={asistente.matricula} className="flex justify-between items-center bg-field p-3 rounded-lg border border-line">
@@ -360,7 +357,7 @@ function Aulas() {
                                 </div>
 
                                 <div>
-                                    <p className="text-ink-muted text-xs uppercase tracking-wider mb-2">Reglas del Aula</p>
+                                    <p className="text-ink-muted text-xs uppercase tracking-wider mb-2">Reglas del aula</p>
                                     <ul className="list-disc list-inside text-sm text-ink-soft space-y-1">
                                         <li>Prohibido introducir alimentos y bebidas.</li>
                                         <li>Mantener el tono de voz moderado.</li>
@@ -380,7 +377,7 @@ function Aulas() {
             </AnimatePresence>
 
             {/* Mis reservaciones (Q2-A) */}
-            <section className="bg-surface/50 border border-line rounded-2xl p-6 shadow-lg mt-8">
+            <section className="card">
                 <h2 className="text-xl font-bold text-ink mb-4">Mis reservaciones</h2>
                 {misReservaciones === null && <p className="text-sm text-ink-muted" aria-busy="true">Cargando...</p>}
                 {misReservaciones?.length === 0 && <p className="text-sm text-ink-muted">Aún no tienes reservaciones.</p>}
@@ -390,7 +387,7 @@ function Aulas() {
                         return (
                             <div key={item.id_reservacion} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-field p-4 rounded-lg border border-line">
                                 <div>
-                                    <p className="font-bold text-ink">{item.aula} · {item.fecha_reserva} · {item.hora_inicio} - {item.hora_fin}</p>
+                                    <p className="font-bold text-ink">{item.aula} · {formatDia(item.fecha_reserva)} · {formatRangoHoras(item.hora_inicio, item.hora_fin)}</p>
                                     <p className="text-xs text-ink-muted">Ticket <span className="font-mono">{item.codigo_ticket}</span> · {item.total_asistentes} asistente(s) · {item.estado}</p>
                                 </div>
                                 {cancelable && (

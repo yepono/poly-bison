@@ -1,21 +1,85 @@
 // Secciones del panel de administración conectadas a la API (Paso 5).
 // Mismo marcado y clases que tenían en Admin.jsx; solo cambia el origen de datos.
 import { useCallback, useEffect, useState } from "react";
-import { api, formatPrecio, mapProducto, parseFechaMySQL, toDateTimeLocal, validarImagen } from "../api/client";
+import { Link } from "react-router-dom";
+import { useDialogos } from "./Dialogos";
+import CustomSelect from "./CustomSelect";
+import { api, formatDia, formatFechaHora, formatHora, formatPrecio, formatRangoFechaHora, formatRangoHoras, mapProducto, toDateTimeLocal, validarImagen } from "../api/client";
 
 const EVENT_TYPES = ["Académico", "Examen", "Asueto", "Cultural", "Deportivo"];
 
-function Metric({ label, value, detail, tone = "blue" }) {
-    return <article className={`admin-metric admin-metric-${tone}`}><p>{label}</p><strong>{value}</strong><span>{detail}</span></article>;
+// Franja de cifras neutra (misma idea que las cifras del perfil). Reemplaza las tarjetas con
+// borde de color, que no se usaban en ningún otro lugar de la app.
+export function FranjaCifras({ cifras, cargando = false, etiqueta }) {
+    return (
+        <dl className="stat-strip" aria-label={etiqueta} aria-busy={cargando || undefined}>
+            {cifras.map(({ etiqueta: nombre, valor, detalle }) => (
+                <div key={nombre} title={detalle}>
+                    <dt>{nombre}</dt>
+                    <dd>{cargando ? <span className="inline-block h-7 w-10 animate-pulse rounded bg-field align-middle" aria-hidden="true" /> : valor}</dd>
+                </div>
+            ))}
+        </dl>
+    );
+}
+
+function Tarjeta({ titulo, detalle, acciones, children }) {
+    return (
+        <section className="settings-section">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h2 className="text-lg font-bold text-ink">{titulo}</h2>
+                    {detalle && <p className="mt-0.5 text-sm text-ink-muted">{detalle}</p>}
+                </div>
+                {acciones}
+            </div>
+            <div className="mt-5">{children}</div>
+        </section>
+    );
+}
+
+function FilasCargando({ filas = 4 }) {
+    return (
+        <div className="space-y-4" aria-hidden="true">
+            {Array.from({ length: filas }, (_, i) => (
+                <div key={i} className="space-y-2">
+                    <div className="h-3 w-1/3 animate-pulse rounded bg-field" />
+                    <div className="h-3 animate-pulse rounded bg-field" style={{ width: `${85 - i * 15}%` }} />
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// Estados de cuenta -> colores de estado (reservados para esto), siempre con etiqueta y cifra
+const ESTADOS = [
+    { campo: "usuarios_activos", nombre: "Aprobados", color: "bg-success" },
+    { campo: "pendientes", nombre: "Pendientes", color: "bg-warning" },
+    { campo: "rechazados", nombre: "Rechazados", color: "bg-ink-muted" },
+    { campo: "baneados", nombre: "Baneados", color: "bg-danger" },
+];
+
+// Barra horizontal de una sola serie con etiqueta directa del valor
+function BarraValor({ valor, maximo, texto }) {
+    const ancho = maximo ? Math.max((valor / maximo) * 100, valor ? 2 : 0) : 0;
+    return (
+        <div className="flex items-center gap-3">
+            <div className="h-2.5 flex-1 rounded-full bg-field">
+                <div className="h-2.5 rounded-full bg-accent" style={{ width: `${ancho}%` }} />
+            </div>
+            <span className="w-16 shrink-0 text-right text-sm font-semibold tabular-nums text-ink">{texto ?? valor}</span>
+        </div>
+    );
 }
 
 // ---------- Resumen / Dashboard (solo Administrador, Paso 6) ----------
 // Datos: reportes.php -> vw_resumen_usuarios, vw_usuarios_mas_activos,
 // vw_publicaciones_mayor_interaccion
-export function AdminResumen({ setNotice }) {
+export function AdminResumen({ setNotice, onIrA }) {
     const [resumen, setResumen] = useState(null);
-    const [masActivos, setMasActivos] = useState([]);
-    const [mayorInteraccion, setMayorInteraccion] = useState([]);
+    const [masActivos, setMasActivos] = useState(null);
+    const [mayorInteraccion, setMayorInteraccion] = useState(null);
+    const [fallo, setFallo] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -30,65 +94,96 @@ export function AdminResumen({ setNotice }) {
                 setMasActivos(activos.usuarios);
                 setMayorInteraccion(interaccion.publicaciones);
             })
-            .catch((err) => { if (!cancelled) setNotice(err.message); });
+            .catch((err) => { if (!cancelled) { setFallo(true); setNotice(err.message); } });
         return () => { cancelled = true; };
     }, [setNotice]);
 
-    const r = resumen ?? {};
-    const valor = (campo) => (resumen ? r[campo] : "—");
+    if (fallo) {
+        return <p role="alert" className="rounded-xl border border-danger/40 bg-danger/10 p-4 text-sm text-danger">No se pudo cargar el resumen. Recarga la página para intentarlo de nuevo.</p>;
+    }
 
-    // Gráfica (R2-B): una sola serie -> un solo color, sin leyenda; etiqueta directa con el valor
-    const porEstado = [
-        { estado: "Aprobados", total: r.usuarios_activos ?? 0 },
-        { estado: "Pendientes", total: r.pendientes ?? 0 },
-        { estado: "Rechazados", total: r.rechazados ?? 0 },
-        { estado: "Baneados", total: r.baneados ?? 0 },
-    ];
+    const cargando = resumen === null;
+    const r = resumen ?? {};
+    const num = (campo) => Number(r[campo]) || 0;
+
+    const porEstado = ESTADOS.map((e) => ({ ...e, total: num(e.campo) }));
     const totalUsuarios = porEstado.reduce((suma, item) => suma + item.total, 0);
-    const maximo = Math.max(1, ...porEstado.map((item) => item.total));
+    const pct = (n) => (totalUsuarios ? Math.round((n / totalUsuarios) * 100) : 0);
+    const maxPosts = Math.max(1, ...(masActivos ?? []).map((u) => Number(u.total_publicaciones) || 0));
+    const interaccion = (p) => (Number(p.total_likes) || 0) + (Number(p.total_comentarios) || 0);
+    const maxInteraccion = Math.max(1, ...(mayorInteraccion ?? []).map(interaccion));
 
     return <>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Metric label="Alumnos registrados" value={valor("total_estudiantes")} detail="Cuentas estudiantiles" />
-            <Metric label="Usuarios activos" value={valor("usuarios_activos")} detail="Estatus aprobado" tone="green" />
-            <Metric label="Pendientes" value={valor("pendientes")} detail="Requieren revisión" tone="amber" />
-            <Metric label="Baneados" value={valor("baneados")} detail="Cuentas restringidas" tone="red" />
-            <Metric label="Administradores" value={valor("administradores")} detail="Admin y moderación" tone="dark" />
-            <Metric label="Publicaciones activas" value={valor("publicaciones_activas")} detail="Visibles en el feed" />
-            <Metric label="Reservaciones activas" value={valor("reservaciones_activas")} detail="Aulas apartadas" />
-        </div>
+        <FranjaCifras etiqueta="Cifras generales" cargando={cargando} cifras={[
+            { etiqueta: "Alumnos", valor: num("total_estudiantes"), detalle: "Cuentas estudiantiles" },
+            { etiqueta: "Activos", valor: num("usuarios_activos"), detalle: "Estatus aprobado" },
+            { etiqueta: "Pendientes", valor: num("pendientes"), detalle: "Requieren revisión" },
+            { etiqueta: "Baneados", valor: num("baneados"), detalle: "Cuentas restringidas" },
+            { etiqueta: "Staff", valor: num("administradores"), detalle: "Administradores y moderadores" },
+            { etiqueta: "Publicaciones", valor: num("publicaciones_activas"), detalle: "Visibles en el feed" },
+            { etiqueta: "Reservaciones", valor: num("reservaciones_activas"), detalle: "Aulas apartadas" },
+        ]} />
 
-        <section className="settings-section">
-            <h2 className="text-lg font-bold text-ink">Usuarios por estado</h2>
-            <p className="mt-1 text-sm text-ink-muted">{totalUsuarios} cuentas (sin incluir eliminadas)</p>
-            <div className="mt-5 flex flex-col gap-3" aria-hidden="true">
-                {porEstado.map((item) => {
-                    const porcentaje = totalUsuarios ? Math.round((item.total / totalUsuarios) * 100) : 0;
-                    return (
-                        <div key={item.estado} className="group flex items-center gap-3" title={`${item.estado}: ${item.total} (${porcentaje}%)`}>
-                            <span className="w-24 shrink-0 text-sm text-ink-soft">{item.estado}</span>
-                            <div className="relative h-4 flex-1">
-                                <div
-                                    className="h-4 rounded-r bg-accent transition-opacity group-hover:opacity-80"
-                                    style={{ width: item.total ? `max(${(item.total / maximo) * 100}%, 4px)` : 0 }}
-                                />
-                            </div>
-                            <span className="w-16 shrink-0 text-right text-sm font-semibold text-ink">{item.total}<span className="ml-1 text-xs font-normal text-ink-muted">{porcentaje}%</span></span>
-                        </div>
-                    );
-                })}
+        {!cargando && num("pendientes") > 0 && (
+            <div className="flex flex-col gap-3 rounded-2xl border border-warning/40 bg-warning/10 p-4 sm:flex-row sm:items-center">
+                <svg className="h-5 w-5 shrink-0 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l2.5 2.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                <p className="flex-1 text-sm text-ink"><b>{num("pendientes")} {num("pendientes") === 1 ? "cuenta espera" : "cuentas esperan"} revisión.</b> Apruébalas o recházalas desde Estudiantes.</p>
+                {onIrA && <button type="button" onClick={() => onIrA("Estudiantes", "Pendiente")} className="action-button text-sm">Revisar ahora</button>}
             </div>
-            {/* Vista de tabla para lectores de pantalla */}
-            <table className="sr-only">
-                <caption>Usuarios por estado</caption>
-                <thead><tr><th>Estado</th><th>Usuarios</th><th>Porcentaje</th></tr></thead>
-                <tbody>{porEstado.map((item) => <tr key={item.estado}><td>{item.estado}</td><td>{item.total}</td><td>{totalUsuarios ? Math.round((item.total / totalUsuarios) * 100) : 0}%</td></tr>)}</tbody>
-            </table>
-        </section>
+        )}
+
+        <Tarjeta titulo="Usuarios por estado" detalle={cargando ? "Cargando..." : `${totalUsuarios} cuentas (sin incluir eliminadas)`}>
+            {cargando ? <FilasCargando filas={1} /> : <>
+                {/* Barra 100% apilada: proporción de cada estado; separación de 2px entre tramos */}
+                <div className="flex h-4 w-full gap-0.5 overflow-hidden rounded-full bg-field" aria-hidden="true">
+                    {porEstado.filter((e) => e.total).map((e) => (
+                        <div key={e.campo} className={`${e.color} h-full first:rounded-l-full last:rounded-r-full`} style={{ width: `${pct(e.total)}%`, minWidth: 4 }} title={`${e.nombre}: ${e.total} (${pct(e.total)}%)`} />
+                    ))}
+                </div>
+                <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {porEstado.map((e) => (
+                        <li key={e.campo} className="flex items-start gap-2">
+                            <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${e.color}`} aria-hidden="true" />
+                            <span>
+                                <span className="block text-sm text-ink-soft">{e.nombre}</span>
+                                <span className="text-lg font-bold tabular-nums text-ink">{e.total}</span>
+                                <span className="ml-1.5 text-xs text-ink-muted">{pct(e.total)}%</span>
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            </>}
+        </Tarjeta>
 
         <div className="grid gap-5 xl:grid-cols-2">
-            <section className="settings-section"><h2 className="text-lg font-bold text-ink">Usuarios más activos</h2><div className="mt-4 divide-y divide-line">{masActivos.map((record, index) => <div key={record.id_usuario} className="flex items-center justify-between gap-4 py-3"><span className="min-w-0 truncate text-ink"><b className="mr-3 text-accent">0{index + 1}</b>{record.alias}</span><span className="shrink-0 font-bold text-ink">{record.total_publicaciones} posts</span></div>)}{!masActivos.length && <p className="py-3 text-sm text-ink-muted">Aún no hay actividad.</p>}</div></section>
-            <section className="settings-section"><h2 className="text-lg font-bold text-ink">Publicaciones con mayor interacción</h2><div className="mt-4 divide-y divide-line">{mayorInteraccion.map((post) => <div key={post.id_publicacion} className="py-3"><p className="line-clamp-1 font-semibold text-ink">{post.titulo}</p><p className="mt-1 text-sm text-ink-muted">@{post.alias} · {post.total_likes} likes · {post.total_comentarios} comentarios</p></div>)}{!mayorInteraccion.length && <p className="py-3 text-sm text-ink-muted">Aún no hay publicaciones.</p>}</div></section>
+            <Tarjeta titulo="Usuarios más activos" detalle="Por número de publicaciones">
+                {masActivos === null ? <FilasCargando /> : !masActivos.length ? <p className="text-sm text-ink-muted">Aún no hay actividad.</p> : (
+                    <ol className="space-y-4">
+                        {masActivos.map((u, i) => (
+                            <li key={u.id_usuario}>
+                                <div className="mb-1 flex items-baseline gap-2 text-sm">
+                                    <span className="w-5 shrink-0 tabular-nums text-ink-muted">{i + 1}.</span>
+                                    <Link to={`/perfil/${u.id_usuario}`} className="min-w-0 truncate font-semibold text-ink hover:text-accent hover:underline">@{u.alias}</Link>
+                                </div>
+                                <div className="pl-7"><BarraValor valor={Number(u.total_publicaciones) || 0} maximo={maxPosts} texto={`${u.total_publicaciones} posts`} /></div>
+                            </li>
+                        ))}
+                    </ol>
+                )}
+            </Tarjeta>
+            <Tarjeta titulo="Publicaciones con mayor interacción" detalle="Me gusta + comentarios">
+                {mayorInteraccion === null ? <FilasCargando /> : !mayorInteraccion.length ? <p className="text-sm text-ink-muted">Aún no hay publicaciones.</p> : (
+                    <ol className="space-y-4">
+                        {mayorInteraccion.map((p) => (
+                            <li key={p.id_publicacion}>
+                                <Link to={`/publicacion/${p.id_publicacion}`} className="line-clamp-1 text-sm font-semibold text-ink hover:text-accent hover:underline">{p.titulo}</Link>
+                                <p className="mb-1 text-xs text-ink-muted">@{p.alias} · {p.total_likes} me gusta · {p.total_comentarios} comentarios</p>
+                                <BarraValor valor={interaccion(p)} maximo={maxInteraccion} />
+                            </li>
+                        ))}
+                    </ol>
+                )}
+            </Tarjeta>
         </div>
     </>;
 }
@@ -108,7 +203,7 @@ export function AdminBitacora({ search, setSearch, setNotice }) {
 
     const lista = (registros ?? []).filter((item) => `${item.accion} ${item.detalle || ""} ${item.realizado_por}`.toLowerCase().includes(search.toLowerCase()));
 
-    return <section className="settings-section"><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-lg font-bold text-ink">Bitácora del sistema</h2><p className="mt-1 text-sm text-ink-muted">{registros === null ? "Cargando..." : `Últimos ${registros.length} movimientos registrados`}</p></div><label className="form-label w-full sm:max-w-sm">Buscar<input className="form-input" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Acción, detalle o usuario"/></label></div><div className="admin-table-wrap mt-4"><table className="admin-table"><thead><tr><th>Fecha</th><th>Acción</th><th>Detalle</th><th>Realizado por</th></tr></thead><tbody>{lista.map((item) => <tr key={item.id_log}><td>{parseFechaMySQL(item.fecha).toLocaleString("es-MX")}</td><td>{item.accion}<small>{item.tabla_afectada}{item.id_registro_afectado ? ` #${item.id_registro_afectado}` : ""}</small></td><td>{item.detalle}</td><td>{item.realizado_por === "Sistema" ? "Sistema" : `@${item.realizado_por}`}</td></tr>)}</tbody></table>{registros !== null && !lista.length && <p className="p-6 text-center text-ink-muted">No hay movimientos que coincidan.</p>}</div></section>;
+    return <section className="settings-section"><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-lg font-bold text-ink">Bitácora del sistema</h2><p className="mt-1 text-sm text-ink-muted">{registros === null ? "Cargando..." : `Últimos ${registros.length} movimientos registrados`}</p></div><label className="form-label w-full sm:max-w-sm">Buscar<input className="form-input" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Acción, detalle o usuario"/></label></div><div className="admin-table-wrap mt-4"><table className="admin-table"><thead><tr><th>Fecha</th><th>Acción</th><th>Detalle</th><th>Realizado por</th></tr></thead><tbody>{lista.map((item) => <tr key={item.id_log}><td className="whitespace-nowrap">{formatFechaHora(item.fecha)}</td><td>{item.accion}<small>{item.tabla_afectada}{item.id_registro_afectado ? ` #${item.id_registro_afectado}` : ""}</small></td><td>{item.detalle}</td><td>{item.realizado_por === "Sistema" ? "Sistema" : `@${item.realizado_por}`}</td></tr>)}</tbody></table>{registros !== null && !lista.length && <p className="p-6 text-center text-ink-muted">No hay movimientos que coincidan.</p>}</div></section>;
 }
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 const PRECIO = /^\d{1,6}(\.\d{1,2})?$/;
@@ -127,11 +222,12 @@ export function AdminRentas({ search, setSearch, setNotice }) {
 
     const lista = (reservations ?? []).filter((item) => `${item.aula} ${item.alias} ${item.matricula || ""} ${item.codigo_ticket}`.toLowerCase().includes(search.toLowerCase()));
 
-    return <section className="settings-section"><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-lg font-bold text-ink">Historial global de rentas de aulas</h2><p className="mt-1 text-sm text-ink-muted">{reservations === null ? "Cargando..." : `${reservations.length} reservaciones registradas`}</p></div><label className="form-label w-full sm:max-w-sm">Buscar usuario, aula o ticket<input className="form-input" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Alias, matrícula, aula o ticket"/></label></div><div className="admin-table-wrap mt-4"><table className="admin-table"><thead><tr><th>Aula</th><th>Usuario</th><th>Matrícula</th><th>Fecha</th><th>Horario</th><th>Ticket</th><th>Estado</th></tr></thead><tbody>{lista.map((item) => <tr key={item.id_reservacion}><td>{item.aula}<small>{item.total_asistentes} asistente(s)</small></td><td>@{item.alias}</td><td>{item.matricula || "-"}</td><td>{item.fecha_reserva}</td><td>{item.hora_inicio} - {item.hora_fin}</td><td className="font-mono">{item.codigo_ticket}</td><td>{item.estado}</td></tr>)}</tbody></table>{reservations !== null && !lista.length && <p className="p-6 text-center text-ink-muted">No hay reservaciones que coincidan.</p>}</div></section>;
+    return <section className="settings-section"><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-lg font-bold text-ink">Historial global de rentas de aulas</h2><p className="mt-1 text-sm text-ink-muted">{reservations === null ? "Cargando..." : `${reservations.length} reservaciones registradas`}</p></div><label className="form-label w-full sm:max-w-sm">Buscar usuario, aula o ticket<input className="form-input" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Alias, matrícula, aula o ticket"/></label></div><div className="admin-table-wrap mt-4"><table className="admin-table"><thead><tr><th>Aula</th><th>Usuario</th><th>Matrícula</th><th>Fecha</th><th>Horario</th><th>Ticket</th><th>Estado</th></tr></thead><tbody>{lista.map((item) => <tr key={item.id_reservacion}><td>{item.aula}<small>{item.total_asistentes} asistente(s)</small></td><td>@{item.alias}</td><td>{item.matricula || "-"}</td><td className="whitespace-nowrap">{formatDia(item.fecha_reserva)}</td><td className="whitespace-nowrap">{formatRangoHoras(item.hora_inicio, item.hora_fin)}</td><td className="font-mono">{item.codigo_ticket}</td><td>{item.estado}</td></tr>)}</tbody></table>{reservations !== null && !lista.length && <p className="p-6 text-center text-ink-muted">No hay reservaciones que coincidan.</p>}</div></section>;
 }
 
 // ---------- Horarios (solo Administrador, D9) ----------
 export function AdminHorarios({ setNotice }) {
+    const { pedirTexto } = useDialogos();
     const [bloques, setBloques] = useState([]);
 
     const cargar = useCallback(() => {
@@ -164,24 +260,26 @@ export function AdminHorarios({ setNotice }) {
         ejecutar("bloque_crear", { hora_inicio: start, hora_fin: end }, "Horario agregado.").then(() => form.reset());
     };
 
-    const editar = (bloque) => {
-        const actual = `${bloque.hora_inicio} - ${bloque.hora_fin}`;
-        const replacement = window.prompt("Escribe el bloque en formato HH:MM - HH:MM", actual);
-        if (replacement === null || replacement.trim() === actual) return;
-        const match = replacement.trim().match(/^([01]\d|2[0-3]):([0-5]\d) - ([01]\d|2[0-3]):([0-5]\d)$/);
-        if (!match) {
-            setNotice("Formato no válido. Usa HH:MM - HH:MM.");
-            return;
-        }
-        const [inicio, fin] = replacement.trim().split(" - ");
-        if (fin <= inicio) {
-            setNotice("La hora de fin debe ser posterior a la de inicio.");
-            return;
-        }
+    const editar = async (bloque) => {
+        const actual = `${formatHora(bloque.hora_inicio)} - ${formatHora(bloque.hora_fin)}`;
+        const replacement = await pedirTexto({
+            titulo: "Editar horario",
+            etiqueta: "Bloque (HH:MM - HH:MM)",
+            valor: actual,
+            maxLength: 13,
+            validar: (texto) => {
+                const match = texto.match(/^([01]\d|2[0-3]):([0-5]\d) - ([01]\d|2[0-3]):([0-5]\d)$/);
+                if (!match) return "Formato no válido. Usa HH:MM - HH:MM, por ejemplo 07:00 - 08:00.";
+                const [inicio, fin] = texto.split(" - ");
+                return fin <= inicio ? "La hora de fin debe ser posterior a la de inicio." : "";
+            },
+        });
+        if (replacement === null || replacement === actual) return;
+        const [inicio, fin] = replacement.split(" - ");
         ejecutar("bloque_editar", { id_bloque: bloque.id_bloque, hora_inicio: inicio, hora_fin: fin }, "Horario actualizado.");
     };
 
-    return <section className="settings-section"><h2 className="text-lg font-bold text-ink">Editar horarios disponibles</h2><p className="mt-1 text-sm text-ink-muted">Los horarios activos se ofrecen en Reserva de Aulas. Un horario con reservaciones no se puede editar: desactívalo y crea uno nuevo.</p><form className="mt-5 flex flex-wrap items-end gap-3" onSubmit={agregar}><label className="form-label">Agregar bloque<input required name="start" type="time" className="form-input"/></label><label className="form-label">Fin<input required name="end" type="time" className="form-input"/></label><button className="action-button">Agregar horario</button></form><div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{bloques.map((bloque) => { const slot = `${bloque.hora_inicio} - ${bloque.hora_fin}`; return <div key={bloque.id_bloque} className={`flex items-center justify-between gap-3 rounded-lg border border-line bg-field p-3 ${bloque.activo ? "" : "opacity-60"}`}><span className="font-semibold text-ink">{slot}{!bloque.activo && <small className="block text-xs font-normal text-ink-muted">Inactivo</small>}</span><div><button type="button" onClick={() => editar(bloque)} aria-label={`Editar ${slot}`} className="min-h-11 rounded-md px-3 text-accent hover:bg-brand/10">Editar</button>{bloque.activo ? <button type="button" onClick={() => ejecutar("bloque_desactivar", { id_bloque: bloque.id_bloque }, "Horario desactivado.")} aria-label={`Desactivar ${slot}`} className="min-h-11 rounded-md px-3 text-danger hover:bg-danger/10">Desactivar</button> : <button type="button" onClick={() => ejecutar("bloque_activar", { id_bloque: bloque.id_bloque }, "Horario activado.")} aria-label={`Activar ${slot}`} className="min-h-11 rounded-md px-3 text-accent hover:bg-brand/10">Activar</button>}</div></div>; })}</div></section>;
+    return <section className="settings-section"><h2 className="text-lg font-bold text-ink">Editar horarios disponibles</h2><p className="mt-1 text-sm text-ink-muted">Los horarios activos se ofrecen en Reserva de Aulas. Un horario con reservaciones no se puede editar: desactívalo y crea uno nuevo.</p><form className="mt-5 flex flex-wrap items-end gap-3" onSubmit={agregar}><label className="form-label">Agregar bloque<input required name="start" type="time" className="form-input"/></label><label className="form-label">Fin<input required name="end" type="time" className="form-input"/></label><button className="action-button">Agregar horario</button></form><div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{bloques.map((bloque) => { const slot = formatRangoHoras(bloque.hora_inicio, bloque.hora_fin); return <div key={bloque.id_bloque} className={`flex items-center justify-between gap-3 rounded-lg border border-line bg-field p-3 ${bloque.activo ? "" : "opacity-60"}`}><span className="font-semibold text-ink">{slot}{!bloque.activo && <small className="block text-xs font-normal text-ink-muted">Inactivo</small>}</span><div><button type="button" onClick={() => editar(bloque)} aria-label={`Editar ${slot}`} className="min-h-11 rounded-md px-3 text-accent hover:bg-brand/10">Editar</button>{bloque.activo ? <button type="button" onClick={() => ejecutar("bloque_desactivar", { id_bloque: bloque.id_bloque }, "Horario desactivado.")} aria-label={`Desactivar ${slot}`} className="min-h-11 rounded-md px-3 text-danger hover:bg-danger/10">Desactivar</button> : <button type="button" onClick={() => ejecutar("bloque_activar", { id_bloque: bloque.id_bloque }, "Horario activado.")} aria-label={`Activar ${slot}`} className="min-h-11 rounded-md px-3 text-accent hover:bg-brand/10">Activar</button>}</div></div>; })}</div></section>;
 }
 
 // ---------- Tienda (solo Administrador, D10) ----------
@@ -197,6 +295,7 @@ function validarProducto({ titulo, precio, stock, descripcionCorta }) {
 }
 
 export function AdminTienda({ setNotice }) {
+    const { confirmar } = useDialogos();
     const [products, setProducts] = useState([]);
     const [categorias, setCategorias] = useState([]);
     const [productForm, setProductForm] = useState(productoVacio);
@@ -297,7 +396,7 @@ export function AdminTienda({ setNotice }) {
     };
 
     const desactivar = async (product) => {
-        if (!window.confirm(`¿Eliminar "${product.titulo}" del catálogo?`)) return;
+        if (!(await confirmar({ titulo: "¿Eliminar del catálogo?", mensaje: `"${product.titulo}" dejará de mostrarse en la Bisontstore.`, accion: "Eliminar", peligro: true }))) return;
         try {
             await api("productos", "desactivar", { method: "POST", body: { id_producto: product.id } });
             setNotice("Producto eliminado del catálogo.");
@@ -307,7 +406,7 @@ export function AdminTienda({ setNotice }) {
         }
     };
 
-    return <section className="space-y-5"><section className="settings-section"><h2 className="text-lg font-bold text-ink">Agregar artículo</h2><form onSubmit={createProduct} className="mt-4 grid gap-4 sm:grid-cols-2" noValidate><label className="form-label">Nombre<input required maxLength={200} className="form-input" value={productForm.titulo} onChange={(event) => setProductForm({ ...productForm, titulo: event.target.value })}/></label><label className="form-label">Precio<input required type="number" min="0" max="999999.99" step="0.01" className="form-input" value={productForm.precio} onChange={(event) => setProductForm({ ...productForm, precio: event.target.value })}/></label><label className="form-label">Categoría<select required className="form-input" value={productForm.id_categoria} onChange={(event) => setProductForm({ ...productForm, id_categoria: event.target.value })}><option value="">Selecciona una categoría</option>{categorias.map((categoria) => <option key={categoria.id_categoria} value={String(categoria.id_categoria)}>{categoria.nombre}</option>)}</select></label><label className="form-label">Stock<input required type="number" min="0" max="100000" step="1" className="form-input" value={productForm.stock} onChange={(event) => setProductForm({ ...productForm, stock: event.target.value })}/></label><label className="form-label">Descripción breve<input maxLength={500} className="form-input" value={productForm.descripcionCorta} onChange={(event) => setProductForm({ ...productForm, descripcionCorta: event.target.value })}/></label><label className="form-label">Imagen (JPG, PNG o WebP, máx. 2 MB)<input type="file" accept="image/jpeg,image/png,image/webp" className="form-input" onChange={(event) => setImagen(event.target.files?.[0] ?? null)}/></label><button disabled={guardando} className="action-button sm:col-span-2 sm:justify-self-start disabled:cursor-not-allowed disabled:opacity-50">{guardando ? "Guardando..." : "Agregar artículo"}</button></form></section><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Producto</th><th>Categoría</th><th>Precio / Stock</th><th>Acción</th></tr></thead><tbody>{products.map((product) => <tr key={product.id}><td><input aria-label={`Nombre ${product.titulo}`} maxLength={200} className="form-input min-w-44" value={valor(product, "titulo")} onChange={(event) => cambiar(product, "titulo", event.target.value)}/><input aria-label={`Descripción ${product.titulo}`} maxLength={500} className="form-input mt-2 min-w-44" value={valor(product, "descripcionCorta")} onChange={(event) => cambiar(product, "descripcionCorta", event.target.value)}/></td><td>{product.categoria}<small>{product.tieneFoto ? "Con imagen" : "Sin imagen"}</small></td><td><input aria-label={`Precio ${product.titulo}`} type="number" min="0" step="0.01" className="form-input min-w-28" value={valor(product, "precio")} onChange={(event) => cambiar(product, "precio", event.target.value)}/><small>{formatPrecio(product.precioValor)}</small><input aria-label={`Stock ${product.titulo}`} type="number" min="0" step="1" className="form-input mt-2 min-w-28" value={valor(product, "stock")} onChange={(event) => cambiar(product, "stock", event.target.value)}/></td><td><div className="flex flex-col gap-2"><button type="button" disabled={!borradores[product.id]} className="min-h-11 px-3 text-accent disabled:opacity-40" onClick={() => guardarFila(product)}>Guardar</button><label className="min-h-11 cursor-pointer px-3 py-2.5 text-center text-accent">Imagen<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => { cambiarImagen(product, event.target.files?.[0]); event.target.value = ""; }}/></label><button type="button" className="min-h-11 px-3 text-danger" onClick={() => desactivar(product)}>Eliminar</button></div></td></tr>)}</tbody></table>{!products.length && <p className="p-6 text-center text-ink-muted">Aún no hay productos.</p>}</div></section>;
+    return <section className="space-y-5"><section className="settings-section"><h2 className="text-lg font-bold text-ink">Agregar artículo</h2><form onSubmit={createProduct} className="mt-4 grid gap-4 sm:grid-cols-2" noValidate><label className="form-label">Nombre<input required maxLength={200} className="form-input" value={productForm.titulo} onChange={(event) => setProductForm({ ...productForm, titulo: event.target.value })}/></label><label className="form-label">Precio<input required type="number" min="0" max="999999.99" step="0.01" className="form-input" value={productForm.precio} onChange={(event) => setProductForm({ ...productForm, precio: event.target.value })}/></label><CustomSelect label="Categoría" value={productForm.id_categoria} onChange={(id_categoria) => setProductForm({ ...productForm, id_categoria })} placeholder="Selecciona una categoría" options={categorias.map((categoria) => ({ value: String(categoria.id_categoria), label: categoria.nombre }))} /><label className="form-label">Stock<input required type="number" min="0" max="100000" step="1" className="form-input" value={productForm.stock} onChange={(event) => setProductForm({ ...productForm, stock: event.target.value })}/></label><label className="form-label">Descripción breve<input maxLength={500} className="form-input" value={productForm.descripcionCorta} onChange={(event) => setProductForm({ ...productForm, descripcionCorta: event.target.value })}/></label><label className="form-label">Imagen (JPG, PNG o WebP, máx. 2 MB)<input type="file" accept="image/jpeg,image/png,image/webp" className="form-input" onChange={(event) => setImagen(event.target.files?.[0] ?? null)}/></label><button disabled={guardando} className="action-button sm:col-span-2 sm:justify-self-start">{guardando ? "Guardando..." : "Agregar artículo"}</button></form></section><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Producto</th><th>Categoría</th><th>Precio / Stock</th><th>Acción</th></tr></thead><tbody>{products.map((product) => <tr key={product.id}><td><input aria-label={`Nombre ${product.titulo}`} maxLength={200} className="form-input min-w-44" value={valor(product, "titulo")} onChange={(event) => cambiar(product, "titulo", event.target.value)}/><input aria-label={`Descripción ${product.titulo}`} maxLength={500} className="form-input mt-2 min-w-44" value={valor(product, "descripcionCorta")} onChange={(event) => cambiar(product, "descripcionCorta", event.target.value)}/></td><td>{product.categoria}<small>{product.tieneFoto ? "Con imagen" : "Sin imagen"}</small></td><td><input aria-label={`Precio ${product.titulo}`} type="number" min="0" step="0.01" className="form-input min-w-28" value={valor(product, "precio")} onChange={(event) => cambiar(product, "precio", event.target.value)}/><small>{formatPrecio(product.precioValor)}</small><input aria-label={`Stock ${product.titulo}`} type="number" min="0" step="1" className="form-input mt-2 min-w-28" value={valor(product, "stock")} onChange={(event) => cambiar(product, "stock", event.target.value)}/></td><td><div className="flex flex-col gap-2"><button type="button" disabled={!borradores[product.id]} className="min-h-11 px-3 text-accent disabled:opacity-40" onClick={() => guardarFila(product)}>Guardar</button><label className="min-h-11 cursor-pointer px-3 py-2.5 text-center text-accent">Imagen<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => { cambiarImagen(product, event.target.files?.[0]); event.target.value = ""; }}/></label><button type="button" className="min-h-11 px-3 text-danger" onClick={() => desactivar(product)}>Eliminar</button></div></td></tr>)}</tbody></table>{!products.length && <p className="p-6 text-center text-ink-muted">Aún no hay productos.</p>}</div></section>;
 }
 
 // ---------- Eventos (Administrador y Moderador, D15) ----------
@@ -323,7 +422,52 @@ function validarEvento(evento) {
     return "";
 }
 
+// Editar inicio, fin y lugar de un evento en un solo formulario (antes eran tres window.prompt)
+function DialogoFechaEvento({ evento, onGuardar, onCerrar }) {
+    const [inicio, setInicio] = useState(toDateTimeLocal(evento.fecha_inicio));
+    const [fin, setFin] = useState(toDateTimeLocal(evento.fecha_fin));
+    const [lugar, setLugar] = useState(evento.lugar || "");
+    const [error, setError] = useState("");
+    const [guardando, setGuardando] = useState(false);
+
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === "Escape") onCerrar(); };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [onCerrar]);
+
+    const enviar = async (e) => {
+        e.preventDefault();
+        if (!inicio || !fin) return setError("Indica el inicio y el fin.");
+        if (fin < inicio) return setError("La fecha de fin debe ser posterior a la fecha de inicio.");
+        setGuardando(true);
+        await onGuardar({ inicio, fin, lugar });
+        setGuardando(false);
+    };
+
+    return (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-scrim p-4 backdrop-blur-sm sm:items-center" onMouseDown={(e) => { if (e.target === e.currentTarget) onCerrar(); }}>
+            <form onSubmit={enviar} role="dialog" aria-modal="true" aria-labelledby="fecha-evento-titulo" className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-pop" noValidate>
+                <h2 id="fecha-evento-titulo" className="text-lg font-bold text-ink">Fecha y lugar</h2>
+                <p className="mt-1 line-clamp-1 text-sm text-ink-muted">{evento.titulo}</p>
+                <div className="mt-4 grid gap-4">
+                    <label className="form-label">Inicio<input autoFocus type="datetime-local" className="form-input" value={inicio} onChange={(e) => { setInicio(e.target.value); setError(""); }} /></label>
+                    <label className="form-label">Fin<input type="datetime-local" min={inicio || undefined} className="form-input" value={fin} onChange={(e) => { setFin(e.target.value); setError(""); }} /></label>
+                    <label className="form-label">Lugar<input maxLength={150} className="form-input" value={lugar} onChange={(e) => setLugar(e.target.value)} /></label>
+                </div>
+                {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
+                <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" onClick={onCerrar} className="action-button action-button-secondary">Cancelar</button>
+                    <button disabled={guardando} className="action-button">{guardando ? "Guardando..." : "Guardar"}</button>
+                </div>
+            </form>
+        </div>
+    );
+}
+
 export function AdminEventos({ setNotice }) {
+    const { confirmar } = useDialogos();
+    const [editandoFecha, setEditandoFecha] = useState(null); // evento cuyo horario/lugar se edita
     const [events, setEvents] = useState([]);
     const [eventForm, setEventForm] = useState(eventoVacio);
     const [borradores, setBorradores] = useState({});
@@ -387,33 +531,15 @@ export function AdminEventos({ setNotice }) {
         }
     };
 
-    const editEventSchedule = (item) => {
-        const start = window.prompt("Inicio (AAAA-MM-DDTHH:mm)", toDateTimeLocal(item.fecha_inicio));
-        if (start === null) return;
-        const end = window.prompt("Fin (AAAA-MM-DDTHH:mm)", toDateTimeLocal(item.fecha_fin));
-        if (end === null) return;
-        const formato = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
-        if (!formato.test(start.trim()) || !formato.test(end.trim())) {
-            setNotice("Formato no válido. Usa AAAA-MM-DDTHH:mm.");
-            return;
-        }
-        if (end.trim() < start.trim()) {
-            setNotice("La fecha de fin debe ser posterior a la fecha de inicio.");
-            return;
-        }
-        const lugar = window.prompt("Lugar del evento", item.lugar || "");
-        if (lugar === null) return;
-        if (lugar.trim().length > 150) {
-            setNotice("El lugar no puede tener más de 150 caracteres.");
-            return;
-        }
-        ejecutar("editar", { id_evento: item.id_evento, fecha_inicio: start.trim(), fecha_fin: end.trim(), lugar: lugar.trim() }, "Evento actualizado.");
+    const guardarFechaLugar = async ({ inicio, fin, lugar }) => {
+        const item = editandoFecha;
+        if (await ejecutar("editar", { id_evento: item.id_evento, fecha_inicio: inicio, fecha_fin: fin, lugar: lugar.trim() }, "Evento actualizado.")) setEditandoFecha(null);
     };
 
-    const eliminar = (item) => {
-        if (!window.confirm(`¿Eliminar el evento "${item.titulo}"? Esta acción no se puede deshacer.`)) return;
+    const eliminar = async (item) => {
+        if (!(await confirmar({ titulo: "¿Eliminar el evento?", mensaje: `"${item.titulo}" se quitará del calendario. Esta acción no se puede deshacer.`, accion: "Eliminar", peligro: true }))) return;
         ejecutar("eliminar", { id_evento: item.id_evento }, "Evento eliminado.");
     };
 
-    return <section className="space-y-5"><section className="settings-section"><h2 className="text-lg font-bold text-ink">Publicar evento</h2><form onSubmit={createEvent} className="mt-4 grid gap-4 sm:grid-cols-2" noValidate><label className="form-label">Título<input required maxLength={200} className="form-input" value={eventForm.titulo} onChange={(event) => setEventForm({ ...eventForm, titulo: event.target.value })}/></label><label className="form-label">Tipo<select className="form-input" value={eventForm.tipo} onChange={(event) => setEventForm({ ...eventForm, tipo: event.target.value })}>{EVENT_TYPES.map((type) => <option key={type}>{type}</option>)}</select></label><label className="form-label">Inicio<input required type="datetime-local" className="form-input" value={eventForm.fecha_inicio} onChange={(event) => setEventForm({ ...eventForm, fecha_inicio: event.target.value })}/></label><label className="form-label">Fin<input required type="datetime-local" min={eventForm.fecha_inicio || undefined} className="form-input" value={eventForm.fecha_fin} onChange={(event) => setEventForm({ ...eventForm, fecha_fin: event.target.value })}/></label><label className="form-label">Lugar<input maxLength={150} className="form-input" value={eventForm.lugar} onChange={(event) => setEventForm({ ...eventForm, lugar: event.target.value })}/></label><label className="form-label">Descripción<input maxLength={1000} className="form-input" value={eventForm.descripcion} onChange={(event) => setEventForm({ ...eventForm, descripcion: event.target.value })}/></label><button disabled={guardando} className="action-button sm:col-span-2 sm:justify-self-start disabled:cursor-not-allowed disabled:opacity-50">{guardando ? "Guardando..." : "Agregar evento"}</button></form></section><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Evento</th><th>Fecha</th><th>Lugar</th><th>Visible</th><th>Acción</th></tr></thead><tbody>{events.map((item) => <tr key={item.id_evento}><td><input aria-label={`Título ${item.titulo}`} maxLength={200} className="form-input min-w-44" value={valor(item, "titulo")} onChange={(event) => cambiar(item, "titulo", event.target.value)}/><small>{item.tipo}</small><input aria-label={`Descripción ${item.titulo}`} maxLength={1000} className="form-input mt-2 min-w-44" value={valor(item, "descripcion")} onChange={(event) => cambiar(item, "descripcion", event.target.value)}/></td><td>{parseFechaMySQL(item.fecha_inicio).toLocaleString("es-MX")}</td><td>{item.lugar}</td><td>{item.visible ? "Sí" : "No"}</td><td><div className="flex flex-col gap-2"><button type="button" disabled={!borradores[item.id_evento]} className="min-h-11 px-2 text-accent disabled:opacity-40" onClick={() => guardarFila(item)}>Guardar</button><button type="button" className="min-h-11 px-2 text-accent" onClick={() => ejecutar(item.visible ? "ocultar" : "mostrar", { id_evento: item.id_evento }, item.visible ? "Evento oculto." : "Evento visible.")}>{item.visible ? "Ocultar" : "Mostrar"}</button><button type="button" className="min-h-11 px-2 text-danger" onClick={() => eliminar(item)}>Eliminar</button><button type="button" className="min-h-11 px-2 text-accent" onClick={() => editEventSchedule(item)}>Editar fecha/lugar</button></div></td></tr>)}</tbody></table>{!events.length && <p className="p-6 text-center text-ink-muted">Aún no hay eventos.</p>}</div></section>;
+    return <section className="space-y-5"><section className="settings-section"><h2 className="text-lg font-bold text-ink">Publicar evento</h2><form onSubmit={createEvent} className="mt-4 grid gap-4 sm:grid-cols-2" noValidate><label className="form-label">Título<input required maxLength={200} className="form-input" value={eventForm.titulo} onChange={(event) => setEventForm({ ...eventForm, titulo: event.target.value })}/></label><CustomSelect label="Tipo" value={eventForm.tipo} onChange={(tipo) => setEventForm({ ...eventForm, tipo })} options={EVENT_TYPES.map((type) => ({ value: type, label: type }))} /><label className="form-label">Inicio<input required type="datetime-local" className="form-input" value={eventForm.fecha_inicio} onChange={(event) => setEventForm({ ...eventForm, fecha_inicio: event.target.value })}/></label><label className="form-label">Fin<input required type="datetime-local" min={eventForm.fecha_inicio || undefined} className="form-input" value={eventForm.fecha_fin} onChange={(event) => setEventForm({ ...eventForm, fecha_fin: event.target.value })}/></label><label className="form-label">Lugar<input maxLength={150} className="form-input" value={eventForm.lugar} onChange={(event) => setEventForm({ ...eventForm, lugar: event.target.value })}/></label><label className="form-label">Descripción<input maxLength={1000} className="form-input" value={eventForm.descripcion} onChange={(event) => setEventForm({ ...eventForm, descripcion: event.target.value })}/></label><button disabled={guardando} className="action-button sm:col-span-2 sm:justify-self-start">{guardando ? "Guardando..." : "Agregar evento"}</button></form></section><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Evento</th><th>Fecha</th><th>Lugar</th><th>Visible</th><th>Acción</th></tr></thead><tbody>{events.map((item) => <tr key={item.id_evento}><td><input aria-label={`Título ${item.titulo}`} maxLength={200} className="form-input min-w-44" value={valor(item, "titulo")} onChange={(event) => cambiar(item, "titulo", event.target.value)}/><small>{item.tipo}</small><input aria-label={`Descripción ${item.titulo}`} maxLength={1000} className="form-input mt-2 min-w-44" value={valor(item, "descripcion")} onChange={(event) => cambiar(item, "descripcion", event.target.value)}/></td><td className="whitespace-nowrap">{formatRangoFechaHora(item.fecha_inicio, item.fecha_fin)}</td><td>{item.lugar}</td><td>{item.visible ? "Sí" : "No"}</td><td><div className="flex flex-col gap-2"><button type="button" disabled={!borradores[item.id_evento]} className="min-h-11 px-2 text-accent disabled:opacity-40" onClick={() => guardarFila(item)}>Guardar</button><button type="button" className="min-h-11 px-2 text-accent" onClick={() => ejecutar(item.visible ? "ocultar" : "mostrar", { id_evento: item.id_evento }, item.visible ? "Evento oculto." : "Evento visible.")}>{item.visible ? "Ocultar" : "Mostrar"}</button><button type="button" className="min-h-11 px-2 text-danger" onClick={() => eliminar(item)}>Eliminar</button><button type="button" className="min-h-11 px-2 text-accent" onClick={() => setEditandoFecha(item)}>Editar fecha/lugar</button></div></td></tr>)}</tbody></table>{!events.length && <p className="p-6 text-center text-ink-muted">Aún no hay eventos.</p>}</div>{editandoFecha && <DialogoFechaEvento evento={editandoFecha} onGuardar={guardarFechaLugar} onCerrar={() => setEditandoFecha(null)} />}</section>;
 }

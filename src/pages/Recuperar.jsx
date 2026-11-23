@@ -43,7 +43,7 @@ function Recuperar() {
                 transition={{ type: "spring", duration: 1.5 }}
                 className="relative z-10 flex min-h-[calc(100dvh-2rem)] w-full max-w-5xl items-center justify-center py-4 sm:p-8 lg:justify-end lg:p-12"
             >
-                <div className="relative z-20 w-full max-w-md bg-surface/20% backdrop-blur-md border border-line rounded-2xl shadow-pop p-8">
+                <div className="auth-card">
 
                     <h1 className="text-3xl font-bold text-center text-ink mb-4">
                         Recuperar contraseña
@@ -69,14 +69,14 @@ function Recuperar() {
                                 placeholder="usuario@uanl.edu.mx"
                                 value={correo}
                                 onChange={(e) => setCorreo(e.target.value)}
-                                className="w-full p-3 border border-line rounded-lg bg-field text-ink focus:outline-none focus:ring-2 focus:ring-accent transition-all"
+                                className="form-input"
                             />
                         </div>
 
                         <button
                             type="submit"
                             disabled={enviando}
-                            className="mt-4 w-full bg-linear-to-r from-brand to-accent hover:from-brand-hover hover:to-brand text-ink font-bold py-3 px-4 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                            className="action-button mt-4 w-full"
                         >
                             {enviando ? "Enviando..." : "Enviar contraseña temporal"}
                         </button>

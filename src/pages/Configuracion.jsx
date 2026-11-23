@@ -3,11 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { useAppData } from "../context/AppDataContext";
 import { api, CORREO_UANL } from "../api/client";
 import { useCambioFoto } from "../components/useCambioFoto";
+import Avatar from "../components/Avatar";
+import CustomSelect from "../components/CustomSelect";
+import PageHeader from "../components/PageHeader";
+import { useDialogos } from "../components/Dialogos";
 import { getCareerName } from "../utils/careers";
 
 function Configuracion() {
     const { user, preferences, updatePreferences, setSessionUser, logout, clearSession } = useAppData();
     const navigate = useNavigate();
+    const { confirmar } = useDialogos();
     const foto = useCambioFoto();
     const [carreras, setCarreras] = useState([]);
     // Valores editados; null = sin tocar (se muestra el valor actual del usuario)
@@ -76,7 +81,7 @@ function Configuracion() {
             carreraCambio && "carrera",
             semestreCambio && "semestre",
         ].filter(Boolean).join(", ");
-        if (!window.confirm(`¿Confirmas que deseas cambiar ${cambios}?`)) return;
+        if (!(await confirmar({ titulo: "¿Guardar los cambios?", mensaje: `Se actualizará: ${cambios}.`, accion: "Guardar" }))) return;
 
         setGuardando(true);
         try {
@@ -136,7 +141,13 @@ function Configuracion() {
     };
 
     const removeAccount = async () => {
-        if (!window.confirm("¿Seguro que quieres eliminar tu cuenta? Tus publicaciones y comentarios se ocultarán y tus reservaciones futuras se cancelarán. Esta acción no se puede deshacer.")) return;
+        const ok = await confirmar({
+            titulo: "¿Eliminar tu cuenta?",
+            mensaje: "Tus publicaciones y comentarios se ocultarán y tus reservaciones futuras se cancelarán. Esta acción no se puede deshacer.",
+            accion: "Eliminar mi cuenta",
+            peligro: true,
+        });
+        if (!ok) return;
         setError("");
         try {
             await api("usuarios", "eliminar_cuenta", { method: "POST" });
@@ -153,19 +164,15 @@ function Configuracion() {
     };
 
     return (
-        <section className="mx-auto w-full max-w-3xl space-y-8">
-            <header>
-                <p className="text-sm font-semibold uppercase tracking-wider text-accent">Tu cuenta</p>
-                <h1 className="mt-2 text-3xl font-bold text-ink">Configuración</h1>
-                <p className="mt-2 text-ink-muted">Personaliza tu perfil y la forma en que usas PolyBison.</p>
-            </header>
+        <section className="pagina-angosta">
+            <PageHeader titulo="Configuración" subtitulo="Personaliza tu perfil y la forma en que usas PolyBison." />
 
             {user.debeCambiarContrasena && <p role="alert" className="rounded-lg border border-danger/50 bg-danger/10 p-4 text-sm font-semibold text-danger">Estás usando una contraseña temporal. Cámbiala en la sección «Contraseña» (escribe la temporal como «Contraseña actual») para poder usar el resto de PolyBison.</p>}
 
             <section className="settings-section">
                 <h2 className="text-lg font-bold text-ink">Foto de perfil</h2>
                 <div className="mt-5 flex flex-wrap items-center gap-4">
-                    <img src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.alias || user.nombre)}&background=003366&color=fff`} alt="Foto de perfil actual" className="h-16 w-16 rounded-full border border-line object-cover" />
+                    <Avatar src={user.avatar} nombre={user.alias || user.nombre} className="h-16 w-16 border border-line" />
                     <button type="button" onClick={foto.seleccionar} className="action-button">{user.avatar ? "Cambiar foto" : "Agregar foto"}</button>
                     {foto.elementos}
                 </div>
@@ -180,20 +187,22 @@ function Configuracion() {
                     <label className="form-label">Correo electrónico
                         <input type="email" value={correoForm} onChange={(event) => setCorreo(event.target.value)} maxLength={150} placeholder="usuario@uanl.edu.mx" autoComplete="email" className="form-input" />
                     </label>
-                    <label className="form-label">Carrera
-                        <select value={carreraForm} onChange={(event) => setCarrera(event.target.value)} className="form-input">
-                            {!idCarreraActual && <option value="">{user.carrera ? getCareerName(user.carrera) : "Selecciona tu carrera"}</option>}
-                            {carreras.map((option) => <option key={option.id_carrera} value={String(option.id_carrera)}>{getCareerName(option.nombre)}</option>)}
-                        </select>
-                    </label>
-                    <label className="form-label">Semestre
-                        <select value={semestreForm} onChange={(event) => setSemestre(event.target.value)} className="form-input">
-                            {!semestreActual && <option value="">Selecciona tu semestre</option>}
-                            {Array.from({ length: 10 }, (_, index) => <option key={index + 1} value={String(index + 1)}>Semestre {index + 1}</option>)}
-                        </select>
-                    </label>
+                    <CustomSelect
+                        label="Carrera"
+                        value={carreraForm}
+                        onChange={setCarrera}
+                        placeholder={user.carrera ? getCareerName(user.carrera) : "Selecciona tu carrera"}
+                        options={carreras.map((option) => ({ value: String(option.id_carrera), label: getCareerName(option.nombre) }))}
+                    />
+                    <CustomSelect
+                        label="Semestre"
+                        value={semestreForm}
+                        onChange={setSemestre}
+                        placeholder="Selecciona tu semestre"
+                        options={Array.from({ length: 10 }, (_, index) => ({ value: String(index + 1), label: `Semestre ${index + 1}` }))}
+                    />
                     <div className="flex flex-wrap gap-3">
-                        <button type="submit" disabled={guardando || !hayCambios} className="action-button disabled:cursor-not-allowed disabled:opacity-50">{guardando ? "Guardando..." : "Guardar cambios"}</button>
+                        <button type="submit" disabled={guardando || !hayCambios} className="action-button">{guardando ? "Guardando..." : "Guardar cambios"}</button>
                         {hayCambios && <button type="button" onClick={() => { reiniciarFormulario(); setError(""); setMensaje(""); }} className="action-button action-button-secondary">Cancelar</button>}
                     </div>
                 </form>
@@ -214,7 +223,7 @@ function Configuracion() {
                         <input type="password" value={confirmacion} onChange={(event) => setConfirmacion(event.target.value)} maxLength={72} autoComplete="new-password" className="form-input" />
                     </label>
                     <div className="flex flex-wrap gap-3">
-                        <button type="submit" disabled={guardandoContrasenia} className="action-button disabled:cursor-not-allowed disabled:opacity-50">{guardandoContrasenia ? "Guardando..." : "Cambiar contraseña"}</button>
+                        <button type="submit" disabled={guardandoContrasenia} className="action-button">{guardandoContrasenia ? "Guardando..." : "Cambiar contraseña"}</button>
                     </div>
                 </form>
                 {mensajeContrasenia && <p role="status" className="mt-3 text-sm text-accent">{mensajeContrasenia}</p>}
@@ -224,20 +233,18 @@ function Configuracion() {
             <section className="settings-section">
                 <h2 className="text-lg font-bold text-ink">Apariencia</h2>
                 <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                    <label className="form-label">Tema
-                        <select value={preferences.theme} onChange={(event) => updatePreferences({ theme: event.target.value })} className="form-input">
-                            <option value="dark">Oscuro</option>
-                            <option value="gray">Gris oscuro</option>
-                            <option value="light">Claro</option>
-                        </select>
-                    </label>
-                    <label className="form-label">Tamaño de fuente
-                        <select value={preferences.fontSize} onChange={(event) => updatePreferences({ fontSize: event.target.value })} className="form-input">
-                            <option value="small">Pequeña</option>
-                            <option value="normal">Normal</option>
-                            <option value="large">Grande</option>
-                        </select>
-                    </label>
+                    <CustomSelect
+                        label="Tema"
+                        value={preferences.theme}
+                        onChange={(theme) => updatePreferences({ theme })}
+                        options={[{ value: "dark", label: "Oscuro" }, { value: "gray", label: "Gris oscuro" }, { value: "light", label: "Claro" }]}
+                    />
+                    <CustomSelect
+                        label="Tamaño de fuente"
+                        value={preferences.fontSize}
+                        onChange={(fontSize) => updatePreferences({ fontSize })}
+                        options={[{ value: "small", label: "Pequeña" }, { value: "normal", label: "Normal" }, { value: "large", label: "Grande" }]}
+                    />
                 </div>
             </section>
 
