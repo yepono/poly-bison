@@ -1,14 +1,29 @@
 <?php
-// Publicaciones del feed: verlas todas, una sola, las de un usuario y el catálogo de etiquetas.
-// Al crear o editar se acepta una imagen o un enlace de YouTube (no los dos). Solo el autor puede
-// editar; eliminar lo puede hacer el autor, un administrador o un moderador.
+// ============================================================
+// publicaciones.php - Sección Publicaciones (+ su multimedia)
+// Acción por parámetro: publicaciones.php?accion=...
+// Todas requieren sesión.
+//
+//   GET  listar                    feed (vw_feed_publicaciones)
+//   GET  detalle&id=               una publicación
+//   GET  por_usuario&id=           publicaciones de un usuario (perfil)
+//   GET  etiquetas                 catálogo de etiquetas (D6)
+//   POST crear      (multipart)    titulo, descripcion, id_etiqueta,
+//                                  imagen (archivo) O video_url (YouTube)
+//                                  -> sp_publicacion CREAR + sp_multimedia
+//   POST editar     (multipart)    solo el autor; además: quitar_multimedia=1
+//                                  -> sp_publicacion EDITAR + sp_multimedia
+//   POST eliminar   (JSON)         el autor o Administrador/Moderador
+//                                  -> sp_publicacion ELIMINAR
+// ============================================================
 require __DIR__ . "/config.php";
 
 const TITULO_MAX      = 250;
 const DESCRIPCION_MAX = 600;
 const FEED_LIMITE     = 100;
 
-// Funciones de apoyo
+// ---------- Helpers ----------
+
 function spPublicacion(mysqli $conn, string $accion, array $p): array {
     return callProcedure($conn, "sp_publicacion", "siissi", [
         $accion,
@@ -34,8 +49,8 @@ function spMultimedia(mysqli $conn, string $accion, array $p): array {
     ]);
 }
 
-// Acepta los distintos tipos de enlace de YouTube y los deja todos en el formato normal;
-// regresa null si el enlace no es válido.
+// Acepta youtube.com/watch?v=ID, youtu.be/ID, youtube.com/shorts/ID y /embed/ID.
+// Regresa la URL normalizada https://www.youtube.com/watch?v=ID o null si no es válida.
 function normalizarYoutube(string $url): ?string {
     if ($url === "" || mb_strlen($url) > 500) return null;
     $partes = parse_url($url);
@@ -58,7 +73,7 @@ function normalizarYoutube(string $url): ?string {
     return "https://www.youtube.com/watch?v=" . $id;
 }
 
-// Convierte una fila del feed en la respuesta que recibe el front
+// Fila de vw_feed_publicaciones -> respuesta JSON
 function postResponse(array $r): array {
     return [
         "id_publicacion"    => (int)$r["id_publicacion"],
@@ -79,8 +94,8 @@ function postResponse(array $r): array {
     ];
 }
 
-// Consulta el feed indicando si al usuario de la sesión le gusta cada publicación.
-// Las condiciones extra llegan con sus parámetros por separado.
+// Consulta la vista con el "liked" del usuario de la sesión.
+// $where usa placeholders; $types/$params son los de ese WHERE.
 function consultarPosts(mysqli $conn, int $viewerId, string $where = "", string $types = "", array $params = [], string $extra = ""): array {
     $sql = "SELECT v.*,
                    EXISTS(SELECT 1 FROM Reaccion r
@@ -123,7 +138,7 @@ function leerCamposPost(bool $parcial): array {
     return $campos;
 }
 
-// Lee la imagen o el video de la publicación (no se permiten los dos)
+// Imagen o video (no ambos). Regresa ["imagen" => ?array, "video" => ?string]
 function leerMultimedia(): array {
     $imagen = validarImagen("imagen");
     $videoTexto = inputStr($_POST, "video_url");
@@ -157,7 +172,8 @@ function agregarMultimedia(mysqli $conn, int $idPublicacion, int $actor, array $
     }
 }
 
-// Acciones
+// ---------- Acciones ----------
+
 function accionListar(mysqli $conn): never {
     requireMethod("GET");
     $u = requireLogin($conn);
@@ -232,7 +248,7 @@ function accionEditar(mysqli $conn): never {
 
     $conn->begin_transaction();
     try {
-        // La rutina revisa que la publicación exista y sea del usuario
+        // EDITAR valida existencia (404) y autoría (403)
         spPublicacion($conn, "EDITAR", ["id_publicacion" => $id, "id_actor" => $actor] + $campos);
 
         if ($cambiaMedia) {
@@ -261,12 +277,12 @@ function accionEliminar(mysqli $conn): never {
     $id = inputInt(readJsonBody(), "id_publicacion");
     if ($id === null || $id <= 0) jsonError(400, "Publicación no válida");
 
-    // La rutina revisa que exista y que quien borra sea el autor, un administrador o un moderador
+    // ELIMINAR valida: existe (404), autor o Administrador/Moderador (403)
     spPublicacion($conn, "ELIMINAR", ["id_publicacion" => $id, "id_actor" => (int)$u["id_usuario"]]);
     jsonResponse(["success" => true, "message" => "Publicación eliminada"]);
 }
 
-// Según la acción pedida se llama a la función que corresponde
+// ---------- Ruteo ----------
 $accion = inputStr($_GET, "accion");
 
 try {

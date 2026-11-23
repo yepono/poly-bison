@@ -1,67 +1,50 @@
 @import "tailwindcss";
 
-@import "./styles/themes.css";
-
-/* Tipografías autoalojadas (variables: un archivo cubre todos los pesos) */
-@import "@fontsource-variable/inter";
-@import "@fontsource-variable/space-grotesk";
-@import "@fontsource-variable/jetbrains-mono";
-
-/* Expone los roles de themes.css como utilidades de Tailwind (bg-canvas, text-ink,
-   border-line, shadow-glow...). "inline" hace que cambien solos al cambiar data-theme. */
 @theme {
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  /* Colores base */
+  --color-primary: #003366;
+  --color-primary-hover: #002244;
+  
+  --color-secondary: #cc0000;
+  --color-secondary-hover: #990000;
 
-  /* Un paso por debajo de text-xs. En rem para respetar el ajuste de tamaño de fuente. */
-  --text-2xs: 0.6875rem;
+  /* Variantes Neon */
+  --color-neon-blue: #00bfff;
+  --color-neon-red: #ff4d4d;
+
+  /* Fondos Globales */
+  --color-bg-light: #f8fafc; 
+  --color-bg-dark: #0f172a;  
+  --color-bg-deep: #05020a; 
+
+  /* Superficies (Tarjetas, Formularios, Modales) */
+  --color-surface-light: #ffffff;
+  --color-surface-dark: #1e293b;
+
+  /* Textos y Tipografía */
+  --color-text-title-light: #0f172a;
+  --color-text-body-light: #334155;
+  --color-text-muted-light: #64748b;
+
+  --color-text-title-dark: #f8fafc;
+  --color-text-body-dark: #cbd5e1;
+  --color-text-muted-dark: #94a3b8;
+
+  /* Bordes y Divisores */
+  --color-border-light: #e2e8f0;
+  --color-border-dark: #334155;
 }
 
-@theme inline {
-  --color-canvas: var(--canvas);
-  --color-surface: var(--surface);
-  --color-field: var(--field);
-  --color-line: var(--line);
-
-  --color-ink: var(--ink);
-  --color-ink-soft: var(--ink-soft);
-  --color-ink-muted: var(--ink-muted);
-
-  --color-brand: var(--brand);
-  --color-brand-hover: var(--brand-hover);
-  --color-on-brand: var(--on-brand);
-  --color-accent: var(--accent);
-  --color-on-accent: var(--on-accent);
-
-  --color-danger: var(--danger);
-  --color-danger-solid: var(--danger-solid);
-  --color-danger-solid-hover: var(--danger-solid-hover);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-scrim: var(--scrim);
-  --color-viz-1: var(--viz-1);
-  --color-viz-2: var(--viz-2);
-  --color-hero-via: var(--hero-via);
-  --color-hero-to: var(--hero-to);
-
-  /* Calendario */
-  --color-cal-cell: var(--cal-cell);
-  --color-cal-cell-hover: var(--cal-cell-hover);
-  --color-cal-grid: var(--cal-grid);
-  --color-cal-today: var(--cal-today);
-  --color-cal-selected: var(--cal-selected);
-  --color-cal-examen: var(--cal-examen);
-  --color-cal-academico: var(--cal-academico);
-  --color-cal-asueto: var(--cal-asueto);
-  --color-cal-cultural: var(--cal-cultural);
-  --color-cal-deportivo: var(--cal-deportivo);
-
-  --shadow-card: var(--elev-card);
-  --shadow-pop: var(--elev-pop);
-  --shadow-glow: var(--glow-accent);
-  --shadow-glow-brand: var(--glow-brand);
-  --shadow-glow-danger: var(--glow-danger);
+:root[data-theme="light"] {
+  --color-bg-deep: #f1f5f9;
+  --color-bg-dark: #e2e8f0;
+  --color-surface-dark: #ffffff;
+  --color-text-title-dark: #0f172a;
+  --color-text-body-dark: #334155;
+  --color-text-muted-dark: #64748b;
+  --color-border-dark: #cbd5e1;
+  --color-neon-blue: #006f9f;
+  --color-neon-red: #b42323;
 }
 
 :root[data-font-size="small"] { font-size: 14px; }
@@ -69,11 +52,13 @@
 :root[data-font-size="large"] { font-size: 19px; }
 
 .theme-glow {
-  text-shadow: var(--glow-text);
+  text-shadow: 0 0 8px var(--color-neon-blue);
 }
 
-/* En el tema claro se apagan los brillos escritos directamente en las clases, porque sobre
-   fondo claro se ven sucios. */
+:root[data-theme="light"] .theme-glow {
+  text-shadow: none;
+}
+
 :root[data-theme="light"] [class*="shadow-[0_0_"] {
   box-shadow: none !important;
 }
@@ -82,120 +67,100 @@
   filter: none !important;
 }
 
-@layer base {
-  h1, h2, h3 {
-    font-family: var(--font-display);
-    letter-spacing: -0.01em;
-  }
-}
-
 @layer components {
-  /* Campos numéricos sin las flechas del navegador */
-  .sin-flechas { appearance: textfield; -moz-appearance: textfield; }
-  .sin-flechas::-webkit-inner-spin-button, .sin-flechas::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-
-  /* Barra de desplazamiento discreta */
-  .custom-scrollbar { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
-
-  /* Anchos estándar de página (ver PageHeader.jsx) */
-  .pagina-angosta { @apply mx-auto w-full max-w-3xl space-y-6; }
-  .pagina-media { @apply mx-auto w-full max-w-5xl space-y-6; }
-  .pagina-ancha { @apply mx-auto w-full max-w-6xl space-y-6; }
-
-  /* Tarjeta que usan todas las superficies de contenido (settings-section es otro nombre para lo mismo) */
-  .card,
   .settings-section {
-    @apply rounded-2xl border border-line bg-surface/50 p-5 shadow-card sm:p-6;
-  }
-
-  /* Tarjeta de las pantallas de acceso. No lleva desenfoque de fondo porque, sobre el fondo
-     animado, hacía que la página se trabara. */
-  .auth-card {
-    @apply relative z-20 w-full max-w-md rounded-2xl border border-line bg-surface/85 p-6 shadow-pop sm:p-8;
-  }
-
-  /* Estrellas secundarias de la constelación del bisonte */
-  .estrella-titila { animation: estrella-titila 3s ease-in-out infinite; }
-  @keyframes estrella-titila {
-    0%, 100% { opacity: 0.85; }
-    50% { opacity: 0.3; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .estrella-titila { animation: none; opacity: 0.7; }
+    @apply rounded-xl border border-border-dark bg-surface-dark/50 p-5 sm:p-6;
   }
 
   .form-label {
-    @apply flex flex-col gap-2 text-sm font-semibold text-ink-soft;
+    @apply flex flex-col gap-2 text-sm font-semibold text-text-body-dark;
   }
 
   .form-input {
-    @apply min-h-11 w-full rounded-lg border border-line bg-field px-3 py-2 text-ink outline-none transition focus-visible:ring-2 focus-visible:ring-accent;
+    @apply min-h-11 w-full rounded-lg border border-border-dark bg-bg-dark px-3 py-2 text-text-title-dark outline-none transition focus-visible:ring-2 focus-visible:ring-neon-blue;
   }
 
   .action-button {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 font-semibold text-on-brand transition hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 py-2 font-semibold text-white transition hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon-blue;
   }
 
-  /* Variantes del botón: secundario con borde, peligro en rojo y uno más pequeño */
   .action-button-danger {
-    @apply bg-danger-solid text-white hover:bg-danger-solid-hover;
-  }
-
-  .action-button-sm {
-    @apply min-h-9 px-3 py-1.5 text-sm;
+    @apply bg-secondary hover:bg-secondary-hover;
   }
 
   .profile-header {
-    @apply flex flex-wrap items-center gap-5 border-b border-line pb-6;
+    @apply flex flex-wrap items-center gap-5 border-b border-border-dark pb-6;
   }
 
-  /* Perfil: una sola tarjeta con identidad + estadísticas compactas */
   .profile-hero {
-    @apply relative flex flex-col gap-4 overflow-hidden rounded-2xl bg-linear-to-br from-brand via-hero-via to-hero-to p-5 shadow-lg sm:p-6;
+    @apply relative flex flex-wrap items-center gap-5 overflow-hidden rounded-2xl bg-linear-to-br from-primary via-[#07538a] to-[#007c88] p-6 shadow-lg sm:p-8;
   }
 
-  .profile-avatar-edit {
-    @apply absolute -bottom-0.5 -right-0.5 flex h-8 w-8 items-center justify-center rounded-full border-2 border-on-brand/80 bg-brand text-on-brand shadow-md transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-brand;
+  .profile-joined {
+    @apply w-full border-t border-white/20 pt-3 text-sm text-white/80 sm:w-auto sm:border-0 sm:pt-0;
   }
 
-  .profile-chip {
-    @apply inline-flex min-w-0 items-center gap-1.5 rounded-lg bg-on-brand/15 px-2.5 py-1 text-xs font-medium leading-snug text-on-brand;
+  .profile-metrics {
+    @apply mt-5 grid gap-3 sm:grid-cols-2;
   }
 
-  .profile-chip svg {
-    @apply h-4 w-4 shrink-0;
+  .profile-metric {
+    @apply min-w-0 rounded-xl border border-border-dark bg-surface-dark/70 p-5;
   }
 
-  .profile-stats {
-    @apply grid grid-cols-3 gap-2 border-t border-on-brand/20 pt-4;
+  .profile-metric dt {
+    @apply text-sm font-semibold uppercase text-text-muted-dark;
   }
 
-  .profile-stat {
-    @apply flex min-w-0 flex-col-reverse items-center rounded-lg bg-on-brand/10 px-2 py-2 text-center sm:flex-row-reverse sm:justify-center sm:gap-2;
+  .profile-metric dd {
+    @apply mt-2 font-bold leading-tight text-text-title-dark;
   }
 
-  .profile-stat dt {
-    @apply truncate text-2xs font-semibold uppercase tracking-wider text-on-brand/75 sm:text-xs;
+  .profile-metric > p {
+    @apply mt-1 text-sm text-text-muted-dark;
   }
 
-  .profile-stat dd {
-    @apply text-lg font-bold leading-tight text-on-brand tabular-nums sm:text-xl;
+  .profile-number {
+    @apply flex items-baseline gap-1 text-4xl sm:text-5xl;
+  }
+
+  .profile-number span {
+    @apply text-xl text-text-muted-dark;
+  }
+
+  .profile-career {
+    @apply sm:col-span-2;
+  }
+
+  .career-icon {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-neon-blue;
+  }
+
+  .career-icon svg {
+    @apply h-6 w-6;
   }
 
   .action-button-secondary {
-    @apply border border-line bg-transparent text-ink hover:bg-field;
+    @apply border border-border-dark bg-transparent text-text-title-dark hover:bg-surface-dark;
   }
 
-  /* Franja de cifras con el mismo estilo que las cifras del perfil */
-  .stat-strip { @apply grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-surface/50 shadow-card sm:grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))]; }
-  .stat-strip > div { @apply -mb-px -mr-px border-b border-r border-line px-4 py-3; }
-  .stat-strip > div:last-child:nth-child(odd) { @apply max-sm:col-span-2; }
-  .stat-strip dt { @apply text-xs font-medium text-ink-muted; }
-  .stat-strip dd { @apply mt-0.5 text-2xl font-bold tabular-nums text-ink; }
+  .admin-metric {
+    @apply flex min-h-36 flex-col justify-between rounded-xl border border-border-dark bg-surface-dark/70 p-5;
+  }
 
-  .admin-table-wrap { @apply w-full overflow-x-auto rounded-xl border border-line; }
+  .admin-metric > p { @apply text-sm font-semibold text-text-muted-dark; }
+  .admin-metric > strong { @apply text-4xl font-bold leading-none text-text-title-dark; }
+  .admin-metric > span { @apply text-xs text-text-muted-dark; }
+  .admin-metric-blue { @apply border-t-4 border-t-neon-blue; }
+  .admin-metric-green { @apply border-t-4 border-t-green-600; }
+  .admin-metric-amber { @apply border-t-4 border-t-amber-500; }
+  .admin-metric-red { @apply border-t-4 border-t-neon-red; }
+  .admin-metric-dark { @apply border-t-4 border-t-primary; }
+
+  .admin-filters { @apply grid gap-4 sm:grid-cols-2 lg:grid-cols-4; }
+  .admin-table-wrap { @apply w-full overflow-x-auto rounded-xl border border-border-dark; }
   .admin-table { @apply w-full min-w-[760px] border-collapse text-left text-sm; }
-  .admin-table th { @apply whitespace-nowrap bg-surface px-4 py-3 font-bold text-ink; }
-  .admin-table td { @apply border-t border-line px-4 py-3 align-middle text-ink-soft; }
-  .admin-table td small { @apply mt-1 block text-xs text-ink-muted; }
+  .admin-table th { @apply whitespace-nowrap bg-surface-dark px-4 py-3 font-bold text-text-title-dark; }
+  .admin-table td { @apply border-t border-border-dark px-4 py-3 align-middle text-text-body-dark; }
+  .admin-table td small { @apply mt-1 block text-xs text-text-muted-dark; }
 }

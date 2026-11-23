@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { estilosTipoEvento, colorPuntoEvento } from "../utils/eventStyles";
 import TechTag from "../components/TechTag";
-import PageHeader from "../components/PageHeader";
-import { api, formatRangoFechaHora, parseFechaMySQL } from "../api/client";
-import { EstadoVacio } from "../components/Estados";
+import { api, parseFechaMySQL } from "../api/client";
 
 const NOMBRE_MES = (anio, mes) => new Date(anio, mes, 1).toLocaleDateString("es-MX", { month: "long" });
 const capitalizar = (texto) => texto.charAt(0).toUpperCase() + texto.slice(1);
@@ -17,7 +14,6 @@ function Calendario() {
     });
     const [eventosMes, setEventosMes] = useState(null);
     const [error, setError] = useState("");
-    const [intento, setIntento] = useState(0);
 
     const claveMes = `${mesActual.anio}-${String(mesActual.mes + 1).padStart(2, "0")}`;
     const events = eventosMes?.clave === claveMes ? eventosMes.lista : [];
@@ -28,18 +24,11 @@ function Calendario() {
             .then((response) => { if (!cancelled) { setEventosMes({ clave: claveMes, lista: response.eventos }); setError(""); } })
             .catch((err) => { if (!cancelled) setError(err.message); });
         return () => { cancelled = true; };
-    }, [claveMes, intento]);
+    }, [claveMes]);
 
     const diasMes = new Date(mesActual.anio, mesActual.mes + 1, 0).getDate();
-    const diaInicio = new Date(mesActual.anio, mesActual.mes, 1).getDay(); // el 0 es domingo
+    const diaInicio = new Date(mesActual.anio, mesActual.mes, 1).getDay(); // 0 = domingo
     const nombreMes = capitalizar(NOMBRE_MES(mesActual.anio, mesActual.mes));
-    const hoy = new Date();
-    const esMesActual = hoy.getFullYear() === mesActual.anio && hoy.getMonth() === mesActual.mes;
-
-    const irAHoy = () => {
-        setFechaSeleccionada(null);
-        setMesActual({ anio: hoy.getFullYear(), mes: hoy.getMonth() });
-    };
 
     const cambiarMes = (delta) => {
         setFechaSeleccionada(null);
@@ -65,10 +54,8 @@ function Calendario() {
         }
     };
 
-    // Eventos del día seleccionado para el Panel[cite: 9]
     const eventosDelDia = fechaSeleccionada ? eventosDelDiaDe(fechaSeleccionada) : [];
 
-    // Estilos dinámicos para las etiquetas de eventos[cite: 9]
     const getEstilosPorTipo = (tipo) => {
         switch (tipo) {
             case 'Examen': return 'bg-neon-red/10 text-neon-red border-neon-red/40';
@@ -80,7 +67,6 @@ function Calendario() {
         }
     };
 
-    // Estilos para los puntitos (cuando está contraído)[cite: 9]
     const getColorPunto = (tipo) => {
         switch (tipo) {
             case 'Examen': return 'bg-neon-red shadow-[0_0_5px_rgba(255,77,77,0.8)]';
@@ -118,99 +104,72 @@ function Calendario() {
         : todasLasCeldas;
 
     return (
-        <div className="pagina-ancha relative flex flex-col">
-            <PageHeader titulo="Calendario" subtitulo="Exámenes, asuetos y eventos de la facultad." />
+        <div className="w-full flex flex-col relative gap-6">
             <motion.div
                 layout
-                className="card w-full overflow-hidden"
+                className="w-full bg-surface-dark/20 backdrop-blur-md border border-border-dark rounded-2xl p-6 md:p-8 shadow-lg overflow-hidden"
             >
-                {/* Encabezado del calendario */}
-                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
-                    <h2 className="text-xl font-bold text-ink sm:text-2xl" aria-live="polite">
+                {/* Header del Calendario */}
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border-dark pb-4">
+                    <h1 className="theme-glow text-2xl font-bold text-text-title-dark sm:text-3xl">
                         {nombreMes} {mesActual.anio}
-                    </h2>
+                    </h1>
                     {!fechaSeleccionada && (
-                        <div className="flex items-center gap-2">
-                            {!esMesActual && (
-                                <button type="button" onClick={irAHoy} className="min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-bold text-ink transition-colors hover:bg-surface">
-                                    Hoy
-                                </button>
-                            )}
-                            <button type="button" onClick={() => cambiarMes(-1)} aria-label="Mes anterior" className="flex h-11 w-11 items-center justify-center rounded-lg border border-line text-ink transition-colors hover:bg-surface">
-                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                        <div className="flex flex-wrap gap-2">
+                            <button type="button" onClick={() => cambiarMes(-1)} className="min-h-11 rounded-lg border border-border-dark px-3 py-2 text-sm font-bold text-text-title-dark transition-colors hover:bg-surface-dark sm:px-4 sm:text-base">
+                                &lt; Anterior
                             </button>
-                            <button type="button" onClick={() => cambiarMes(1)} aria-label="Mes siguiente" className="flex h-11 w-11 items-center justify-center rounded-lg border border-line text-ink transition-colors hover:bg-surface">
-                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                            <button type="button" onClick={() => cambiarMes(1)} className="min-h-11 rounded-lg border border-border-dark px-3 py-2 text-sm font-bold text-text-title-dark transition-colors hover:bg-surface-dark sm:px-4 sm:text-base">
+                                Siguiente &gt;
                             </button>
                         </div>
                     )}
                     {fechaSeleccionada && (
-                        <button type="button" onClick={() => setFechaSeleccionada(null)} className="min-h-11 text-ink-muted hover:text-ink font-bold text-sm underline transition-colors">
+                        <button onClick={() => setFechaSeleccionada(null)} className="text-text-muted-dark hover:text-white font-bold text-sm underline transition-colors">
                             Ver mes completo
                         </button>
                     )}
                 </div>
 
-                {error && (
-                    <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-danger/40 bg-danger/10 px-4 py-2.5 text-sm text-danger">
-                        <span>No se pudieron cargar los eventos del mes.</span>
-                        <button type="button" onClick={() => { setError(""); setIntento((n) => n + 1); }} className="action-button action-button-secondary action-button-sm">Reintentar</button>
-                    </div>
-                )}
+                {error && <p role="alert" className="mb-4 text-sm text-neon-red">{error}</p>}
 
-                <div className="grid grid-cols-7 gap-2 md:gap-4 mb-4 text-center text-sm font-bold text-ink-muted uppercase tracking-wider">
+                <div className="grid grid-cols-7 gap-2 md:gap-4 mb-4 text-center text-sm font-bold text-text-muted-dark uppercase tracking-wider">
                     <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div>
                 </div>
 
                 <motion.div layout className="grid grid-cols-7 gap-2 md:gap-4">
                     {celdasRenderizadas.map((celda) => {
                         if (celda.tipo === 'vacio') {
-                            return <div key={celda.key} aria-hidden="true" className="min-h-16 md:min-h-[140px] rounded-xl bg-transparent border border-transparent"></div>;
+                            return <div key={celda.key} className="min-h-[100px] md:min-h-[140px] rounded-xl bg-transparent border border-transparent"></div>;
                         }
 
                         const dia = celda.dia;
                         const esSeleccionado = dia === fechaSeleccionada;
                         const eventosHoy = eventosDelDiaDe(dia);
-                        const esHoy = esMesActual && dia === hoy.getDate();
-                        const totalEventos = eventosHoy.length;
 
                         return (
-                            <motion.button
-                                type="button"
+                            <motion.div
                                 layout
                                 key={celda.key}
                                 onClick={() => toggleDia(dia)}
-                                aria-pressed={esSeleccionado}
-                                aria-label={`${dia} de ${nombreMes}${esHoy ? ", hoy" : ""}: ${totalEventos ? `${totalEventos} ${totalEventos === 1 ? "evento" : "eventos"}` : "sin eventos"}`}
-                                className={`min-h-16 md:min-h-[140px] rounded-xl border p-1.5 md:p-3 text-left cursor-pointer transition-colors flex flex-col relative overflow-hidden group shadow-sm hover:shadow-glow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent
+                                className={`min-h-[100px] md:min-h-[140px] rounded-xl border p-2 md:p-3 cursor-pointer transition-colors flex flex-col relative overflow-hidden group shadow-sm hover:shadow-[0_0_15px_rgba(0,191,255,0.15)]
                                     ${esSeleccionado
-                                        ? 'border-cal-selected bg-cal-selected/10 shadow-glow'
-                                        : esHoy
-                                            ? 'border-cal-today/60 bg-cal-cell/40 hover:bg-cal-cell-hover'
-                                            : 'border-cal-grid bg-cal-cell/40 hover:bg-cal-cell-hover hover:border-cal-selected/50'
+                                        ? 'border-neon-blue bg-primary/10 shadow-[0_0_15px_rgba(0,191,255,0.2)]'
+                                        : 'border-border-dark bg-surface-dark/40 hover:bg-surface-dark hover:border-neon-blue/50'
                                     }`}
                             >
-                                <span className={`mb-1 md:mb-2 inline-flex h-6 min-w-6 items-center justify-center self-start rounded-full px-1 text-sm font-bold transition-colors ${esHoy
-                                    ? 'bg-cal-today text-on-accent'
-                                    : esSeleccionado ? 'text-cal-selected' : 'text-ink-soft group-hover:text-cal-selected'}`}>
+                                <span className={`text-sm font-bold mb-2 transition-colors ${esSeleccionado ? 'text-neon-blue' : 'text-text-body-dark group-hover:text-neon-blue'}`}>
                                     {dia}
                                 </span>
 
-                                {/* Vista de semana o celular: puntitos. Mes completo en pantallas medianas: etiquetas */}
+                                {/* Lógica condicional: Puntitos o Etiquetas */}
                                 <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pr-1 mt-auto">
-                                    {!fechaSeleccionada && totalEventos > 0 && (
-                                        <div className="flex flex-wrap gap-1 md:hidden" aria-hidden="true">
-                                            {eventosHoy.map((evento) => (
-                                                <span key={evento.id_evento} className={`h-2 w-2 rounded-full ${colorPuntoEvento(evento.tipo)}`} />
-                                            ))}
-                                        </div>
-                                    )}
                                     {fechaSeleccionada ? (
                                         <div className="flex flex-wrap gap-1.5 mt-2">
                                             {eventosHoy.map((evento, idx) => (
                                                 <div
                                                     key={idx}
-                                                    className={`w-2.5 h-2.5 rounded-full ${colorPuntoEvento(evento.tipo)}`}
+                                                    className={`w-2.5 h-2.5 rounded-full ${getColorPunto(evento.tipo)}`}
                                                     title={evento.titulo}
                                                 ></div>
                                             ))}
@@ -219,7 +178,7 @@ function Calendario() {
                                         eventosHoy.map((evento, idx) => (
                                             <div
                                                 key={idx}
-                                                className={`hidden md:block text-xs font-semibold px-2 py-1 rounded border truncate ${estilosTipoEvento(evento.tipo)}`}
+                                                className={`text-[10px] md:text-xs font-semibold px-2 py-1 rounded border truncate ${getEstilosPorTipo(evento.tipo)}`}
                                                 title={evento.titulo}
                                             >
                                                 {evento.titulo}
@@ -227,7 +186,7 @@ function Calendario() {
                                         ))
                                     )}
                                 </div>
-                            </motion.button>
+                            </motion.div>
                         );
                     })}
                 </motion.div>
@@ -242,16 +201,16 @@ function Calendario() {
                         transition={{ duration: 0.4, ease: "easeInOut" }}
                         className="w-full overflow-hidden"
                     >
-                        <div className="card flex h-full w-full flex-col">
+                        <div className="w-full h-full bg-surface-dark/20 backdrop-blur-md border border-border-dark rounded-2xl p-6 md:p-8 shadow-lg flex flex-col">
 
-                            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
-                                <h2 className="flex min-w-0 items-center gap-3 text-xl font-bold text-ink sm:text-2xl">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border-dark pb-4">
+                                <h2 className="flex min-w-0 items-center gap-3 text-xl font-bold text-text-title-dark sm:text-2xl">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-neon-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
-                                    Eventos del {fechaSeleccionada} de {nombreMes.toLowerCase()}
+                                    Eventos del {fechaSeleccionada} de {nombreMes}
                                 </h2>
-                                <button type="button" onClick={() => setFechaSeleccionada(null)} aria-label="Cerrar eventos del día" className="text-ink-muted hover:text-ink transition-colors bg-field rounded-full p-2 border border-line">
+                                <button onClick={() => setFechaSeleccionada(null)} className="text-text-muted-dark hover:text-white transition-colors bg-bg-dark rounded-full p-2 border border-border-dark">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
@@ -262,33 +221,31 @@ function Calendario() {
                             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 overflow-y-auto custom-scrollbar flex-1 pr-2">
                                 {eventosDelDia.length > 0 ? (
                                     eventosDelDia.map((evento) => (
-                                        <div key={evento.id_evento} className="bg-field border border-line rounded-xl p-5 hover:border-accent/50 transition-colors flex flex-col">
+                                        <div key={evento.id_evento} className="bg-bg-dark border border-border-dark rounded-xl p-5 hover:border-neon-blue/50 transition-colors flex flex-col">
                                             <div className="flex justify-between items-start mb-3">
                                                 <TechTag etiqueta={evento.tipo} />
                                             </div>
-                                            <h3 className="font-bold text-ink text-xl mb-2">{evento.titulo}</h3>
+                                            <h3 className="font-bold text-text-title-dark text-xl mb-2">{evento.titulo}</h3>
 
-                                            <div className="text-sm text-ink-muted mb-4 space-y-1.5 border-l-2 border-line pl-3 flex-1">
+                                            <div className="text-sm text-text-muted-dark mb-4 space-y-1.5 border-l-2 border-border-dark pl-3 flex-1">
                                                 <p className="flex items-center gap-2">
-                                                    <strong className="text-ink-soft">Horario:</strong>
-                                                    {formatRangoFechaHora(evento.fecha_inicio, evento.fecha_fin)}
+                                                    <strong className="text-text-body-dark">Horario:</strong>
+                                                    {parseFechaMySQL(evento.fecha_inicio).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })} - {parseFechaMySQL(evento.fecha_fin).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}
                                                 </p>
                                                 <p className="flex items-center gap-2">
-                                                    <strong className="text-ink-soft">Lugar:</strong>
+                                                    <strong className="text-text-body-dark">Lugar:</strong>
                                                     {evento.lugar || "Por definir"}
                                                 </p>
                                             </div>
 
-                                            {evento.descripcion && (
-                                                <p className="text-sm text-ink-soft leading-relaxed bg-surface/50 p-3 rounded-lg border border-line/50">
-                                                    {evento.descripcion}
-                                                </p>
-                                            )}
+                                            <p className="text-sm text-text-body-dark leading-relaxed bg-surface-dark/50 p-3 rounded-lg border border-border-dark/50">
+                                                {evento.descripcion}
+                                            </p>
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="col-span-full rounded-xl border border-line bg-field/40">
-                                        <EstadoVacio compacto icono="calendario" titulo="Sin eventos este día" detalle="No hay exámenes, asuetos ni actividades programadas." />
+                                    <div className="col-span-full text-center py-10 bg-bg-dark border border-border-dark rounded-xl">
+                                        <p className="text-text-muted-dark text-lg">No hay eventos programados para este día.</p>
                                     </div>
                                 )}
                             </div>

@@ -1,6 +1,14 @@
 <?php
-// Muestra la imagen de una publicación activa. Los videos no pasan por aquí porque son enlaces
-// de YouTube; las imágenes se suben y se reemplazan desde publicaciones.php.
+// ============================================================
+// multimedia.php - Sección Multimedia
+// Acción por parámetro: multimedia.php?accion=...
+// Requiere sesión.
+//
+//   GET ver&id=   imagen (BLOB) de una publicación ACTIVA
+//                 (los videos son enlaces de YouTube: van en video_url)
+// La subida y el reemplazo se hacen en publicaciones.php (crear/editar)
+// mediante sp_multimedia.
+// ============================================================
 require __DIR__ . "/config.php";
 
 function accionVer(mysqli $conn): never {

@@ -1,6 +1,14 @@
 <?php
-// Datos del resumen del panel de administración (solo administrador): conteos de usuarios,
-// los estudiantes más activos, las publicaciones con más interacción y la bitácora.
+// ============================================================
+// reportes.php - Sección Reportes / Dashboard
+// Acción por parámetro: reportes.php?accion=...
+// Solo Administrador (D15, R1-A del Paso 6).
+//
+//   GET resumen             conteos generales        (vw_resumen_usuarios)
+//   GET mas_activos         top 5 estudiantes        (vw_usuarios_mas_activos)
+//   GET mayor_interaccion   top 5 publicaciones      (vw_publicaciones_mayor_interaccion)
+//   GET bitacora            últimos 100 movimientos  (vw_bitacora; la alimentan los triggers)
+// ============================================================
 require __DIR__ . "/config.php";
 
 const TOP_LIMITE      = 5;

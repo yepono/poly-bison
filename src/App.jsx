@@ -18,7 +18,7 @@ import { useAppData } from "./context/AppDataContext";
 function RequireAuth({ children }) {
   const { user, authStatus } = useAppData();
   const location = useLocation();
-  if (authStatus === "loading") return <div className="min-h-screen bg-canvas" aria-busy="true" />;
+  if (authStatus === "loading") return <div className="min-h-screen bg-bg-deep" aria-busy="true" />;
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
   // Clave temporal: solo puede estar en Configuración hasta cambiarla (el PHP también lo exige)
   if (user.debeCambiarContrasena && location.pathname !== "/configuracion") return <Navigate to="/configuracion" replace />;
@@ -45,9 +45,9 @@ function App() {
         <Route path="/configuracion" element={<Configuracion />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/aulas" element={<Aulas />} />
-        <Route path="/bisontstore" element={<Bisontstore />} />
-        <Route path="/calendario" element={<Calendario />} />
-        <Route path="/mapa" element={<Mapa />} />
+        <Route path="Bisontstore" element={<Bisontstore />} />
+        <Route path="Calendario" element={<Calendario />} />
+        <Route path="Mapa" element={<Mapa />} />
       </Route>
     </Routes>
     {backgroundLocation && (

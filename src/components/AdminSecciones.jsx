@@ -1,76 +1,21 @@
-// Secciones del panel de administración.
+// Secciones del panel de administración conectadas a la API (Paso 5).
+// Mismo marcado y clases que tenían en Admin.jsx; solo cambia el origen de datos.
 import { useCallback, useEffect, useState } from "react";
-import { AnimatePresence } from "framer-motion";
-import { useDialogos } from "./Dialogos";
-import CustomSelect from "./CustomSelect";
-import PanelLateral from "./PanelLateral";
-import MenuAcciones from "./MenuAcciones";
-import Interruptor from "./Interruptor";
-import CampoFechaHora from "./CampoFechaHora";
-import { EsqueletoFilas, EstadoError, EstadoVacio } from "./Estados";
-import { EstadoStock, ImagenProducto } from "./ProductModal";
-import { colorPuntoEvento } from "../utils/eventStyles";
-import { DonaEstados, RankingInteraccion, RankingUsuarios } from "./GraficasAdmin";
-import { api, formatDia, formatFechaHora, formatHora, formatPrecio, formatRangoFechaHora, formatRangoHoras, mapProducto, toDateTimeLocal, validarImagen } from "../api/client";
+import { api, formatPrecio, mapProducto, parseFechaMySQL, toDateTimeLocal, validarImagen } from "../api/client";
 
 const EVENT_TYPES = ["Académico", "Examen", "Asueto", "Cultural", "Deportivo"];
 
-// Franja de cifras sencilla, con el mismo estilo que las cifras del perfil
-export function FranjaCifras({ cifras, cargando = false, etiqueta }) {
-    return (
-        <dl className="stat-strip" aria-label={etiqueta} aria-busy={cargando || undefined}>
-            {cifras.map(({ etiqueta: nombre, valor, detalle }) => (
-                <div key={nombre} title={detalle}>
-                    <dt>{nombre}</dt>
-                    <dd>{cargando ? <span className="inline-block h-7 w-10 animate-pulse rounded bg-field align-middle" aria-hidden="true" /> : valor}</dd>
-                </div>
-            ))}
-        </dl>
-    );
+function Metric({ label, value, detail, tone = "blue" }) {
+    return <article className={`admin-metric admin-metric-${tone}`}><p>{label}</p><strong>{value}</strong><span>{detail}</span></article>;
 }
 
-function Tarjeta({ titulo, detalle, acciones, children }) {
-    return (
-        <section className="settings-section">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <h2 className="text-lg font-bold text-ink">{titulo}</h2>
-                    {detalle && <p className="mt-0.5 text-sm text-ink-muted">{detalle}</p>}
-                </div>
-                {acciones}
-            </div>
-            <div className="mt-5">{children}</div>
-        </section>
-    );
-}
-
-function FilasCargando({ filas = 4 }) {
-    return (
-        <div className="space-y-4" aria-hidden="true">
-            {Array.from({ length: filas }, (_, i) => (
-                <div key={i} className="space-y-2">
-                    <div className="h-3 w-1/3 animate-pulse rounded bg-field" />
-                    <div className="h-3 animate-pulse rounded bg-field" style={{ width: `${85 - i * 15}%` }} />
-                </div>
-            ))}
-        </div>
-    );
-}
-
-// Color de cada estado de cuenta; siempre se muestra junto con su nombre y su cifra
-const ESTADOS = [
-    { campo: "usuarios_activos", estado: "Aprobado", nombre: "Aprobados", color: "var(--success)", punto: "bg-success" },
-    { campo: "pendientes", estado: "Pendiente", nombre: "Pendientes", color: "var(--warning)", punto: "bg-warning" },
-    { campo: "rechazados", estado: "Rechazado", nombre: "Rechazados", color: "var(--ink-muted)", punto: "bg-ink-muted" },
-    { campo: "baneados", estado: "Baneado", nombre: "Baneados", color: "var(--danger)", punto: "bg-danger" },
-];
-
-// Resumen (solo administrador). Los datos vienen de reportes.php
-export function AdminResumen({ setNotice, onIrA }) {
+// ---------- Resumen / Dashboard ----------
+// Datos: reportes.php -> vw_resumen_usuarios, vw_usuarios_mas_activos,
+// vw_publicaciones_mayor_interaccion
+export function AdminResumen({ setNotice }) {
     const [resumen, setResumen] = useState(null);
-    const [masActivos, setMasActivos] = useState(null);
-    const [mayorInteraccion, setMayorInteraccion] = useState(null);
-    const [fallo, setFallo] = useState(false);
+    const [masActivos, setMasActivos] = useState([]);
+    const [mayorInteraccion, setMayorInteraccion] = useState([]);
 
     useEffect(() => {
         let cancelled = false;
@@ -85,19 +30,14 @@ export function AdminResumen({ setNotice, onIrA }) {
                 setMasActivos(activos.usuarios);
                 setMayorInteraccion(interaccion.publicaciones);
             })
-            .catch((err) => { if (!cancelled) { setFallo(true); setNotice(err.message); } });
+            .catch((err) => { if (!cancelled) setNotice(err.message); });
         return () => { cancelled = true; };
     }, [setNotice]);
 
-    if (fallo) {
-        return <p role="alert" className="rounded-xl border border-danger/40 bg-danger/10 p-4 text-sm text-danger">No se pudo cargar el resumen. Recarga la página para intentarlo de nuevo.</p>;
-    }
-
-    const cargando = resumen === null;
     const r = resumen ?? {};
     const valor = (campo) => (resumen ? r[campo] : "—");
 
-    // Gráfica (R2-B): una sola serie -> un solo color, sin leyenda; etiqueta directa con el valor
+    // Gráfica: una sola serie -> un solo color, sin leyenda; etiqueta directa con el valor
     const porEstado = [
         { estado: "Aprobados", total: r.usuarios_activos ?? 0 },
         { estado: "Pendientes", total: r.pendientes ?? 0 },
@@ -105,46 +45,55 @@ export function AdminResumen({ setNotice, onIrA }) {
         { estado: "Baneados", total: r.baneados ?? 0 },
     ];
     const totalUsuarios = porEstado.reduce((suma, item) => suma + item.total, 0);
+    const maximo = Math.max(1, ...porEstado.map((item) => item.total));
 
     return <>
-        <FranjaCifras etiqueta="Cifras generales" cargando={cargando} cifras={[
-            { etiqueta: "Alumnos", valor: num("total_estudiantes"), detalle: "Cuentas estudiantiles" },
-            { etiqueta: "Activos", valor: num("usuarios_activos"), detalle: "Estatus aprobado" },
-            { etiqueta: "Pendientes", valor: num("pendientes"), detalle: "Requieren revisión" },
-            { etiqueta: "Baneados", valor: num("baneados"), detalle: "Cuentas restringidas" },
-            { etiqueta: "Staff", valor: num("administradores"), detalle: "Administradores y moderadores" },
-            { etiqueta: "Publicaciones", valor: num("publicaciones_activas"), detalle: "Visibles en el feed" },
-            { etiqueta: "Reservaciones", valor: num("reservaciones_activas"), detalle: "Aulas apartadas" },
-        ]} />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <Metric label="Alumnos registrados" value={valor("total_estudiantes")} detail="Cuentas estudiantiles" />
+            <Metric label="Usuarios activos" value={valor("usuarios_activos")} detail="Estatus aprobado" tone="green" />
+            <Metric label="Pendientes" value={valor("pendientes")} detail="Requieren revisión" tone="amber" />
+            <Metric label="Baneados" value={valor("baneados")} detail="Cuentas restringidas" tone="red" />
+            <Metric label="Administradores" value={valor("administradores")} detail="Admin y moderación" tone="dark" />
+            <Metric label="Publicaciones activas" value={valor("publicaciones_activas")} detail="Visibles en el feed" />
+            <Metric label="Reservaciones activas" value={valor("reservaciones_activas")} detail="Aulas apartadas" />
+        </div>
 
-        {!cargando && num("pendientes") > 0 && (
-            <div className="flex flex-col gap-3 rounded-2xl border border-warning/40 bg-warning/10 p-4 sm:flex-row sm:items-center">
-                <svg className="h-5 w-5 shrink-0 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l2.5 2.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
-                <p className="flex-1 text-sm text-ink"><b>{num("pendientes")} {num("pendientes") === 1 ? "cuenta espera" : "cuentas esperan"} revisión.</b> Apruébalas o recházalas desde Estudiantes.</p>
-                {onIrA && <button type="button" onClick={() => onIrA("Estudiantes", "Pendiente")} className="action-button text-sm">Revisar ahora</button>}
+        <section className="settings-section">
+            <h2 className="text-lg font-bold text-text-title-dark">Usuarios por estado</h2>
+            <p className="mt-1 text-sm text-text-muted-dark">{totalUsuarios} cuentas (sin incluir eliminadas)</p>
+            <div className="mt-5 flex flex-col gap-3" aria-hidden="true">
+                {porEstado.map((item) => {
+                    const porcentaje = totalUsuarios ? Math.round((item.total / totalUsuarios) * 100) : 0;
+                    return (
+                        <div key={item.estado} className="group flex items-center gap-3" title={`${item.estado}: ${item.total} (${porcentaje}%)`}>
+                            <span className="w-24 shrink-0 text-sm text-text-body-dark">{item.estado}</span>
+                            <div className="relative h-4 flex-1">
+                                <div
+                                    className="h-4 rounded-r bg-neon-blue transition-opacity group-hover:opacity-80"
+                                    style={{ width: item.total ? `max(${(item.total / maximo) * 100}%, 4px)` : 0 }}
+                                />
+                            </div>
+                            <span className="w-16 shrink-0 text-right text-sm font-semibold text-text-title-dark">{item.total}<span className="ml-1 text-xs font-normal text-text-muted-dark">{porcentaje}%</span></span>
+                        </div>
+                    );
+                })}
             </div>
-        )}
-
-        <Tarjeta titulo="Usuarios por estado" detalle={cargando ? " " : `${totalUsuarios} cuentas (sin incluir eliminadas)${onIrA ? " · toca un estado para ver esas cuentas" : ""}`}>
-            {cargando ? <FilasCargando filas={2} /> : <DonaEstados datos={porEstado} />}
-        </Tarjeta>
+            {/* Vista de tabla para lectores de pantalla */}
+            <table className="sr-only">
+                <caption>Usuarios por estado</caption>
+                <thead><tr><th>Estado</th><th>Usuarios</th><th>Porcentaje</th></tr></thead>
+                <tbody>{porEstado.map((item) => <tr key={item.estado}><td>{item.estado}</td><td>{item.total}</td><td>{totalUsuarios ? Math.round((item.total / totalUsuarios) * 100) : 0}%</td></tr>)}</tbody>
+            </table>
+        </section>
 
         <div className="grid gap-5 xl:grid-cols-2">
-            <Tarjeta titulo="Usuarios más activos" detalle="Por número de publicaciones">
-                {masActivos === null ? <FilasCargando /> : !masActivos.length
-                    ? <EstadoVacio compacto icono="publicacion" titulo="Aún no hay actividad" />
-                    : <RankingUsuarios usuarios={masActivos} />}
-            </Tarjeta>
-            <Tarjeta titulo="Publicaciones con mayor interacción" detalle="Me gusta y comentarios por publicación">
-                {mayorInteraccion === null ? <FilasCargando /> : !mayorInteraccion.length
-                    ? <EstadoVacio compacto icono="publicacion" titulo="Aún no hay publicaciones" />
-                    : <RankingInteraccion publicaciones={mayorInteraccion} />}
-            </Tarjeta>
+            <section className="settings-section"><h2 className="text-lg font-bold text-text-title-dark">Usuarios más activos</h2><div className="mt-4 divide-y divide-border-dark">{masActivos.map((record, index) => <div key={record.id_usuario} className="flex items-center justify-between gap-4 py-3"><span className="min-w-0 truncate text-text-title-dark"><b className="mr-3 text-neon-blue">0{index + 1}</b>{record.alias}</span><span className="shrink-0 font-bold text-text-title-dark">{record.total_publicaciones} posts</span></div>)}{!masActivos.length && <p className="py-3 text-sm text-text-muted-dark">Aún no hay actividad.</p>}</div></section>
+            <section className="settings-section"><h2 className="text-lg font-bold text-text-title-dark">Publicaciones con mayor interacción</h2><div className="mt-4 divide-y divide-border-dark">{mayorInteraccion.map((post) => <div key={post.id_publicacion} className="py-3"><p className="line-clamp-1 font-semibold text-text-title-dark">{post.titulo}</p><p className="mt-1 text-sm text-text-muted-dark">@{post.alias} · {post.total_likes} likes · {post.total_comentarios} comentarios</p></div>)}{!mayorInteraccion.length && <p className="py-3 text-sm text-text-muted-dark">Aún no hay publicaciones.</p>}</div></section>
         </div>
     </>;
 }
 
-// ---------- Bitácora (solo Administrador, D18) ----------
+// ---------- Bitácora ----------
 // Datos: reportes.php?accion=bitacora -> vw_bitacora (Event_Log que llenan los triggers)
 export function AdminBitacora({ search, setSearch, setNotice }) {
     const [registros, setRegistros] = useState(null);
@@ -181,112 +130,69 @@ export function AdminRentas({ search, setSearch, setNotice }) {
     return <section className="settings-section"><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-lg font-bold text-text-title-dark">Historial global de rentas de aulas</h2><p className="mt-1 text-sm text-text-muted-dark">{reservations === null ? "Cargando..." : `${reservations.length} reservaciones registradas`}</p></div><label className="form-label w-full sm:max-w-sm">Buscar usuario, aula o ticket<input className="form-input" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Alias, matrícula, aula o ticket"/></label></div><div className="admin-table-wrap mt-4"><table className="admin-table"><thead><tr><th>Aula</th><th>Usuario</th><th>Matrícula</th><th>Fecha</th><th>Horario</th><th>Ticket</th><th>Estado</th></tr></thead><tbody>{lista.map((item) => <tr key={item.id_reservacion}><td>{item.aula}<small>{item.total_asistentes} asistente(s)</small></td><td>@{item.alias}</td><td>{item.matricula || "-"}</td><td>{item.fecha_reserva}</td><td>{item.hora_inicio} - {item.hora_fin}</td><td className="font-mono">{item.codigo_ticket}</td><td>{item.estado}</td></tr>)}</tbody></table>{reservations !== null && !lista.length && <p className="p-6 text-center text-text-muted-dark">No hay reservaciones que coincidan.</p>}</div></section>;
 }
 
-// ---------- Horarios (solo Administrador, D9) ----------
+// ---------- Horarios (solo Administrador) ----------
 export function AdminHorarios({ setNotice }) {
-    const { avisar } = useDialogos();
-    const { datos, error, recargar, reintentar } = useLista(cargarBloques);
-    const [panel, setPanel] = useState(null); // datos del panel abierto, o null si está cerrado
-    const [errorPanel, setErrorPanel] = useState("");
-    const [guardando, setGuardando] = useState(false);
-    const [cambiando, setCambiando] = useState(null);
+    const [bloques, setBloques] = useState([]);
 
-    const abrir = (bloque = null) => {
-        setErrorPanel("");
-        setPanel({ bloque, inicio: bloque ? formatHora(bloque.hora_inicio) : "07:00", fin: bloque ? formatHora(bloque.hora_fin) : "08:00" });
-    };
+    const cargar = useCallback(() => {
+        return api("reservaciones", "bloques", { params: { todos: 1 } })
+            .then((response) => setBloques(response.bloques))
+            .catch((err) => setNotice(err.message));
+    }, [setNotice]);
 
-    const guardar = async () => {
-        const { bloque, inicio, fin } = panel;
-        if (!HORA.test(inicio) || !HORA.test(fin) || fin <= inicio) return setErrorPanel("La hora de fin debe ser posterior a la de inicio.");
-        if (bloque && inicio === formatHora(bloque.hora_inicio) && fin === formatHora(bloque.hora_fin)) return setPanel(null);
-        setGuardando(true);
+    useEffect(() => { cargar(); }, [cargar]);
+
+    const ejecutar = async (accion, body, mensaje) => {
         try {
-            await api("reservaciones", bloque ? "bloque_editar" : "bloque_crear", { method: "POST", body: { ...(bloque && { id_bloque: bloque.id_bloque }), hora_inicio: inicio, hora_fin: fin } });
-            avisar(bloque ? "Horario actualizado." : "Horario agregado.", "exito");
-            setPanel(null);
-            await recargar();
-        } catch (err) {
-            setErrorPanel(err.message);
-        } finally {
-            setGuardando(false);
-        }
-    };
-
-    const alternarActivo = async (bloque, activo) => {
-        setCambiando(bloque.id_bloque);
-        try {
-            await api("reservaciones", activo ? "bloque_activar" : "bloque_desactivar", { method: "POST", body: { id_bloque: bloque.id_bloque } });
-            avisar(activo ? "Horario activado." : "Horario desactivado: ya no se ofrece en Reserva de aulas.", "exito");
-            await recargar();
+            await api("reservaciones", accion, { method: "POST", body });
+            setNotice(mensaje);
+            await cargar();
         } catch (err) {
             setNotice(err.message);
-        } finally {
-            setCambiando(null);
         }
     };
 
-    const opcionesHora = (extra) => (extra && !HORAS_BLOQUE.includes(extra) ? [...HORAS_BLOQUE, extra].sort() : HORAS_BLOQUE).map((h) => ({ value: h, label: h }));
-    const lista = datos ?? [];
+    const agregar = (event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const start = form.elements.start.value;
+        const end = form.elements.end.value;
+        if (!HORA.test(start) || !HORA.test(end) || end <= start) {
+            setNotice("La hora de fin debe ser posterior a la de inicio.");
+            return;
+        }
+        ejecutar("bloque_crear", { hora_inicio: start, hora_fin: end }, "Horario agregado.").then(() => form.reset());
+    };
 
-    return (
-        <SeccionAdmin
-            titulo="Horarios disponibles"
-            detalle="Los horarios activos se ofrecen en Reserva de aulas. Un horario con reservaciones no se puede editar: desactívalo y crea uno nuevo."
-            accion={<button type="button" onClick={() => abrir()} className="action-button">+ Agregar horario</button>}
-        >
-            <TablaAdmin
-                columnas={["Bloque", "Duración", "Activo", "Acciones"]}
-                cargando={datos === null} error={error} onReintentar={reintentar} hayFilas={lista.length > 0}
-                vacio={{ icono: "reloj", titulo: "Sin horarios", detalle: "Agrega el primer bloque para que se puedan reservar aulas.", accion: { texto: "Agregar horario", onClick: () => abrir() } }}
-            >
-                {lista.map((bloque) => {
-                    const slot = formatRangoHoras(bloque.hora_inicio, bloque.hora_fin);
-                    const [h1, m1] = formatHora(bloque.hora_inicio).split(":").map(Number);
-                    const [h2, m2] = formatHora(bloque.hora_fin).split(":").map(Number);
-                    const minutos = h2 * 60 + m2 - (h1 * 60 + m1);
-                    return (
-                        <tr key={bloque.id_bloque} className={bloque.activo ? "" : ATENUADA}>
-                            <td className="whitespace-nowrap font-semibold text-ink">{slot}</td>
-                            <td>{minutos >= 60 ? `${Math.floor(minutos / 60)} h${minutos % 60 ? ` ${minutos % 60} min` : ""}` : `${minutos} min`}</td>
-                            <td><Interruptor activo={Boolean(bloque.activo)} etiqueta={`Horario ${slot} activo`} deshabilitado={cambiando === bloque.id_bloque} onCambiar={(v) => alternarActivo(bloque, v)} /></td>
-                            <td><AccionesFila nombre={slot} onEditar={() => abrir(bloque)} /></td>
-                        </tr>
-                    );
-                })}
-            </TablaAdmin>
+    const editar = (bloque) => {
+        const actual = `${bloque.hora_inicio} - ${bloque.hora_fin}`;
+        const replacement = window.prompt("Escribe el bloque en formato HH:MM - HH:MM", actual);
+        if (replacement === null || replacement.trim() === actual) return;
+        const match = replacement.trim().match(/^([01]\d|2[0-3]):([0-5]\d) - ([01]\d|2[0-3]):([0-5]\d)$/);
+        if (!match) {
+            setNotice("Formato no válido. Usa HH:MM - HH:MM.");
+            return;
+        }
+        const [inicio, fin] = replacement.trim().split(" - ");
+        if (fin <= inicio) {
+            setNotice("La hora de fin debe ser posterior a la de inicio.");
+            return;
+        }
+        ejecutar("bloque_editar", { id_bloque: bloque.id_bloque, hora_inicio: inicio, hora_fin: fin }, "Horario actualizado.");
+    };
 
-            <AnimatePresence>
-                {panel && (
-                    <PanelLateral
-                        titulo={panel.bloque ? "Editar horario" : "Nuevo horario"}
-                        subtitulo={panel.bloque ? formatRangoHoras(panel.bloque.hora_inicio, panel.bloque.hora_fin) : "Bloque que se podrá reservar"}
-                        accion={panel.bloque ? "Guardar cambios" : "Agregar horario"}
-                        onCerrar={() => setPanel(null)} onEnviar={guardar} guardando={guardando} error={errorPanel}
-                    >
-                        <div className="grid grid-cols-2 gap-4">
-                            <CustomSelect label="Inicio" value={panel.inicio} onChange={(inicio) => { setPanel({ ...panel, inicio }); setErrorPanel(""); }} options={opcionesHora(panel.inicio)} />
-                            <CustomSelect label="Fin" value={panel.fin} onChange={(fin) => { setPanel({ ...panel, fin }); setErrorPanel(""); }} options={opcionesHora(panel.fin)} />
-                        </div>
-                        <p className="text-sm text-ink-muted">Las reservaciones duran como máximo 1 hora.</p>
-                    </PanelLateral>
-                )}
-            </AnimatePresence>
-        </SeccionAdmin>
-    );
+    return <section className="settings-section"><h2 className="text-lg font-bold text-text-title-dark">Editar horarios disponibles</h2><p className="mt-1 text-sm text-text-muted-dark">Los horarios activos se ofrecen en Reserva de Aulas. Un horario con reservaciones no se puede editar: desactívalo y crea uno nuevo.</p><form className="mt-5 flex flex-wrap items-end gap-3" onSubmit={agregar}><label className="form-label">Agregar bloque<input required name="start" type="time" className="form-input"/></label><label className="form-label">Fin<input required name="end" type="time" className="form-input"/></label><button className="action-button">Agregar horario</button></form><div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{bloques.map((bloque) => { const slot = `${bloque.hora_inicio} - ${bloque.hora_fin}`; return <div key={bloque.id_bloque} className={`flex items-center justify-between gap-3 rounded-lg border border-border-dark bg-bg-dark p-3 ${bloque.activo ? "" : "opacity-60"}`}><span className="font-semibold text-text-title-dark">{slot}{!bloque.activo && <small className="block text-xs font-normal text-text-muted-dark">Inactivo</small>}</span><div><button type="button" onClick={() => editar(bloque)} aria-label={`Editar ${slot}`} className="min-h-11 rounded-md px-3 text-neon-blue hover:bg-primary/10">Editar</button>{bloque.activo ? <button type="button" onClick={() => ejecutar("bloque_desactivar", { id_bloque: bloque.id_bloque }, "Horario desactivado.")} aria-label={`Desactivar ${slot}`} className="min-h-11 rounded-md px-3 text-neon-red hover:bg-secondary/10">Desactivar</button> : <button type="button" onClick={() => ejecutar("bloque_activar", { id_bloque: bloque.id_bloque }, "Horario activado.")} aria-label={`Activar ${slot}`} className="min-h-11 rounded-md px-3 text-neon-blue hover:bg-primary/10">Activar</button>}</div></div>; })}</div></section>;
 }
 
-// ---------- Tienda (solo Administrador, D10) ----------
+// ---------- Tienda (solo Administrador) ----------
 const productoVacio = { titulo: "", precio: "", id_categoria: "", stock: "0", descripcionCorta: "" };
-const cargarProductos = () => api("productos", "listar").then((r) => r.productos.map(mapProducto));
-const cargarCategorias = () => api("productos", "categorias").then((r) => r.categorias);
 
 // Mensaje de error de los campos de un producto, o ""
-function validarProducto({ titulo, precio, stock, descripcionCorta, id_categoria }) {
-    if (!titulo.trim() || titulo.trim().length > 200) return "El nombre es obligatorio (máximo 200 caracteres).";
-    if (!id_categoria) return "Selecciona una categoría.";
-    if (!PRECIO.test(String(precio).trim()) || Number(precio) > 999999.99) return "Escribe un precio válido (máximo 2 decimales).";
-    if (!/^\d+$/.test(String(stock).trim()) || Number(stock) > 100000) return "El stock debe ser un número entero entre 0 y 100000.";
-    if (descripcionCorta.trim().length > 500) return "La descripción no puede tener más de 500 caracteres.";
+function validarProducto({ titulo, precio, stock, descripcionCorta }) {
+    if (titulo !== undefined && (!titulo.trim() || titulo.trim().length > 200)) return "El nombre es obligatorio (máximo 200 caracteres).";
+    if (precio !== undefined && (!PRECIO.test(String(precio).trim()) || Number(precio) > 999999.99)) return "Escribe un precio válido (máximo 2 decimales).";
+    if (stock !== undefined && (!/^\d+$/.test(String(stock).trim()) || Number(stock) > 100000)) return "El stock debe ser un número entero entre 0 y 100000.";
+    if (descripcionCorta !== undefined && descripcionCorta.trim().length > 500) return "La descripción no puede tener más de 500 caracteres.";
     return "";
 }
 
@@ -295,272 +201,219 @@ export function AdminTienda({ setNotice }) {
     const [categorias, setCategorias] = useState([]);
     const [productForm, setProductForm] = useState(productoVacio);
     const [imagen, setImagen] = useState(null);
-    const [borradores, setBorradores] = useState({}); // ediciones por fila sin guardar
+    const [borradores, setBorradores] = useState({});
     const [guardando, setGuardando] = useState(false);
 
-    const abrir = (producto = null) => {
-        setErrorPanel("");
-        setPanel({
-            producto,
-            imagen: null,
-            vista: producto?.imagen ?? null,
-            form: producto
-                ? { titulo: producto.titulo, precio: String(producto.precioValor), id_categoria: String(producto.idCategoria ?? ""), stock: String(producto.stock), descripcionCorta: producto.descripcionCorta }
-                : productoVacio,
-        });
-    };
-    const campo = (nombre, valor) => { setPanel((p) => ({ ...p, form: { ...p.form, [nombre]: valor } })); setErrorPanel(""); };
-    const elegirImagen = (file) => {
-        if (!file) return;
-        const problema = validarImagen(file);
-        if (problema) return setErrorPanel(problema);
-        setErrorPanel("");
-        setPanel((p) => ({ ...p, imagen: file, vista: URL.createObjectURL(file) }));
-    };
+    const cargar = useCallback(() => {
+        return api("productos", "listar")
+            .then((response) => setProducts(response.productos.map(mapProducto)))
+            .catch((err) => setNotice(err.message));
+    }, [setNotice]);
 
-    const guardar = async () => {
-        const { producto, form, imagen } = panel;
-        const problema = validarProducto(form);
-        if (problema) return setErrorPanel(problema);
-        const body = new FormData();
-        const original = producto && { titulo: producto.titulo, precio: String(producto.precioValor), id_categoria: String(producto.idCategoria ?? ""), stock: String(producto.stock), descripcionCorta: producto.descripcionCorta };
-        const nombres = { titulo: "nombre", precio: "precio", id_categoria: "id_categoria", stock: "stock", descripcionCorta: "descripcion" };
-        // Al editar solo se envían los campos que cambiaron
-        Object.entries(nombres).forEach(([clave, api_]) => {
-            const valor = String(form[clave]).trim();
-            if (!producto || valor !== String(original[clave]).trim()) body.append(api_, valor);
-        });
-        if (imagen) body.append("imagen", imagen);
-        if (producto) {
-            if ([...body.keys()].length === 0) return setPanel(null);
-            body.append("id_producto", producto.id);
+    useEffect(() => {
+        cargar();
+        api("productos", "categorias")
+            .then((response) => setCategorias(response.categorias))
+            .catch((err) => setNotice(err.message));
+    }, [cargar, setNotice]);
+
+    const createProduct = async (event) => {
+        event.preventDefault();
+        const problema = validarProducto(productForm) || (!productForm.id_categoria ? "Selecciona una categoría." : "") || validarImagen(imagen);
+        if (problema) {
+            setNotice(problema);
+            return;
         }
+        const body = new FormData();
+        body.append("nombre", productForm.titulo.trim());
+        body.append("precio", productForm.precio.trim());
+        body.append("id_categoria", productForm.id_categoria);
+        body.append("stock", productForm.stock.trim());
+        body.append("descripcion", productForm.descripcionCorta.trim());
+        if (imagen) body.append("imagen", imagen);
         setGuardando(true);
         try {
-            await api("productos", producto ? "editar" : "crear", { method: "POST", body });
-            avisar(producto ? "Producto actualizado." : "Artículo agregado al catálogo.", "exito");
-            setPanel(null);
-            await recargar();
+            await api("productos", "crear", { method: "POST", body });
+            setProductForm(productoVacio);
+            setImagen(null);
+            event.target.reset();
+            setNotice("Artículo agregado al catálogo.");
+            await cargar();
         } catch (err) {
-            setErrorPanel(err.message);
+            setNotice(err.message);
         } finally {
             setGuardando(false);
         }
     };
 
-    const eliminar = async (producto) => {
-        if (!(await confirmar({ titulo: "¿Eliminar del catálogo?", mensaje: `"${producto.titulo}" dejará de mostrarse en la Bisontstore.`, accion: "Eliminar", peligro: true }))) return;
+    const valor = (product, campo) => borradores[product.id]?.[campo] ?? ({
+        titulo: product.titulo,
+        descripcionCorta: product.descripcionCorta,
+        precio: product.precioValor,
+        stock: String(product.stock),
+    })[campo];
+
+    const cambiar = (product, campo, nuevo) => setBorradores((current) => ({ ...current, [product.id]: { ...current[product.id], [campo]: nuevo } }));
+
+    const guardarFila = async (product) => {
+        const cambios = borradores[product.id] || {};
+        const problema = validarProducto(cambios);
+        if (problema) {
+            setNotice(problema);
+            return;
+        }
+        const body = new FormData();
+        body.append("id_producto", product.id);
+        if (cambios.titulo !== undefined) body.append("nombre", cambios.titulo.trim());
+        if (cambios.descripcionCorta !== undefined) body.append("descripcion", cambios.descripcionCorta.trim());
+        if (cambios.precio !== undefined) body.append("precio", String(cambios.precio).trim());
+        if (cambios.stock !== undefined) body.append("stock", String(cambios.stock).trim());
         try {
-            await api("productos", "desactivar", { method: "POST", body: { id_producto: producto.id } });
-            avisar("Producto eliminado del catálogo.", "exito");
-            await recargar();
+            await api("productos", "editar", { method: "POST", body });
+            setBorradores((current) => { const resto = { ...current }; delete resto[product.id]; return resto; });
+            setNotice("Producto actualizado.");
+            await cargar();
         } catch (err) {
-            avisar(err.message, "error");
+            setNotice(err.message);
         }
     };
 
-    const lista = (datos ?? []).filter((p) => (!categoria || String(p.idCategoria) === categoria) && coincide(`${p.titulo} ${p.categoria} ${p.descripcionCorta}`, busqueda));
-    const opcionesCategoria = (categorias ?? []).map((c) => ({ value: String(c.id_categoria), label: c.nombre }));
+    const cambiarImagen = async (product, file) => {
+        const problema = validarImagen(file);
+        if (!file || problema) {
+            if (problema) setNotice(problema);
+            return;
+        }
+        const body = new FormData();
+        body.append("id_producto", product.id);
+        body.append("imagen", file);
+        try {
+            await api("productos", "editar", { method: "POST", body });
+            setNotice("Imagen actualizada.");
+            await cargar();
+        } catch (err) {
+            setNotice(err.message);
+        }
+    };
 
-    return (
-        <SeccionAdmin
-            titulo="Catálogo de la Bisontstore"
-            detalle={datos && !error ? `${datos.length} ${datos.length === 1 ? "artículo" : "artículos"}` : " "}
-            busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar artículo"
-            filtros={opcionesCategoria.length > 1 && <CustomSelect ariaLabel="Filtrar por categoría" className="w-48" value={categoria} onChange={setCategoria} options={[{ value: "", label: "Todas las categorías" }, ...opcionesCategoria]} />}
-            accion={<button type="button" onClick={() => abrir()} className="action-button">+ Agregar artículo</button>}
-        >
-            <TablaAdmin
-                columnas={["Artículo", "Categoría", "Precio", "Stock", "Acciones"]}
-                cargando={datos === null} error={error} onReintentar={reintentar} hayFilas={lista.length > 0}
-                vacio={busqueda || categoria ? vacioBusqueda(() => { setBusqueda(""); setCategoria(""); }) : { icono: "tienda", titulo: "El catálogo está vacío", detalle: "Agrega el primer artículo de la tienda.", accion: { texto: "Agregar artículo", onClick: () => abrir() } }}
-            >
-                {lista.map((p) => (
-                    <tr key={p.id}>
-                        <td>
-                            <div className="flex items-center gap-3">
-                                <ImagenProducto producto={p} className="h-10 w-10 shrink-0 rounded-lg" />
-                                <div className="min-w-0">
-                                    <strong className="block font-semibold text-ink">{p.titulo}</strong>
-                                    {p.descripcionCorta && <small className="line-clamp-1 max-w-xs">{p.descripcionCorta}</small>}
-                                </div>
-                            </div>
-                        </td>
-                        <td>{p.categoria}</td>
-                        <td className="whitespace-nowrap tabular-nums">{formatPrecio(p.precioValor)}</td>
-                        <td className="whitespace-nowrap"><span className="tabular-nums">{p.stock}</span>{p.stock <= 5 && <span className="ml-2 align-middle"><EstadoStock stock={p.stock} compacto /></span>}</td>
-                        <td><AccionesFila nombre={p.titulo} onEditar={() => abrir(p)} extra={[{ texto: "Ver en la tienda", onClick: () => window.open(`${import.meta.env.BASE_URL}bisontstore`, "_blank", "noopener") }, { texto: "Eliminar", peligro: true, onClick: () => eliminar(p) }]} /></td>
-                    </tr>
-                ))}
-            </TablaAdmin>
+    const desactivar = async (product) => {
+        if (!window.confirm(`¿Eliminar "${product.titulo}" del catálogo?`)) return;
+        try {
+            await api("productos", "desactivar", { method: "POST", body: { id_producto: product.id } });
+            setNotice("Producto eliminado del catálogo.");
+            await cargar();
+        } catch (err) {
+            setNotice(err.message);
+        }
+    };
 
-            <AnimatePresence>
-                {panel && (
-                    <PanelLateral
-                        titulo={panel.producto ? "Editar artículo" : "Nuevo artículo"}
-                        subtitulo={panel.producto?.titulo}
-                        accion={panel.producto ? "Guardar cambios" : "Agregar artículo"}
-                        onCerrar={() => setPanel(null)} onEnviar={guardar} guardando={guardando} error={errorPanel}
-                    >
-                        <label className="form-label">Nombre<input maxLength={200} className="form-input" value={panel.form.titulo} onChange={(e) => campo("titulo", e.target.value)} /></label>
-                        <CustomSelect label="Categoría" value={panel.form.id_categoria} onChange={(v) => campo("id_categoria", v)} placeholder="Selecciona una categoría" options={opcionesCategoria} />
-                        <div className="grid grid-cols-2 gap-4">
-                            <label className="form-label">Precio (MXN)<input inputMode="decimal" className="form-input" value={panel.form.precio} onChange={(e) => campo("precio", e.target.value)} placeholder="0.00" /></label>
-                            <label className="form-label">Stock<input inputMode="numeric" className="form-input" value={panel.form.stock} onChange={(e) => campo("stock", e.target.value)} /></label>
-                        </div>
-                        <label className="form-label">Descripción<textarea maxLength={500} rows={3} className="form-input resize-y" value={panel.form.descripcionCorta} onChange={(e) => campo("descripcionCorta", e.target.value)} /></label>
-                        <div className="form-label">
-                            <span>Imagen</span>
-                            <div className="flex items-center gap-4">
-                                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-line bg-field">
-                                    {panel.vista ? <img src={panel.vista} alt="" className="h-full w-full object-cover" /> : <ImagenProducto producto={{ titulo: panel.form.titulo || "Artículo", categoria: "" }} className="h-full w-full" />}
-                                </div>
-                                <div className="text-sm font-normal text-ink-muted">
-                                    <label className="action-button action-button-secondary action-button-sm cursor-pointer focus-within:outline-2 focus-within:outline-accent">
-                                        {panel.vista ? "Cambiar imagen" : "Subir imagen"}
-                                        <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => { elegirImagen(e.target.files?.[0]); e.target.value = ""; }} />
-                                    </label>
-                                    <p className="mt-1.5">JPG, PNG o WebP, máx. 2 MB.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </PanelLateral>
-                )}
-            </AnimatePresence>
-        </SeccionAdmin>
-    );
+    return <section className="space-y-5"><section className="settings-section"><h2 className="text-lg font-bold text-text-title-dark">Agregar artículo</h2><form onSubmit={createProduct} className="mt-4 grid gap-4 sm:grid-cols-2" noValidate><label className="form-label">Nombre<input required maxLength={200} className="form-input" value={productForm.titulo} onChange={(event) => setProductForm({ ...productForm, titulo: event.target.value })}/></label><label className="form-label">Precio<input required type="number" min="0" max="999999.99" step="0.01" className="form-input" value={productForm.precio} onChange={(event) => setProductForm({ ...productForm, precio: event.target.value })}/></label><label className="form-label">Categoría<select required className="form-input" value={productForm.id_categoria} onChange={(event) => setProductForm({ ...productForm, id_categoria: event.target.value })}><option value="">Selecciona una categoría</option>{categorias.map((categoria) => <option key={categoria.id_categoria} value={String(categoria.id_categoria)}>{categoria.nombre}</option>)}</select></label><label className="form-label">Stock<input required type="number" min="0" max="100000" step="1" className="form-input" value={productForm.stock} onChange={(event) => setProductForm({ ...productForm, stock: event.target.value })}/></label><label className="form-label">Descripción breve<input maxLength={500} className="form-input" value={productForm.descripcionCorta} onChange={(event) => setProductForm({ ...productForm, descripcionCorta: event.target.value })}/></label><label className="form-label">Imagen (JPG, PNG o WebP, máx. 2 MB)<input type="file" accept="image/jpeg,image/png,image/webp" className="form-input" onChange={(event) => setImagen(event.target.files?.[0] ?? null)}/></label><button disabled={guardando} className="action-button sm:col-span-2 sm:justify-self-start disabled:cursor-not-allowed disabled:opacity-50">{guardando ? "Guardando..." : "Agregar artículo"}</button></form></section><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Producto</th><th>Categoría</th><th>Precio / Stock</th><th>Acción</th></tr></thead><tbody>{products.map((product) => <tr key={product.id}><td><input aria-label={`Nombre ${product.titulo}`} maxLength={200} className="form-input min-w-44" value={valor(product, "titulo")} onChange={(event) => cambiar(product, "titulo", event.target.value)}/><input aria-label={`Descripción ${product.titulo}`} maxLength={500} className="form-input mt-2 min-w-44" value={valor(product, "descripcionCorta")} onChange={(event) => cambiar(product, "descripcionCorta", event.target.value)}/></td><td>{product.categoria}<small>{product.tieneFoto ? "Con imagen" : "Sin imagen"}</small></td><td><input aria-label={`Precio ${product.titulo}`} type="number" min="0" step="0.01" className="form-input min-w-28" value={valor(product, "precio")} onChange={(event) => cambiar(product, "precio", event.target.value)}/><small>{formatPrecio(product.precioValor)}</small><input aria-label={`Stock ${product.titulo}`} type="number" min="0" step="1" className="form-input mt-2 min-w-28" value={valor(product, "stock")} onChange={(event) => cambiar(product, "stock", event.target.value)}/></td><td><div className="flex flex-col gap-2"><button type="button" disabled={!borradores[product.id]} className="min-h-11 px-3 text-neon-blue disabled:opacity-40" onClick={() => guardarFila(product)}>Guardar</button><label className="min-h-11 cursor-pointer px-3 py-2.5 text-center text-neon-blue">Imagen<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => { cambiarImagen(product, event.target.files?.[0]); event.target.value = ""; }}/></label><button type="button" className="min-h-11 px-3 text-neon-red" onClick={() => desactivar(product)}>Eliminar</button></div></td></tr>)}</tbody></table>{!products.length && <p className="p-6 text-center text-text-muted-dark">Aún no hay productos.</p>}</div></section>;
 }
 
-// ---------- Eventos (Administrador y Moderador, D15) ----------
+// ---------- Eventos (Administrador y Moderador) ----------
 const eventoVacio = { titulo: "", descripcion: "", tipo: "Académico", fecha_inicio: "", fecha_fin: "", lugar: "" };
-const cargarEventos = () => api("eventos", "admin_listar").then((r) => r.eventos);
-
-// Suma una hora a la fecha de inicio, sin pasar de las 23:45 del mismo día
-function unaHoraDespues(valor) {
-    const [fecha, hora] = valor.split("T");
-    const [h, m] = hora.split(":").map(Number);
-    const total = Math.min(h * 60 + m + 60, 23 * 60 + 45);
-    return `${fecha}T${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
-}
 
 function validarEvento(evento) {
-    if (!evento.titulo.trim() || evento.titulo.trim().length > 200) return "El título es obligatorio (máximo 200 caracteres).";
-    if (!evento.fecha_inicio) return "Indica la fecha y hora de inicio.";
-    if (!evento.fecha_fin) return "Indica la fecha y hora de fin.";
-    if (evento.fecha_fin < evento.fecha_inicio) return "El fin del evento debe ser posterior al inicio.";
-    if (evento.lugar.trim().length > 150) return "El lugar no puede tener más de 150 caracteres.";
-    if (evento.descripcion.trim().length > 1000) return "La descripción no puede tener más de 1000 caracteres.";
+    if (evento.titulo !== undefined && (!evento.titulo.trim() || evento.titulo.trim().length > 200)) return "El título es obligatorio (máximo 200 caracteres).";
+    if (evento.descripcion !== undefined && evento.descripcion.trim().length > 1000) return "La descripción no puede tener más de 1000 caracteres.";
+    if (evento.lugar !== undefined && evento.lugar.trim().length > 150) return "El lugar no puede tener más de 150 caracteres.";
+    if (evento.fecha_inicio !== undefined && !evento.fecha_inicio) return "Indica la fecha de inicio.";
+    if (evento.fecha_fin !== undefined && !evento.fecha_fin) return "Indica la fecha de fin.";
+    if (evento.fecha_inicio && evento.fecha_fin && evento.fecha_fin < evento.fecha_inicio) return "La fecha de fin del evento debe ser posterior a la fecha de inicio.";
     return "";
 }
 
-export function AdminEventos() {
-    const { confirmar, avisar } = useDialogos();
-    const { datos, setDatos, error, recargar, reintentar } = useLista(cargarEventos);
-    const [busqueda, setBusqueda] = useState("");
-    const [tipo, setTipo] = useState("");
-    const [panel, setPanel] = useState(null); // datos del panel abierto, o null si está cerrado
-    const [errorPanel, setErrorPanel] = useState("");
+export function AdminEventos({ setNotice }) {
+    const [events, setEvents] = useState([]);
+    const [eventForm, setEventForm] = useState(eventoVacio);
+    const [borradores, setBorradores] = useState({});
     const [guardando, setGuardando] = useState(false);
 
-    const desdeEvento = (e) => ({ titulo: e.titulo, descripcion: e.descripcion || "", tipo: e.tipo, fecha_inicio: toDateTimeLocal(e.fecha_inicio), fecha_fin: toDateTimeLocal(e.fecha_fin), lugar: e.lugar || "" });
-    const abrir = (evento = null) => { setErrorPanel(""); setPanel({ evento, form: evento ? desdeEvento(evento) : eventoVacio }); };
-    const campo = (nombre, valor) => { setPanel((p) => ({ ...p, form: { ...p.form, [nombre]: valor } })); setErrorPanel(""); };
+    const cargar = useCallback(() => {
+        return api("eventos", "admin_listar")
+            .then((response) => setEvents(response.eventos))
+            .catch((err) => setNotice(err.message));
+    }, [setNotice]);
 
-    const guardar = async () => {
-        const { evento, form } = panel;
-        const problema = validarEvento(form);
-        if (problema) return setErrorPanel(problema);
-        const limpio = { ...form, titulo: form.titulo.trim(), descripcion: form.descripcion.trim(), lugar: form.lugar.trim() };
-        let body = limpio;
-        if (evento) {
-            // Solo los campos que cambiaron
-            const original = desdeEvento(evento);
-            body = Object.fromEntries(Object.entries(limpio).filter(([k, v]) => v !== original[k]));
-            if (!Object.keys(body).length) return setPanel(null);
-            body.id_evento = evento.id_evento;
+    useEffect(() => { cargar(); }, [cargar]);
+
+    const ejecutar = async (accion, body, mensaje) => {
+        try {
+            await api("eventos", accion, { method: "POST", body });
+            setNotice(mensaje);
+            await cargar();
+            return true;
+        } catch (err) {
+            setNotice(err.message);
+            return false;
+        }
+    };
+
+    const createEvent = async (event) => {
+        event.preventDefault();
+        const problema = validarEvento(eventForm);
+        if (problema) {
+            setNotice(problema);
+            return;
         }
         setGuardando(true);
-        try {
-            await api("eventos", evento ? "editar" : "crear", { method: "POST", body });
-            avisar(evento ? "Evento actualizado." : "Evento agregado al calendario.", "exito");
-            setPanel(null);
-            await recargar();
-        } catch (err) {
-            setErrorPanel(err.message);
-        } finally {
-            setGuardando(false);
+        const ok = await ejecutar("crear", {
+            titulo: eventForm.titulo.trim(),
+            descripcion: eventForm.descripcion.trim(),
+            tipo: eventForm.tipo,
+            fecha_inicio: eventForm.fecha_inicio,
+            fecha_fin: eventForm.fecha_fin,
+            lugar: eventForm.lugar.trim(),
+        }, "Evento agregado al calendario.");
+        if (ok) setEventForm(eventoVacio);
+        setGuardando(false);
+    };
+
+    const valor = (item, campo) => borradores[item.id_evento]?.[campo] ?? item[campo] ?? "";
+    const cambiar = (item, campo, nuevo) => setBorradores((current) => ({ ...current, [item.id_evento]: { ...current[item.id_evento], [campo]: nuevo } }));
+
+    const guardarFila = async (item) => {
+        const cambios = borradores[item.id_evento] || {};
+        const problema = validarEvento(cambios);
+        if (problema) {
+            setNotice(problema);
+            return;
+        }
+        const body = { id_evento: item.id_evento };
+        if (cambios.titulo !== undefined) body.titulo = cambios.titulo.trim();
+        if (cambios.descripcion !== undefined) body.descripcion = cambios.descripcion.trim();
+        if (await ejecutar("editar", body, "Evento actualizado.")) {
+            setBorradores((current) => { const resto = { ...current }; delete resto[item.id_evento]; return resto; });
         }
     };
 
-    // El interruptor de Visible se guarda al momento, sin esperar la respuesta del servidor
-    const alternarVisible = async (item, visible) => {
-        setDatos((lista) => lista.map((e) => (e.id_evento === item.id_evento ? { ...e, visible } : e)));
-        try {
-            await api("eventos", visible ? "mostrar" : "ocultar", { method: "POST", body: { id_evento: item.id_evento } });
-            avisar(visible ? "El evento ya se ve en el calendario." : "Evento oculto del calendario.", "exito");
-        } catch (err) {
-            avisar(err.message, "error");
-            recargar();
+    const editEventSchedule = (item) => {
+        const start = window.prompt("Inicio (AAAA-MM-DDTHH:mm)", toDateTimeLocal(item.fecha_inicio));
+        if (start === null) return;
+        const end = window.prompt("Fin (AAAA-MM-DDTHH:mm)", toDateTimeLocal(item.fecha_fin));
+        if (end === null) return;
+        const formato = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+        if (!formato.test(start.trim()) || !formato.test(end.trim())) {
+            setNotice("Formato no válido. Usa AAAA-MM-DDTHH:mm.");
+            return;
         }
+        if (end.trim() < start.trim()) {
+            setNotice("La fecha de fin debe ser posterior a la fecha de inicio.");
+            return;
+        }
+        const lugar = window.prompt("Lugar del evento", item.lugar || "");
+        if (lugar === null) return;
+        if (lugar.trim().length > 150) {
+            setNotice("El lugar no puede tener más de 150 caracteres.");
+            return;
+        }
+        ejecutar("editar", { id_evento: item.id_evento, fecha_inicio: start.trim(), fecha_fin: end.trim(), lugar: lugar.trim() }, "Evento actualizado.");
     };
 
-    const eliminar = async (item) => {
-        if (!(await confirmar({ titulo: "¿Eliminar el evento?", mensaje: `"${item.titulo}" se quitará del calendario. Esta acción no se puede deshacer.`, accion: "Eliminar", peligro: true }))) return;
-        try {
-            await api("eventos", "eliminar", { method: "POST", body: { id_evento: item.id_evento } });
-            avisar("Evento eliminado.", "exito");
-            await recargar();
-        } catch (err) {
-            avisar(err.message, "error");
-        }
+    const eliminar = (item) => {
+        if (!window.confirm(`¿Eliminar el evento "${item.titulo}"? Esta acción no se puede deshacer.`)) return;
+        ejecutar("eliminar", { id_evento: item.id_evento }, "Evento eliminado.");
     };
 
-    const lista = (datos ?? []).filter((e) => (!tipo || e.tipo === tipo) && coincide(`${e.titulo} ${e.lugar || ""} ${e.descripcion || ""}`, busqueda));
-
-    return (
-        <SeccionAdmin
-            titulo="Eventos del calendario"
-            detalle={datos && !error ? `${datos.length} ${datos.length === 1 ? "evento" : "eventos"}` : " "}
-            busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar evento"
-            filtros={<CustomSelect ariaLabel="Filtrar por tipo" className="w-44" value={tipo} onChange={setTipo} options={[{ value: "", label: "Todos los tipos" }, ...EVENT_TYPES.map((t) => ({ value: t, label: t }))]} />}
-            accion={<button type="button" onClick={() => abrir()} className="action-button">+ Publicar evento</button>}
-        >
-            <TablaAdmin
-                columnas={["Evento", "Fecha", "Lugar", "Visible", "Acciones"]}
-                cargando={datos === null} error={error} onReintentar={reintentar} hayFilas={lista.length > 0}
-                vacio={busqueda || tipo ? vacioBusqueda(() => { setBusqueda(""); setTipo(""); }) : { icono: "calendario", titulo: "Aún no hay eventos", detalle: "Publica exámenes, asuetos y actividades para que aparezcan en el calendario.", accion: { texto: "Publicar evento", onClick: () => abrir() } }}
-            >
-                {lista.map((item) => (
-                    <tr key={item.id_evento} className={item.visible ? "" : ATENUADA}>
-                        <td>
-                            <strong className="block font-semibold text-ink">{item.titulo}</strong>
-                            <small className="flex items-center gap-1.5"><span aria-hidden="true" className={`h-2 w-2 rounded-full ${colorPuntoEvento(item.tipo)}`} />{item.tipo}</small>
-                        </td>
-                        <td className="whitespace-nowrap">{formatRangoFechaHora(item.fecha_inicio, item.fecha_fin)}</td>
-                        <td>{item.lugar || "—"}</td>
-                        <td><Interruptor activo={Boolean(item.visible)} etiqueta={`${item.titulo} visible en el calendario`} onCambiar={(v) => alternarVisible(item, v)} /></td>
-                        <td><AccionesFila nombre={item.titulo} onEditar={() => abrir(item)} extra={[{ texto: "Eliminar", peligro: true, onClick: () => eliminar(item) }]} /></td>
-                    </tr>
-                ))}
-            </TablaAdmin>
-
-            <AnimatePresence>
-                {panel && (
-                    <PanelLateral
-                        titulo={panel.evento ? "Editar evento" : "Nuevo evento"}
-                        subtitulo={panel.evento?.titulo}
-                        accion={panel.evento ? "Guardar cambios" : "Publicar evento"}
-                        onCerrar={() => setPanel(null)} onEnviar={guardar} guardando={guardando} error={errorPanel}
-                    >
-                        <label className="form-label">Título<input maxLength={200} className="form-input" value={panel.form.titulo} onChange={(e) => campo("titulo", e.target.value)} /></label>
-                        <CustomSelect label="Tipo" value={panel.form.tipo} onChange={(v) => campo("tipo", v)} options={EVENT_TYPES.map((t) => ({ value: t, label: t }))} />
-                        <CampoFechaHora etiqueta="Inicio" valor={panel.form.fecha_inicio} onCambiar={(v) => { campo("fecha_inicio", v); if (!panel.form.fecha_fin || panel.form.fecha_fin < v) campo("fecha_fin", unaHoraDespues(v)); }} />
-                        <CampoFechaHora etiqueta="Fin" valor={panel.form.fecha_fin} onCambiar={(v) => campo("fecha_fin", v)} horaInicial={panel.form.fecha_inicio.split("T")[1] || "10:00"} />
-                        <label className="form-label">Lugar<input maxLength={150} className="form-input" value={panel.form.lugar} onChange={(e) => campo("lugar", e.target.value)} placeholder="Aula, auditorio, cancha…" /></label>
-                        <label className="form-label">Descripción<textarea maxLength={1000} rows={4} className="form-input resize-y" value={panel.form.descripcion} onChange={(e) => campo("descripcion", e.target.value)} /></label>
-                    </PanelLateral>
-                )}
-            </AnimatePresence>
-        </SeccionAdmin>
-    );
+    return <section className="space-y-5"><section className="settings-section"><h2 className="text-lg font-bold text-text-title-dark">Publicar evento</h2><form onSubmit={createEvent} className="mt-4 grid gap-4 sm:grid-cols-2" noValidate><label className="form-label">Título<input required maxLength={200} className="form-input" value={eventForm.titulo} onChange={(event) => setEventForm({ ...eventForm, titulo: event.target.value })}/></label><label className="form-label">Tipo<select className="form-input" value={eventForm.tipo} onChange={(event) => setEventForm({ ...eventForm, tipo: event.target.value })}>{EVENT_TYPES.map((type) => <option key={type}>{type}</option>)}</select></label><label className="form-label">Inicio<input required type="datetime-local" className="form-input" value={eventForm.fecha_inicio} onChange={(event) => setEventForm({ ...eventForm, fecha_inicio: event.target.value })}/></label><label className="form-label">Fin<input required type="datetime-local" min={eventForm.fecha_inicio || undefined} className="form-input" value={eventForm.fecha_fin} onChange={(event) => setEventForm({ ...eventForm, fecha_fin: event.target.value })}/></label><label className="form-label">Lugar<input maxLength={150} className="form-input" value={eventForm.lugar} onChange={(event) => setEventForm({ ...eventForm, lugar: event.target.value })}/></label><label className="form-label">Descripción<input maxLength={1000} className="form-input" value={eventForm.descripcion} onChange={(event) => setEventForm({ ...eventForm, descripcion: event.target.value })}/></label><button disabled={guardando} className="action-button sm:col-span-2 sm:justify-self-start disabled:cursor-not-allowed disabled:opacity-50">{guardando ? "Guardando..." : "Agregar evento"}</button></form></section><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Evento</th><th>Fecha</th><th>Lugar</th><th>Visible</th><th>Acción</th></tr></thead><tbody>{events.map((item) => <tr key={item.id_evento}><td><input aria-label={`Título ${item.titulo}`} maxLength={200} className="form-input min-w-44" value={valor(item, "titulo")} onChange={(event) => cambiar(item, "titulo", event.target.value)}/><small>{item.tipo}</small><input aria-label={`Descripción ${item.titulo}`} maxLength={1000} className="form-input mt-2 min-w-44" value={valor(item, "descripcion")} onChange={(event) => cambiar(item, "descripcion", event.target.value)}/></td><td>{parseFechaMySQL(item.fecha_inicio).toLocaleString("es-MX")}</td><td>{item.lugar}</td><td>{item.visible ? "Sí" : "No"}</td><td><div className="flex flex-col gap-2"><button type="button" disabled={!borradores[item.id_evento]} className="min-h-11 px-2 text-neon-blue disabled:opacity-40" onClick={() => guardarFila(item)}>Guardar</button><button type="button" className="min-h-11 px-2 text-neon-blue" onClick={() => ejecutar(item.visible ? "ocultar" : "mostrar", { id_evento: item.id_evento }, item.visible ? "Evento oculto." : "Evento visible.")}>{item.visible ? "Ocultar" : "Mostrar"}</button><button type="button" className="min-h-11 px-2 text-neon-red" onClick={() => eliminar(item)}>Eliminar</button><button type="button" className="min-h-11 px-2 text-neon-blue" onClick={() => editEventSchedule(item)}>Editar fecha/lugar</button></div></td></tr>)}</tbody></table>{!events.length && <p className="p-6 text-center text-text-muted-dark">Aún no hay eventos.</p>}</div></section>;
 }

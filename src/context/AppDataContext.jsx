@@ -9,8 +9,6 @@ const initialData = {
     preferences: { theme: "dark", fontSize: "normal" },
 };
 
-const THEMES = ["dark", "gray", "light"];
-
 const AppDataContext = createContext(null);
 
 function readStoredData() {
@@ -18,11 +16,9 @@ function readStoredData() {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (!stored) return initialData;
         const parsed = JSON.parse(stored);
-        // Solo se leen las preferencias guardadas
-        const preferences = { ...initialData.preferences, ...parsed.preferences };
-        // Un valor guardado que ya no existe (o alterado a mano) vuelve al tema por defecto
-        if (!THEMES.includes(preferences.theme)) preferences.theme = initialData.preferences.theme;
-        return { preferences };
+        // Solo se lee "preferences" (versiones anteriores guardaban usuario,
+        // publicaciones, reservaciones, etc.; ya no se usan)
+        return { preferences: { ...initialData.preferences, ...parsed.preferences } };
     } catch {
         return initialData;
     }
@@ -95,7 +91,7 @@ export function AppDataProvider({ children }) {
         setPosts([]);
     };
 
-    // Publicaciones (publicaciones.php / reacciones.php)
+    // ---------- Publicaciones (publicaciones.php / reacciones.php) ----------
     const loadPosts = useCallback(() => {
         return api("publicaciones", "listar")
             .then((response) => {
@@ -130,7 +126,7 @@ export function AppDataProvider({ children }) {
         return resultado;
     };
 
-    // Recibe el formulario con título, descripción, etiqueta e imagen o video
+    // formData: titulo, descripcion, id_etiqueta, imagen | video_url
     const createPost = async (formData) => {
         const response = await api("publicaciones", "crear", { method: "POST", body: formData });
         const post = mapPost(response.publicacion);
@@ -138,7 +134,7 @@ export function AppDataProvider({ children }) {
         return post;
     };
 
-    // Recibe la publicación a editar y solo los campos que cambiaron
+    // formData: id_publicacion + campos a cambiar (+ quitar_multimedia=1)
     const updatePost = async (formData) => {
         const response = await api("publicaciones", "editar", { method: "POST", body: formData });
         const post = mapPost(response.publicacion);

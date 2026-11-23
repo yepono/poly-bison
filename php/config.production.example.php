@@ -1,7 +1,12 @@
 <?php
-// Plantilla de configuración para el servidor de producción. Súbela como /api/config.local.php
-// y llénala con los datos reales; nunca subas a git el archivo con esos datos.
-// Los datos de la base de datos están en el panel de IONOS, en Hosting > Bases de datos.
+// ============================================================
+// Plantilla de configuración para PRODUCCIÓN (IONOS, https://poly-bison.com)
+// En el servidor, súbela como /api/config.local.php y llena los datos reales.
+// Nunca subas a git ni compartas el archivo con datos reales.
+// Los datos de la base de datos salen del panel de IONOS:
+//   Hosting -> Bases de datos -> (tu BD) -> nombre de host, nombre de BD,
+//   nombre de usuario y contraseña.
+// ============================================================
 return [
     "env" => "prod",
 
@@ -18,7 +23,7 @@ return [
     ],
 
     "brevo" => [
-        "api_key"          => "",           // la misma clave de la API de Brevo
+        "api_key"          => "",           // la misma API key de Brevo
         "remitente_correo" => "",           // remitente verificado en Brevo
         "remitente_nombre" => "PolyBison",
     ],

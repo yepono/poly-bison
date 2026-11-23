@@ -26,9 +26,11 @@ function buildUrl(seccion, accion, params) {
     return url;
 }
 
-// Llama a una acción de la API (<seccion>.php?accion=<accion>). Si el cuerpo es un FormData se
-// envía como formulario con archivos; si no, como JSON. Si el servidor responde con un error,
-// lanza un ApiError con su mensaje.
+/**
+ * Llama a <seccion>.php?accion=<accion>.
+ * - body FormData -> multipart (archivos); cualquier otro objeto -> JSON.
+ * - Lanza ApiError con el mensaje del servidor si la respuesta no es exitosa.
+ */
 export async function api(seccion, accion, { method = "GET", params, body, skipAuthHandler = false } = {}) {
     const options = { method, credentials: "include", headers: {} };
     if (body instanceof FormData) {
@@ -71,7 +73,7 @@ export function formatFecha(fecha) {
     return date.toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" });
 }
 
-// Adapta el usuario de la API a la forma que usan los componentes
+// Usuario de la API -> forma que ya usan los componentes
 export function mapUser(apiUser, avatarVersion) {
     if (!apiUser) return null;
     return {
@@ -96,41 +98,7 @@ export function formatFechaHora(fecha) {
     return new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
-// Formatos de fecha y hora
-// Toda la app usa estos formatos en español de México, por ejemplo:
-//   formatFecha       "20 de noviembre de 2026"     (registro, perfil)
-//   formatFechaHora   "20 nov 2026, 9:30 a.m."      (publicaciones, bitácora, eventos)
-//   formatDia         "jue, 26 de nov de 2026"      (reservaciones: fecha sin hora)
-//   formatHora        "09:00"                       (bloques de horario; quita los segundos)
-
-// Convierte "AAAA-MM-DD" en algo como "jue, 26 nov 2026"
-export function formatDia(iso) {
-    if (!iso) return "";
-    const [a, m, d] = String(iso).slice(0, 10).split("-").map(Number);
-    const fecha = new Date(a, m - 1, d);
-    if (Number.isNaN(fecha.getTime())) return String(iso);
-    return fecha.toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).replace(/\./g, "");
-}
-
-// Quita los segundos: "09:00:00" queda como "09:00"
-export function formatHora(hora) {
-    const m = String(hora ?? "").match(/^(\d{1,2}):(\d{2})/);
-    return m ? `${m[1].padStart(2, "0")}:${m[2]}` : String(hora ?? "");
-}
-
-export const formatRangoHoras = (inicio, fin) => `${formatHora(inicio)} – ${formatHora(fin)}`;
-
-// Inicio y fin de un evento: si es el mismo día no repite la fecha
-export function formatRangoFechaHora(inicio, fin) {
-    const a = new Date(String(inicio).replace(" ", "T"));
-    const b = new Date(String(fin).replace(" ", "T"));
-    if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return "";
-    const hora = (d) => d.toLocaleTimeString("es-MX", { hour: "numeric", minute: "2-digit" });
-    if (a.toDateString() === b.toDateString()) return `${formatFechaHora(inicio)} – ${hora(b)}`;
-    return `${formatFechaHora(inicio)} – ${formatFechaHora(fin)}`;
-}
-
-// Adapta una publicación de la API a la forma que usan PostCard y Feed
+// Publicación de la API (vw_feed_publicaciones) -> forma que usan PostCard y Feed
 export function mapPost(p) {
     return {
         id: p.id_publicacion,
@@ -151,7 +119,7 @@ export function mapPost(p) {
     };
 }
 
-// Adapta un comentario de la API a la forma que usa la página de la publicación
+// Comentario de la API (vw_comentarios_activos) -> forma que usa Publicacion
 export function mapComentario(c) {
     return {
         id: c.id_comentario,
@@ -170,7 +138,7 @@ export function formatPrecio(precio) {
     return `$${valor.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
 }
 
-// Adapta un producto de la API a la forma que usan la tienda y su ventana de detalle
+// Producto de la API (vw_catalogo_productos) -> forma que usan Bisontstore y ProductModal
 export function mapProducto(p) {
     return {
         id: p.id_producto,
@@ -180,8 +148,9 @@ export function mapProducto(p) {
         stock: p.stock,
         idCategoria: p.id_categoria,
         categoria: p.categoria,
-        // Si no tiene foto queda en null y la tienda dibuja su propio marcador
-        imagen: p.tiene_foto ? fileUrl("productos", "foto", p.id_producto) : null,
+        imagen: p.tiene_foto
+            ? fileUrl("productos", "foto", p.id_producto)
+            : `https://ui-avatars.com/api/?name=${encodeURIComponent(p.nombre)}&size=512&background=003366&color=fff`,
         tieneFoto: p.tiene_foto,
         descripcionCorta: p.descripcion || "",
         descripcionLarga: p.descripcion || "",
@@ -193,17 +162,17 @@ export function hoyISO() {
     return new Date().toLocaleDateString("en-CA");
 }
 
-// Convierte una fecha de MySQL en un Date con la hora local
+// "AAAA-MM-DD HH:MM:SS" (MySQL) -> Date local
 export function parseFechaMySQL(fecha) {
     return new Date(String(fecha).replace(" ", "T"));
 }
 
-// Convierte una fecha de MySQL al formato "AAAA-MM-DDTHH:MM" de los formularios
+// "AAAA-MM-DD HH:MM:SS" -> "AAAA-MM-DDTHH:MM" (input datetime-local)
 export function toDateTimeLocal(fecha) {
     return fecha ? String(fecha).replace(" ", "T").slice(0, 16) : "";
 }
 
-// Saca el ID de un enlace de YouTube (normal, corto, shorts o embed); null si no es válido
+// ID de 11 caracteres de un enlace de YouTube (watch, youtu.be, shorts, embed) o null
 export function youtubeId(url) {
     if (!url) return null;
     try {

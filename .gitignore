@@ -27,6 +27,3 @@ php/config.production.php
 *.njsproj
 *.sln
 *.sw?
-
-# Planos SVG de la Guía Bisonte (se descargan con scripts/mapa/descargar_svgs.sh)
-scripts/mapa/svg/

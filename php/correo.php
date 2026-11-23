@@ -1,7 +1,13 @@
 <?php
-// Envío de correos con la API de Brevo. No se llama directamente: lo usa usuarios.php para
-// mandar la clave temporal de los moderadores nuevos y la de "Olvidé mi contraseña".
-// La clave de Brevo y el remitente se configuran en config.local.php.
+// ============================================================
+// correo.php - Envío de correos con la API de Brevo (R12: API externa)
+// No es un endpoint: lo incluye usuarios.php (crear_moderador,
+// recuperar_contrasena). .htaccess bloquea su acceso por URL.
+//
+// API: POST https://api.brevo.com/v3/smtp/email  (cabecera api-key)
+// Configuración en config.local.php -> "brevo":
+//   api_key, remitente_correo (verificado en Brevo), remitente_nombre
+// ============================================================
 
 const BREVO_URL = "https://api.brevo.com/v3/smtp/email";
 
@@ -49,7 +55,8 @@ function enviarCorreo(string $paraCorreo, string $paraNombre, string $asunto, st
     return true;
 }
 
-// Plantillas
+// ---------- Plantillas ----------
+
 function plantillaCorreo(string $titulo, string $saludo, string $parrafo, string $clave, string $nota): array {
     $e = fn(string $t) => htmlspecialchars($t, ENT_QUOTES, "UTF-8");
     $url = appConfig()["app_url"] ?? "";
