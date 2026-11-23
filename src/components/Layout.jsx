@@ -49,7 +49,7 @@ function Layout() {
                 <div className="absolute top-[85%] left-[-10%] w-137.5 h-137.5 bg-neon-blue/15 rounded-full blur-[140px]"></div>
             </div>
 
-            <aside className="sticky top-0 z-20 hidden h-screen w-64 shrink-0 flex-col border-r border-border-dark bg-surface-deep/90 p-6 shadow-[5px_0_15px_rgba(0,0,0,0.5)] backdrop-blur-md lg:flex">
+            <aside className="sticky top-0 z-20 hidden h-screen w-64 shrink-0 flex-col border-r border-border-dark bg-bg-deep/90 p-6 shadow-[5px_0_15px_rgba(0,0,0,0.5)] backdrop-blur-md lg:flex">
                 {navigation}
             </aside>
 

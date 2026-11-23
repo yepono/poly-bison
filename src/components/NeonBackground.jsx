@@ -8,17 +8,17 @@ function NeonBackground() {
         const ctx = canvas.getContext("2d");
         let animationFrameId;
         let particles = [];
-        
+
         // Coordenadas del mouse
         let mouse = { x: null, y: null, radius: 150 };
 
-        const colors = ['#00bfff', '#ff4d4d']; 
+        const colors = ['#00bfff', '#ff4d4d'];
 
         // tamano de canvas
         const resizeCanvas = () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            initParticles(); 
+            initParticles();
         };
 
 
@@ -74,7 +74,7 @@ function NeonBackground() {
                     // Conexion entre nodos
                     if (distance < 120) {
                         const opacity = 1 - (distance / 120);
-                        ctx.strokeStyle = `rgba(0, 191, 255, ${opacity * 0.5})`; 
+                        ctx.strokeStyle = `rgba(0, 191, 255, ${opacity * 0.5})`;
                         ctx.lineWidth = 1;
                         ctx.beginPath();
                         ctx.moveTo(particles[a].x, particles[a].y);
@@ -105,24 +105,27 @@ function NeonBackground() {
         const animate = () => {
             // Limpiar frame anterior
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
+
             // Actualizar nodos y conexiones
             particles.forEach(particle => particle.update());
             connectParticles();
-            
+
             animationFrameId = requestAnimationFrame(animate);
         };
 
-        
+
         window.addEventListener("resize", resizeCanvas);
-        window.addEventListener("mousemove", (e) => {
+        const handleMouseMove = (e) => {
             mouse.x = e.x;
             mouse.y = e.y;
-        });
-        window.addEventListener("mouseout", () => {
+        };
+        const handleMouseOut = () => {
             mouse.x = null;
             mouse.y = null;
-        });
+        };
+        
+        window.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mouseout", handleMouseOut);
 
         // Ejecucion inicial
         resizeCanvas();
@@ -131,20 +134,20 @@ function NeonBackground() {
         // Cleanup al desmontar el componente
         return () => {
             window.removeEventListener("resize", resizeCanvas);
-            window.removeEventListener("mousemove", null);
-            window.removeEventListener("mouseout", null);
+            window.removeEventListener("mousemove", handleMouseMove);
+            window.removeEventListener("mouseout", handleMouseOut);
             cancelAnimationFrame(animationFrameId);
         };
     }, []);
 
     return (
         <div className="absolute inset-0 z-0 overflow-hidden bg-bg-deep pointer-events-auto">
-            <div className="absolute bottom-0 left-0 w-full h-[40%] opacity-20 pointer-events-none" 
-                 style={{ backgroundImage: 'linear-gradient(transparent 95%, var(--color-neon-blue) 100%), linear-gradient(90deg, transparent 95%, var(--color-neon-blue) 100%)', backgroundSize: '40px 40px', transform: 'perspective(500px) rotateX(60deg)' }}>
+            <div className="absolute bottom-0 left-0 w-full h-[40%] opacity-20 pointer-events-none"
+                style={{ backgroundImage: 'linear-gradient(transparent 95%, var(--color-neon-blue) 100%), linear-gradient(90deg, transparent 95%, var(--color-neon-blue) 100%)', backgroundSize: '40px 40px', transform: 'perspective(500px) rotateX(60deg)' }}>
             </div>
-            
-            <canvas 
-                ref={canvasRef} 
+
+            <canvas
+                ref={canvasRef}
                 className="block w-full h-full drop-shadow-[0_0_8px_var(--color-neon-blue)]"
             />
         </div>

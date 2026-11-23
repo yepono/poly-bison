@@ -56,7 +56,7 @@ function Login() {
                 transition={{ type: "spring", duration: 1.5 }}
                 className="relative z-10 flex min-h-[calc(100dvh-2rem)] w-full max-w-5xl items-center justify-center py-4 sm:p-8 lg:justify-end lg:p-12"
             >
-                <div className="relative z-20 w-full max-w-md bg-surface-dark/20% backdrop-blur-md border border-border-dark rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.8)] p-8">
+                <div className="relative z-20 w-full max-w-md bg-surface-dark/20 backdrop-blur-md border border-border-dark rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.8)] p-8">
 
                     <h1 className="text-3xl font-bold text-center text-text-title-dark mb-8">
                         Bienvenido
