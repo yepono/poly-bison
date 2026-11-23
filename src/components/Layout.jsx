@@ -16,7 +16,7 @@ function Layout() {
     // Escritorio: el menú lateral se puede ocultar; se recuerda en este navegador
     const [menuOculto, setMenuOculto] = useState(leerMenuOculto);
     const alternarMenu = useCallback(() => setMenuOculto((oculto) => {
-        try { localStorage.setItem(CLAVE_MENU, oculto ? "0" : "1"); } catch { /* sin almacenamiento */ }
+        try { localStorage.setItem(CLAVE_MENU, oculto ? "0" : "1"); } catch { /* si el navegador no deja guardar, no pasa nada */ }
         return !oculto;
     }), []);
 

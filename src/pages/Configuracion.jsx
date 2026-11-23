@@ -15,7 +15,7 @@ function Configuracion() {
     const { confirmar } = useDialogos();
     const foto = useCambioFoto();
     const [carreras, setCarreras] = useState([]);
-    // Valores editados; null = sin tocar (se muestra el valor actual del usuario)
+    // Valores editados; null si no se han tocado (entonces se muestra el valor actual)
     const [correo, setCorreo] = useState(null);
     const [carrera, setCarrera] = useState(null);    // id_carrera como texto
     const [semestre, setSemestre] = useState(null);

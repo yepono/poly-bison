@@ -7,7 +7,7 @@ import datos from "../data/mapaFacultad.json";
 export const ALTURA_PISO = datos.alturaPiso;
 export const FUENTE_MAPA = datos.fuente;
 
-// ---------------------------------------------------------------- geometría
+// Geometría
 function bboxDe(puntos) {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const [x, y] of puntos) {
@@ -19,7 +19,7 @@ function bboxDe(puntos) {
     return [x0, y0, x1, y1];
 }
 
-// Centroide por área (cae dentro de los cuartos en L mejor que el centro del bbox)
+// Centro de un cuarto calculado por área (así queda dentro de los cuartos en forma de L)
 function centroide(poly) {
     let a = 0, cx = 0, cy = 0;
     for (let i = 0; i < poly.length; i++) {
@@ -40,14 +40,14 @@ function centroide(poly) {
 const BBOX_CAMPUS = bboxDe(datos.campus.flatMap((e) => e.poly));
 const CENTRO = [(BBOX_CAMPUS[0] + BBOX_CAMPUS[2]) / 2, (BBOX_CAMPUS[1] + BBOX_CAMPUS[3]) / 2];
 
-// Punto del plano -> [x, z] de la escena (centrada en el campus)
+// Convierte un punto del plano en coordenadas de la escena, centradas en el campus
 export function aEscena([x, y]) {
     return [x - CENTRO[0], y - CENTRO[1]];
 }
 
 export const TAMANO_CAMPUS = Math.max(BBOX_CAMPUS[2] - BBOX_CAMPUS[0], BBOX_CAMPUS[3] - BBOX_CAMPUS[1]);
 
-// ---------------------------------------------------------------- tipos
+// Tipos
 // Cada tipo usa un token de color del tema (themes.css), así cambia con el tema.
 export const TIPOS = {
     "Aulas": "--cal-academico",
@@ -95,7 +95,7 @@ export function colorPuntoLugar(tipo) {
     }
 }
 
-// ---------------------------------------------------------------- campus
+// Campus
 export const CAMPUS = datos.campus.map((e) => ({
     ...e,
     centro: centroide(e.poly),
@@ -103,7 +103,7 @@ export const CAMPUS = datos.campus.map((e) => ({
     altura: e.forma === "suelo" ? 0.12 : e.pisos * ALTURA_PISO,
 }));
 
-// ---------------------------------------------------------------- edificios con planos
+// Edificios con planos
 export const EDIFICIOS = Object.values(datos.edificios).map((ed) => ({
     ...ed,
     // Huella para las losas de cada piso: los polígonos del mapa general de este edificio
@@ -125,7 +125,7 @@ export const EDIFICIOS = Object.values(datos.edificios).map((ed) => ({
 
 const EDIFICIO_POR_ID = Object.fromEntries(EDIFICIOS.map((e) => [e.id, e]));
 
-// ---------------------------------------------------------------- vistas
+// Vistas
 export const VISTA_GENERAL = {
     id: "general", titulo: "Vista general", nivel: "Panorámica", edificio: null, piso: null,
     subtitulo: "Campus FCFM",
@@ -157,7 +157,7 @@ export function edificioDeVista(vista) {
     return vista.edificio ? EDIFICIO_POR_ID[vista.edificio] : null;
 }
 
-// ---------------------------------------------------------------- directorio
+// Directorio
 // Un "lugar" es lo que aparece en el directorio: un cuarto con nombre o un edificio del campus.
 const LUGARES_CUARTOS = EDIFICIOS.flatMap((ed) => ed.pisos.flatMap((p) =>
     p.cuartos.filter((c) => c.nombre).map((c) => ({
@@ -208,7 +208,7 @@ export function buscarLugares(texto) {
         .sort((a, b) => PESO_TIPO(a.tipo) - PESO_TIPO(b.tipo) || a.nombre.localeCompare(b.nombre, "es", { numeric: true }));
 }
 
-// ---------------------------------------------------------------- encuadres de cámara
+// Encuadres de cámara
 // La cámara mira desde el sur (z+) hacia el norte, un poco elevada.
 function encuadre(bbox, y, minimo = 20) {
     const [x0, z0] = aEscena([bbox[0], bbox[1]]);
@@ -233,7 +233,7 @@ export function encuadreLugar(lugar) {
     return encuadre(lugar.bbox, lugar.y, 40);
 }
 
-// ---------------------------------------------------------------- lugares destacados
+// Lugares destacados
 // Tesorería: ahí se pagan los productos de la Bisontstore. Se busca por nombre (no por id)
 // porque los ids dependen del orden de extracción de los planos.
 export const TESORERIA = LUGARES.find((l) => l.nombre === "Tesorería") ?? null;

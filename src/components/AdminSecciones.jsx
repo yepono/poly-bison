@@ -1,4 +1,4 @@
-// Secciones del panel de administración conectadas a la API (Paso 5).
+// Secciones del panel de administración.
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useDialogos } from "./Dialogos";
@@ -15,8 +15,7 @@ import { api, formatDia, formatFechaHora, formatHora, formatPrecio, formatRangoF
 
 const EVENT_TYPES = ["Académico", "Examen", "Asueto", "Cultural", "Deportivo"];
 
-// Franja de cifras neutra (misma idea que las cifras del perfil). Reemplaza las tarjetas con
-// borde de color, que no se usaban en ningún otro lugar de la app.
+// Franja de cifras sencilla, con el mismo estilo que las cifras del perfil
 export function FranjaCifras({ cifras, cargando = false, etiqueta }) {
     return (
         <dl className="stat-strip" aria-label={etiqueta} aria-busy={cargando || undefined}>
@@ -58,7 +57,7 @@ function FilasCargando({ filas = 4 }) {
     );
 }
 
-// Estados de cuenta -> colores de estado (reservados para esto), siempre con etiqueta y cifra
+// Color de cada estado de cuenta; siempre se muestra junto con su nombre y su cifra
 const ESTADOS = [
     { campo: "usuarios_activos", estado: "Aprobado", nombre: "Aprobados", color: "var(--success)", punto: "bg-success" },
     { campo: "pendientes", estado: "Pendiente", nombre: "Pendientes", color: "var(--warning)", punto: "bg-warning" },
@@ -66,9 +65,7 @@ const ESTADOS = [
     { campo: "baneados", estado: "Baneado", nombre: "Baneados", color: "var(--danger)", punto: "bg-danger" },
 ];
 
-// ---------- Resumen / Dashboard (solo Administrador, Paso 6) ----------
-// Datos: reportes.php -> vw_resumen_usuarios, vw_usuarios_mas_activos,
-// vw_publicaciones_mayor_interaccion
+// Resumen (solo administrador). Los datos vienen de reportes.php
 export function AdminResumen({ setNotice, onIrA }) {
     const [resumen, setResumen] = useState(null);
     const [masActivos, setMasActivos] = useState(null);
@@ -146,16 +143,12 @@ export function AdminResumen({ setNotice, onIrA }) {
     </>;
 }
 
-// =====================================================================================
-// Patrón común de las pestañas con tabla:
-//   tarjeta -> título + conteo -> barra (búsqueda a la izquierda, filtros, botón principal a la
-//   derecha) -> tabla de solo lectura con estados (cargando / error / vacío).
-//   Crear y editar abren el MISMO <PanelLateral>. Cambios de un solo valor (estado, visible,
-//   activo) se hacen en la fila. Acciones secundarias van en el menú "⋯"; eliminar siempre pide
-//   confirmación.
-// =====================================================================================
+// Todas las pestañas con tabla siguen el mismo orden: título y conteo, una barra con búsqueda,
+// filtros y botón principal, y la tabla. Crear y editar abren el mismo panel lateral, los cambios
+// de un solo valor se hacen en la misma fila, las acciones secundarias van en el menú "⋯" y
+// eliminar siempre pide confirmación.
 
-// Carga una lista: datos = null mientras carga. `cargar` debe ser estable (función de módulo).
+// Carga una lista; mientras llega, los datos valen null. La función `cargar` no debe cambiar entre renders
 function useLista(cargar) {
     const [datos, setDatos] = useState(null);
     const [error, setError] = useState("");
@@ -227,8 +220,7 @@ const ATENUADA = "[&>td:not(:nth-last-child(-n+2))]:opacity-55";
 const coincide = (texto, busqueda) => texto.toLowerCase().includes(busqueda.trim().toLowerCase());
 const vacioBusqueda = (limpiar) => ({ icono: "buscar", titulo: "Sin resultados", detalle: "Prueba con otra búsqueda o quita los filtros.", accion: { texto: "Limpiar filtros", onClick: limpiar } });
 
-// ---------- Bitácora (solo Administrador, D18) ----------
-// Datos: reportes.php?accion=bitacora -> vw_bitacora (Event_Log que llenan los triggers)
+// Bitácora (solo administrador): los movimientos que registran los triggers de la base de datos
 const cargarBitacora = () => api("reportes", "bitacora").then((r) => r.registros);
 
 export function AdminBitacora({ search, setSearch }) {
@@ -255,7 +247,7 @@ export function AdminBitacora({ search, setSearch }) {
     );
 }
 
-// ---------- Rentas: historial global (Administrador y Moderador) ----------
+// Rentas: historial de todas las reservaciones (administrador y moderador)
 const cargarRentas = () => api("reservaciones", "historial").then((r) => r.reservaciones);
 
 export function AdminRentas({ search, setSearch }) {
@@ -294,7 +286,7 @@ export function AdminRentas({ search, setSearch }) {
     );
 }
 
-// ---------- Horarios (solo Administrador, D9) ----------
+// Horarios (solo administrador)
 const cargarBloques = () => api("reservaciones", "bloques", { params: { todos: 1 } }).then((r) => r.bloques);
 // Horas cada 30 minutos de 06:00 a 22:00
 const HORAS_BLOQUE = Array.from({ length: 33 }, (_, i) => `${String(6 + Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`);
@@ -302,7 +294,7 @@ const HORAS_BLOQUE = Array.from({ length: 33 }, (_, i) => `${String(6 + Math.flo
 export function AdminHorarios({ setNotice }) {
     const { avisar } = useDialogos();
     const { datos, error, recargar, reintentar } = useLista(cargarBloques);
-    const [panel, setPanel] = useState(null); // { bloque?, inicio, fin }
+    const [panel, setPanel] = useState(null); // datos del panel abierto, o null si está cerrado
     const [errorPanel, setErrorPanel] = useState("");
     const [guardando, setGuardando] = useState(false);
     const [cambiando, setCambiando] = useState(null);
@@ -395,7 +387,7 @@ export function AdminHorarios({ setNotice }) {
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 const PRECIO = /^\d{1,6}(\.\d{1,2})?$/;
 
-// ---------- Tienda (solo Administrador, D10) ----------
+// Tienda (solo administrador)
 const productoVacio = { titulo: "", precio: "", id_categoria: "", stock: "0", descripcionCorta: "" };
 const cargarProductos = () => api("productos", "listar").then((r) => r.productos.map(mapProducto));
 const cargarCategorias = () => api("productos", "categorias").then((r) => r.categorias);
@@ -416,7 +408,7 @@ export function AdminTienda() {
     const { datos: categorias } = useLista(cargarCategorias);
     const [busqueda, setBusqueda] = useState("");
     const [categoria, setCategoria] = useState("");
-    const [panel, setPanel] = useState(null); // { producto?, form, imagen, vista }
+    const [panel, setPanel] = useState(null); // datos del panel abierto, o null si está cerrado
     const [errorPanel, setErrorPanel] = useState("");
     const [guardando, setGuardando] = useState(false);
 
@@ -553,11 +545,11 @@ export function AdminTienda() {
     );
 }
 
-// ---------- Eventos (Administrador y Moderador, D15) ----------
+// Eventos (administrador y moderador)
 const eventoVacio = { titulo: "", descripcion: "", tipo: "Académico", fecha_inicio: "", fecha_fin: "", lugar: "" };
 const cargarEventos = () => api("eventos", "admin_listar").then((r) => r.eventos);
 
-// "AAAA-MM-DDTHH:MM" + 1 hora (sin pasar de las 23:45 del mismo día)
+// Suma una hora a la fecha de inicio, sin pasar de las 23:45 del mismo día
 function unaHoraDespues(valor) {
     const [fecha, hora] = valor.split("T");
     const [h, m] = hora.split(":").map(Number);
@@ -580,7 +572,7 @@ export function AdminEventos() {
     const { datos, setDatos, error, recargar, reintentar } = useLista(cargarEventos);
     const [busqueda, setBusqueda] = useState("");
     const [tipo, setTipo] = useState("");
-    const [panel, setPanel] = useState(null); // { evento?, form }
+    const [panel, setPanel] = useState(null); // datos del panel abierto, o null si está cerrado
     const [errorPanel, setErrorPanel] = useState("");
     const [guardando, setGuardando] = useState(false);
 
@@ -614,7 +606,7 @@ export function AdminEventos() {
         }
     };
 
-    // Visible: cambio de un solo valor, se guarda al momento (optimista)
+    // El interruptor de Visible se guarda al momento, sin esperar la respuesta del servidor
     const alternarVisible = async (item, visible) => {
         setDatos((lista) => lista.map((e) => (e.id_evento === item.id_evento ? { ...e, visible } : e)));
         try {

@@ -12,7 +12,7 @@ const GROSOR_LOSA = 0.18;
 const ALTURA_CUARTO_ACTIVO = 2.6;   // el piso activo se ve "cortado" para leerlo mejor
 const SEPARACION_CUARTOS = 0.14;    // hueco entre cuartos vecinos (m)
 
-// ---------------------------------------------------------------- geometría
+// Geometría
 function crearGeometria(poly, alto, hueco = 0) {
     const pts = poly.map(aEscena);
     let xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1]);
@@ -21,7 +21,7 @@ function crearGeometria(poly, alto, hueco = 0) {
     // Encoge un poco el polígono para que los cuartos vecinos no se peguen
     const sx = hueco ? Math.max(0.6, 1 - (2 * hueco) / Math.max(x1 - x0, 0.01)) : 1;
     const sz = hueco ? Math.max(0.6, 1 - (2 * hueco) / Math.max(z1 - z0, 0.01)) : 1;
-    // Shape vive en XY; tras rotar -90° en X, (x, y) -> (x, -y) en el suelo, así que usamos -z.
+    // La figura se dibuja de pie y luego se acuesta en el suelo, por eso aquí se usa -z
     const shape = new THREE.Shape(pts.map(([x, z]) => new THREE.Vector2(cx + (x - cx) * sx, -(cz + (z - cz) * sz))));
     const geo = new THREE.ExtrudeGeometry(shape, { depth: alto, bevelEnabled: false });
     geo.rotateX(-Math.PI / 2);
@@ -39,7 +39,7 @@ const sinRaycast = () => null;
 // Un clic que en realidad fue arrastrar para girar no debe seleccionar
 const esClic = (e) => e.delta <= 4;
 
-// ---------------------------------------------------------------- etiquetas
+// Etiquetas
 // Una sola capa DOM encima del canvas; cada frame se proyectan las posiciones 3D.
 // (drei <Html> crea una raíz de React por etiqueta y desmontar decenas a la vez
 // al cambiar de vista provoca errores en React 19.)
@@ -113,7 +113,7 @@ function calcularEtiquetas(vista, seleccionId, hoverId) {
     });
 }
 
-// ---------------------------------------------------------------- campus
+// Campus
 function EdificioCampus({ edificio, modo, colores, seleccionado, hover, onHover, onSeleccionar, onAbrir }) {
     const esSuelo = edificio.forma === "suelo";
     const altoPiso = esSuelo ? edificio.altura : ALTURA_PISO - 0.12;
@@ -159,7 +159,7 @@ function EdificioCampus({ edificio, modo, colores, seleccionado, hover, onHover,
     );
 }
 
-// ---------------------------------------------------------------- pisos
+// Pisos
 function Losa({ poly, y, color }) {
     const geo = useGeometria(poly, GROSOR_LOSA, 0);
     return (
@@ -203,7 +203,7 @@ function Cuarto({ cuarto, activo, colores, seleccionado, hover, onHover, onSelec
     );
 }
 
-// ---------------------------------------------------------------- cámara
+// Cámara
 function ControlCamara({ encuadre }) {
     const controles = useRef(null);
     const camera = useThree((s) => s.camera);
@@ -248,7 +248,7 @@ function ControlCamara({ encuadre }) {
     );
 }
 
-// ---------------------------------------------------------------- escena
+// Escena
 function Escena({ vista, seleccionId, hoverId, setHoverId, onSeleccionar, onAbrirVista, colores }) {
     useCursor(Boolean(hoverId));
 
@@ -314,7 +314,7 @@ function Escena({ vista, seleccionId, hoverId, setHoverId, onSeleccionar, onAbri
     );
 }
 
-// ---------------------------------------------------------------- error WebGL
+// Aviso para cuando el navegador no puede mostrar gráficos 3D
 class LimiteError extends Component {
     state = { error: false };
     static getDerivedStateFromError() { return { error: true }; }
@@ -330,13 +330,9 @@ class LimiteError extends Component {
     }
 }
 
-// ---------------------------------------------------------------- componente
-/**
- * Mapa 3D de la facultad.
- * @param vistaId     "general" o el id de un piso ("e1-pb", "e3-p1", ...)
- * @param seleccionId id de lugar seleccionado (cuarto o "campus:<id>")
- * @param enfoque     objeto nuevo cada vez que la cámara debe volar: { lugarId? }
- */
+// Componente principal
+// Mapa 3D de la facultad. Recibe la vista actual (general o un piso), el lugar seleccionado y
+// un objeto `enfoque` que cambia cada vez que la cámara debe volar a un lugar.
 export default function Mapa3D({ vistaId, seleccionId, enfoque, onSeleccionar, onAbrirVista }) {
     const colores = useColoresTema();
     const vista = VISTAS_POR_ID[vistaId];

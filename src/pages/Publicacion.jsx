@@ -17,9 +17,9 @@ function Publicacion({ modal = false }) {
     const [comment, setComment] = useState("");
     const [enviando, setEnviando] = useState(false);
     const [errorComentario, setErrorComentario] = useState("");
-    // Detalle pedido a la API cuando la publicación no está en el feed: { id, post | null }
+    // Detalle pedido a la API cuando la publicación no está en el feed
     const [detalle, setDetalle] = useState(null);
-    // Comentarios de la publicación: { id, lista, error }
+    // Comentarios de la publicación
     const [comentarios, setComentarios] = useState(null);
     const [intento, setIntento] = useState(0); // "Reintentar" en los comentarios
     const navigate = useNavigate();

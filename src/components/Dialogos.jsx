@@ -1,13 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
-// Confirmaciones, preguntas y avisos dentro de la app (reemplazan window.confirm/prompt/alert,
-// que se veían fuera de lugar y no respetaban el tema).
-//
-//   const { confirmar, pedirTexto, avisar } = useDialogos();
-//   if (!(await confirmar({ titulo: "¿Eliminar?", mensaje: "...", accion: "Eliminar", peligro: true }))) return;
-//   const motivo = await pedirTexto({ titulo: "Motivo", etiqueta: "Motivo (opcional)" }); // null = cancelado
-//   avisar("Guardado", "exito");   // "exito" | "error" | "info"
+// Confirmaciones, preguntas y avisos con el estilo de la app, en lugar de las ventanas del
+// navegador. Se usan con useDialogos(): confirmar y pedirTexto esperan la respuesta del usuario
+// (pedirTexto da null si cancela) y avisar muestra una notificación de éxito, error o información.
 
 const DialogosContext = createContext(null);
 

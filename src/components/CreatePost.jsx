@@ -7,7 +7,7 @@ const TITULO_MAX = 250;
 const CONTENIDO_MAX = 600;
 
 // Crear publicación, o editarla si recibe `post` (solo el autor).
-// onDone(post) se llama al guardar correctamente.
+// Al guardar bien se llama a onDone con la publicación.
 function CreatePost({ post = null, onDone, enModal = false, autoFocus = false }) {
     const { createPost, updatePost } = useAppData();
     const editando = Boolean(post);
@@ -22,7 +22,7 @@ function CreatePost({ post = null, onDone, enModal = false, autoFocus = false })
     const [error, setError] = useState("");
     const [enviando, setEnviando] = useState(false);
 
-    // Catálogo de etiquetas (D6)
+    // Catálogo de etiquetas
     useEffect(() => {
         let cancelled = false;
         api("publicaciones", "etiquetas")

@@ -14,7 +14,7 @@ async function decodificar(file) {
     if ("createImageBitmap" in window) {
         try {
             return await createImageBitmap(file, { imageOrientation: "from-image" });
-        } catch { /* cae al método con <img> */ }
+        } catch { /* si falla, se usa el método con <img> */ }
     }
     const url = URL.createObjectURL(file);
     try {
@@ -57,11 +57,8 @@ function dibujar(ctx, fuente, lado, escala, pos) {
 
 const aBlob = (lienzo, tipo) => new Promise((resolve) => lienzo.toBlob(resolve, tipo, 0.9));
 
-/**
- * @param file      imagen original elegida por el usuario
- * @param onCancel  cerrar sin cambios
- * @param onConfirm recibe el File recortado; puede devolver una promesa (se muestra "Guardando…")
- */
+// Recibe la imagen elegida, una función para cancelar y otra que recibe el recorte terminado
+// (si regresa una promesa, el botón dice "Guardando…" mientras termina).
 function AvatarCropper({ file, onCancel, onConfirm }) {
     const contenedor = useRef(null);
     const lienzo = useRef(null);
@@ -121,7 +118,7 @@ function AvatarCropper({ file, onCancel, onConfirm }) {
 
     const mover = (dx, dy) => setPos((p) => limitar({ x: p.x + dx, y: p.y + dy }, fuente, escala, lado));
 
-    // ---- punteros: 1 dedo/ratón = mover, 2 dedos = pellizcar
+    // Con un dedo o el ratón se mueve la imagen; con dos dedos se hace zoom
     const relativo = (e) => {
         const r = lienzo.current.getBoundingClientRect();
         return { x: e.clientX - r.left - r.width / 2, y: e.clientY - r.top - r.height / 2 };

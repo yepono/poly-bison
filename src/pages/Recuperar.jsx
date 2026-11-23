@@ -3,8 +3,7 @@ import { Link } from "react-router-dom";
 import PantallaAuth from "../components/PantallaAuth";
 import { api, CORREO_UANL } from "../api/client";
 
-// "Olvidé mi contraseña" (R12): usuarios.php?accion=recuperar_contrasena envía una
-// contraseña temporal con la API de Brevo. Mismo diseño que Login.
+// "Olvidé mi contraseña": manda una contraseña temporal al correo. Mismo diseño que Login.
 function Recuperar() {
     const [correo, setCorreo] = useState("");
     const [mensaje, setMensaje] = useState("");

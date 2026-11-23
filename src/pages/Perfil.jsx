@@ -40,9 +40,9 @@ function Perfil() {
     const { user: currentUser } = useAppData();
     const { userId } = useParams();
     const esOtroUsuario = Boolean(userId) && String(currentUser.id) !== userId;
-    // { id, user } del perfil consultado; user null = no encontrado
+    // Perfil consultado; si no existe, user queda en null
     const [perfilConsultado, setPerfilConsultado] = useState(null);
-    // { id, lista } publicaciones del perfil (publicaciones.php?accion=por_usuario)
+    // Publicaciones del perfil
     const [publicaciones, setPublicaciones] = useState(null);
     const [intento, setIntento] = useState(0); // "Reintentar" vuelve a pedir las publicaciones
     const perfilId = String(esOtroUsuario ? userId : currentUser.id);

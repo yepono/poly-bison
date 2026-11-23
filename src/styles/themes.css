@@ -1,6 +1,6 @@
 /*
  * Temas de PolyBison: dark (por defecto), gray y light.
- * Solo variables CSS planas: index.css las expone a Tailwind con @theme inline.
+ * index.css convierte estas variables en clases de Tailwind.
  * Se aplican con <html data-theme="dark|gray|light"> (ver AppDataContext).
  *
  * Roles (no colores):
@@ -13,7 +13,7 @@
  * Contraste de texto verificado >= 4.5:1 (WCAG AA) en los tres temas.
  */
 
-/* ───────── DARK (azul-negro, neón intenso) ───────── */
+/* Tema oscuro: azul casi negro con neón intenso */
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
@@ -31,7 +31,7 @@
   --brand-hover: #002244;
   --on-brand: #ffffff;
   --accent: #00bfff;
-  /* Series de gráficas (validadas: CVD y contraste vs. --surface de este tema) */
+  /* Colores de las gráficas, elegidos para distinguirse también con daltonismo */
   --viz-1: #3987e5;
   --viz-2: #d95926;
   --on-accent: #04121c;
@@ -67,7 +67,7 @@
   --cal-deportivo: #2ee59d;
 }
 
-/* ───────── GRAY (grafito neutro, menos contraste, neón más suave) ───────── */
+/* Tema gris: grafito neutro, con menos contraste y neón más suave */
 [data-theme="gray"] {
   color-scheme: dark;
 
@@ -84,7 +84,7 @@
   --brand-hover: #083a69;
   --on-brand: #ffffff;
   --accent: #1cc3ff;
-  /* Series de gráficas (validadas: CVD y contraste vs. --surface de este tema) */
+  /* Colores de las gráficas, elegidos para distinguirse también con daltonismo */
   --viz-1: #3987e5;
   --viz-2: #d95926;
   --on-accent: #04121c;
@@ -110,7 +110,7 @@
   --cal-deportivo: #43e3a6;
 }
 
-/* ───────── LIGHT (sin brillos: el neón pasa a tonos profundos) ───────── */
+/* Tema claro: sin brillos, el neón se vuelve tonos más profundos */
 [data-theme="light"] {
   color-scheme: light;
 
@@ -127,7 +127,7 @@
   --brand-hover: #002244;
   --on-brand: #ffffff;
   --accent: #0071a8;
-  /* Series de gráficas (validadas: CVD y contraste vs. --surface de este tema) */
+  /* Colores de las gráficas, elegidos para distinguirse también con daltonismo */
   --viz-1: #2a78d6;
   --viz-2: #eb6834;
   --on-accent: #ffffff;

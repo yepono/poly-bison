@@ -64,7 +64,7 @@ function EtiquetaTipo({ tipo }) {
     );
 }
 
-// ---------------------------------------------------------------- selector de edificio y piso
+// Selector de edificio y piso
 function SelectorVista({ vista, vistaId, onElegir }) {
     const [abierto, setAbierto] = useState(false);
     const ref = useRef(null);
@@ -125,7 +125,7 @@ function SelectorVista({ vista, vistaId, onElegir }) {
     );
 }
 
-// ---------------------------------------------------------------- buscador (ícono que se despliega)
+// Buscador (ícono que se despliega)
 function Buscador({ onElegir }) {
     const [abierto, setAbierto] = useState(false);
     const [texto, setTexto] = useState("");
@@ -224,9 +224,9 @@ function Buscador({ onElegir }) {
     );
 }
 
-// ---------------------------------------------------------------- lista de lugares (panel que se oculta)
+// Lista de lugares (panel que se oculta)
 function PanelLugares({ vista, vistaId, seleccionId, onElegir, onCerrar }) {
-    const [alcance, setAlcance] = useState("vista"); // "vista" | "todo"
+    const [alcance, setAlcance] = useState("vista"); // muestra solo la vista actual o todos los lugares
     const [tipo, setTipo] = useState("Todos");
 
     const base = useMemo(
@@ -311,15 +311,15 @@ function PanelLugares({ vista, vistaId, seleccionId, onElegir, onCerrar }) {
     );
 }
 
-// ---------------------------------------------------------------- página
+// Página
 function Mapa() {
-    // ?lugar=<id> abre el mapa ya enfocado en ese lugar (p. ej. Tesorería desde la tienda)
+    // Si la dirección trae ?lugar=, el mapa abre enfocado en ese lugar (por ejemplo, Tesorería desde la tienda)
     const [searchParams] = useSearchParams();
     const [lugarInicial] = useState(() => LUGARES_POR_ID[searchParams.get("lugar")] ?? null);
 
     const [vistaId, setVistaId] = useState(lugarInicial?.vista ?? "general");
     const [seleccionId, setSeleccionId] = useState(lugarInicial?.id ?? null);
-    // Objeto nuevo = la cámara vuela. Sólo lo cambian la navegación, la lista y el buscador.
+    // Cada objeto nuevo hace volar la cámara. Solo lo cambian la navegación, la lista y el buscador.
     const [enfoque, setEnfoque] = useState(lugarInicial ? { lugarId: lugarInicial.id } : null);
     const [listaAbierta, setListaAbierta] = useState(false);
     const [ayuda, setAyuda] = useState(false);

@@ -1,18 +1,7 @@
 <?php
-// ============================================================
-// eventos.php - Sección Eventos (calendario)
-// Acción por parámetro: eventos.php?accion=...
-// Todas requieren sesión.
-//
-//   GET  listar&mes=AAAA-MM          eventos visibles del mes (vw_eventos_visibles)
-// Administrador / Moderador (D15):
-//   GET  admin_listar                visibles + ocultos (vw_eventos_visibles
-//                                    UNION vw_eventos_ocultos)
-//   POST crear    (JSON)             titulo, tipo, fecha_inicio, fecha_fin, lugar, descripcion
-//   POST editar   (JSON)             id_evento + campos a cambiar
-//   POST ocultar | mostrar | eliminar (JSON)  id_evento
-//                                    -> sp_evento
-// ============================================================
+// Eventos del calendario. Con sesión se pueden ver los eventos visibles de un mes.
+// Los administradores y moderadores además ven los ocultos y pueden crear, editar, ocultar,
+// mostrar o eliminar eventos.
 require __DIR__ . "/config.php";
 
 const ROLES_STAFF   = ["Administrador", "Moderador"];
@@ -35,7 +24,7 @@ function spEvento(mysqli $conn, string $accion, array $p): array {
     ]);
 }
 
-// "AAAA-MM-DDTHH:MM" (datetime-local) -> "AAAA-MM-DD HH:MM:00", o null si no es válida
+// Convierte la fecha y hora del formulario al formato de MySQL, o null si no es válida
 function leerFechaHora(string $valor): ?string {
     if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::\d{2})?$/', $valor, $m)) return null;
     if (!checkdate((int)$m[2], (int)$m[3], (int)$m[1]) || (int)$m[4] > 23 || (int)$m[5] > 59) return null;
@@ -100,8 +89,7 @@ function leerIdEvento(array $data): int {
     return $id;
 }
 
-// ---------- Acciones ----------
-
+// Acciones
 function accionListar(mysqli $conn): never {
     requireMethod("GET");
     requireLogin($conn);
@@ -153,7 +141,7 @@ function accionEditar(mysqli $conn): never {
     $id = leerIdEvento($data);
     $campos = leerCamposEvento($data, true);
     if (!$campos) jsonError(400, "No hay cambios para guardar");
-    // sp_evento valida fin >= inicio con los valores combinados (nuevos + actuales)
+    // La rutina revisa que el fin no sea antes del inicio, con los valores nuevos y los actuales
     spEvento($conn, "EDITAR", ["id_evento" => $id, "id_actor" => (int)$u["id_usuario"]] + $campos);
     jsonResponse(["success" => true, "message" => "Evento actualizado"]);
 }

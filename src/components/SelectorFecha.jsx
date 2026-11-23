@@ -2,9 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 
-// Selector de fecha con calendario pequeño en español (reemplaza <input type="date">, que
-// muestra el formato del navegador, p. ej. mm/dd/yyyy).
-// value / min: "AAAA-MM-DD" (o ""). onChange recibe "AAAA-MM-DD".
+// Selector de fecha con un calendario pequeño en español. Recibe y entrega fechas "AAAA-MM-DD"
 
 const DIAS = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sá"];
 

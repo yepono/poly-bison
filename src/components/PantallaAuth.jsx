@@ -67,7 +67,7 @@ function PantallaAuth({ children }) {
                     <div aria-hidden="true" className="pointer-events-none absolute -inset-16 -z-10" style={{ background: "radial-gradient(closest-side, var(--canvas) 55%, transparent)" }} />
                     <ConstelacionBisonte />
                 </div>
-                {/* Entrada corta (opacidad + desplazamiento): antes escalaba desde 0.5 durante 1.5 s */}
+                {/* La tarjeta aparece con un desvanecido corto */}
                 <motion.div
                     initial={reducido ? false : { opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}

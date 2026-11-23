@@ -8,7 +8,7 @@ import { DialogosProvider } from './components/Dialogos.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {/* basename = ruta base de Vite (VITE_BASE): /poly-bison/ en local, / en producción */}
+    {/* La ruta base es /poly-bison/ en local y / en producción (sale de VITE_BASE) */}
     <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || '/'}>
       <AppDataProvider>
         <DialogosProvider>

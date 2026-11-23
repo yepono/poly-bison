@@ -191,7 +191,7 @@ function Registro() {
                         </form>
                     )}
 
-                    {/* PASO 3: Foto de Perfil */}
+                    {/* Paso 3: foto de perfil */}
                     {paso === 3 && (
                         <form className="flex flex-col gap-4" onSubmit={handleSubmitFinal} noValidate>
                             <div className="flex flex-col gap-1.5">

@@ -3,13 +3,11 @@ import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import Avatar from "./Avatar";
 
-// Gráficas del Resumen del panel. Reglas de diseño:
-//  - Barras finas (10 px) que crecen desde una base, punta redondeada de 4 px, base recta.
-//  - El valor va en la punta de la barra; el texto nunca usa el color de la serie.
-//  - Dos series -> leyenda siempre visible. Colores de serie: --viz-1 / --viz-2 (validados
-//    para daltonismo y contraste en los tres temas). Los colores de estado solo para estados.
+// Gráficas del resumen del panel: barras delgadas que crecen al aparecer, con el valor en la
+// punta y una leyenda cuando hay dos datos por barra. Los colores están elegidos para que se
+// distingan también con daltonismo, en los tres temas.
 
-// Barra horizontal que crece al montarse. `tramos`: [{ valor, clase }] (uno o varios apilados)
+// Barra horizontal que crece al aparecer; puede tener uno o varios tramos apilados
 function BarraApilada({ tramos, maximo, etiqueta, descripcion, reservaEtiqueta = "4.5rem" }) {
     const reducido = useReducedMotion();
     const total = tramos.reduce((s, t) => s + t.valor, 0);
@@ -31,13 +29,13 @@ function BarraApilada({ tramos, maximo, etiqueta, descripcion, reservaEtiqueta =
     );
 }
 
-// ---------- Dona: usuarios por estado ----------
+// Dona de usuarios por estado
 const RADIO = 60;
 const GROSOR = 18;
 const CIRC = 2 * Math.PI * RADIO;
 const HUECO = 3; // separación entre tramos (px de arco)
 
-/** @param datos [{ clave, nombre, total, color: "var(--success)", punto: "bg-success" }] */
+// Cada dato trae su nombre, su total y su color
 export function DonaEstados({ datos }) {
     const reducido = useReducedMotion();
     const [activo, setActivo] = useState(null);
@@ -106,7 +104,7 @@ export function DonaEstados({ datos }) {
     );
 }
 
-// ---------- Ranking de usuarios (publicaciones) ----------
+// Usuarios con más publicaciones
 export function RankingUsuarios({ usuarios }) {
     const maximo = Math.max(1, ...usuarios.map((u) => Number(u.total_publicaciones) || 0));
     return (
@@ -139,7 +137,7 @@ export function RankingUsuarios({ usuarios }) {
     );
 }
 
-// ---------- Publicaciones con mayor interacción (me gusta + comentarios apilados) ----------
+// Publicaciones con más interacción (me gusta y comentarios apilados)
 export function RankingInteraccion({ publicaciones }) {
     const valor = (p) => ({ likes: Number(p.total_likes) || 0, comentarios: Number(p.total_comentarios) || 0 });
     const maximo = Math.max(1, ...publicaciones.map((p) => { const v = valor(p); return v.likes + v.comentarios; }));

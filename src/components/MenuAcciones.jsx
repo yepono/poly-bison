@@ -1,13 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-/**
- * Menú "⋯" de una fila: agrupa las acciones secundarias (Ocultar, Desactivar, Eliminar...).
- * Se dibuja en un portal para que las tablas con scroll no lo recorten.
- *
- * @param etiqueta  nombre accesible del botón ("Más acciones para Taza Bisonte")
- * @param acciones  [{ texto, onClick, peligro?, oculto? }]
- */
+// Menú "⋯" de una fila con las acciones secundarias (ocultar, desactivar, eliminar...). Se dibuja
+// encima de todo para que las tablas con scroll no lo recorten.
 function MenuAcciones({ etiqueta, acciones }) {
     const visibles = acciones.filter((a) => !a.oculto);
     const [abierto, setAbierto] = useState(false);

@@ -9,10 +9,8 @@ const HORAS = Array.from({ length: 96 }, (_, i) => {
     return `${h}:${m}`;
 });
 
-/**
- * Fecha (calendario en español) + hora (lista) en un solo valor "AAAA-MM-DDTHH:MM",
- * el mismo formato que usaba <input type="datetime-local"> y que espera la API.
- */
+// Fecha (con el calendario en español) y hora (de una lista) juntas en un solo valor
+// "AAAA-MM-DDTHH:MM", que es el formato que espera la API.
 function CampoFechaHora({ etiqueta, valor, onCambiar, horaInicial = "09:00" }) {
     const id = useId();
     const [fecha = "", hora = ""] = (valor || "").split("T");

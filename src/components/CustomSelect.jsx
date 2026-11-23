@@ -2,19 +2,10 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-/**
- * Lista desplegable de la app (reemplaza todos los <select> nativos).
- *
- * - La lista se dibuja en un portal con posición fija: no la recortan tablas ni paneles con scroll,
- *   y se abre hacia arriba si no cabe abajo.
- * - Teclado: ↑/↓/Inicio/Fin para moverse, Enter/Espacio para elegir, Esc o Tab para cerrar,
- *   y escribir letras salta a la opción que empieza así.
- * - Lectores de pantalla: botón con aria-haspopup="listbox" + listbox con aria-activedescendant.
- *
- * @param label      texto visible encima (opcional; si no hay, usa ariaLabel)
- * @param options    [{ value, label }]  — los valores se comparan como texto
- * @param tamano     "normal" | "compacto" (filas de tabla, barras de herramientas)
- */
+// Lista desplegable de la app, que se usa en lugar de los <select> del navegador. Se dibuja
+// encima de todo para que ninguna tabla o panel la recorte y se abre hacia arriba si no cabe
+// abajo. Se puede usar por completo con el teclado (flechas, Enter, Esc y escribir letras para
+// saltar a una opción) y con lectores de pantalla. El tamaño "compacto" es para tablas y barras.
 function CustomSelect({
     label, ariaLabel, options, value, onChange, placeholder = "Selecciona una opción",
     id, disabled = false, tamano = "normal", className = "",

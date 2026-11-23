@@ -1,17 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
-/**
- * Panel lateral con formulario (crear y editar usan el mismo). Se desliza desde la derecha en
- * escritorio y desde abajo en celular. Va dentro de <AnimatePresence>.
- *
- * @param titulo     encabezado ("Nuevo artículo", "Editar evento")
- * @param subtitulo  línea opcional bajo el título
- * @param onEnviar   submit del formulario
- * @param accion     texto del botón principal ("Guardar", "Agregar")
- * @param guardando  deshabilita y cambia el texto a "Guardando…"
- * @param error      mensaje de validación (se muestra arriba de los botones)
- */
+// Panel con formulario para crear o editar (los dos usan el mismo). Entra desde la derecha en
+// escritorio y desde abajo en celular. Muestra el error de validación arriba de los botones y,
+// mientras guarda, desactiva el botón principal.
 function PanelLateral({ titulo, subtitulo, onCerrar, onEnviar, accion = "Guardar", guardando = false, error = "", children }) {
     const panel = useRef(null);
     // Celular: entra desde abajo; escritorio: desde la derecha

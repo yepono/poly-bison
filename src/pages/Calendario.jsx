@@ -11,12 +11,12 @@ const capitalizar = (texto) => texto.charAt(0).toUpperCase() + texto.slice(1);
 
 function Calendario() {
     const [fechaSeleccionada, setFechaSeleccionada] = useState(null);
-    // Mes mostrado (D11): inicia en el mes actual
+    // Mes que se muestra; empieza en el mes actual
     const [mesActual, setMesActual] = useState(() => {
         const hoy = new Date();
         return { anio: hoy.getFullYear(), mes: hoy.getMonth() };
     });
-    // { clave: "AAAA-MM", lista } eventos visibles del mes (eventos.php?accion=listar)
+    // Eventos visibles del mes que se muestra
     const [eventosMes, setEventosMes] = useState(null);
     const [error, setError] = useState("");
     const [intento, setIntento] = useState(0);
@@ -33,7 +33,7 @@ function Calendario() {
     }, [claveMes, intento]);
 
     const diasMes = new Date(mesActual.anio, mesActual.mes + 1, 0).getDate();
-    const diaInicio = new Date(mesActual.anio, mesActual.mes, 1).getDay(); // 0 = domingo
+    const diaInicio = new Date(mesActual.anio, mesActual.mes, 1).getDay(); // el 0 es domingo
     const nombreMes = capitalizar(NOMBRE_MES(mesActual.anio, mesActual.mes));
     const hoy = new Date();
     const esMesActual = hoy.getFullYear() === mesActual.anio && hoy.getMonth() === mesActual.mes;
@@ -67,7 +67,7 @@ function Calendario() {
         }
     };
 
-    // Eventos del día seleccionado para el Panel[cite: 9]
+    // Eventos del día seleccionado para el panel inferior
     const eventosDelDia = fechaSeleccionada ? eventosDelDiaDe(fechaSeleccionada) : [];
 
     // Lógica para estructurar la cuadrícula y aislar la semana seleccionada
@@ -102,7 +102,7 @@ function Calendario() {
                 layout
                 className="card w-full overflow-hidden"
             >
-                {/* Header del Calendario */}
+                {/* Encabezado del calendario */}
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
                     <h2 className="text-xl font-bold text-ink sm:text-2xl" aria-live="polite">
                         {nombreMes} {mesActual.anio}

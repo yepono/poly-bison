@@ -96,7 +96,7 @@ function PostCard({ post, onPostChange, onPostDeleted }) {
                             <p className="text-xs text-ink-muted">{fecha}</p>
                         </div>
                     </Link>
-                    {/* La etiqueta que se eligió al publicar (antes no se mostraba) */}
+                    {/* Etiqueta que se eligió al publicar */}
                     {etiqueta && (
                         <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-field px-2.5 py-1 text-2xs font-semibold uppercase tracking-wider text-ink-soft">
                             <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ backgroundColor: etiquetaColor || "var(--accent)" }} />

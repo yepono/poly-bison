@@ -1,38 +1,11 @@
 <?php
-// ============================================================
-// usuarios.php - Sección Usuarios y autenticación
-// Acción por parámetro: usuarios.php?accion=...
-//
-// Públicas:
-//   POST registro            (multipart) alta de estudiante -> sp_usuario REGISTRAR
-//   POST login               (JSON)      inicia sesión      -> sp_usuario DATOS_LOGIN
-//                                        (acepta la clave temporal vigente -> USAR_TEMPORAL)
-//   POST recuperar_contrasena (JSON)     envía una clave temporal por correo con la
-//                                        API de Brevo -> SOLICITAR_RECUPERACION (R12)
-//   GET  carreras                        catálogo para el registro
-// Con sesión:
-//   POST logout
-//   GET  me                              usuario de la sesión (vw_usuario_publico + correo)
-//   (Con clave temporal solo se permiten me, logout y cambiar_contrasena; el
-//    resto responde 403 desde requireLogin.)
-//   GET  perfil&id=                      perfil público      (vw_usuario_publico)
-//   GET  foto&id=                        avatar (BLOB)
-//   POST actualizar_perfil   (JSON)      correo, carrera, semestre -> ACTUALIZAR_PERFIL
-//   POST cambiar_contrasena  (JSON)      pide la actual           -> CAMBIAR_CONTRASENA
-//   POST actualizar_foto     (multipart)                          -> ACTUALIZAR_FOTO
-//   POST eliminar_cuenta                 borrado lógico           -> ELIMINAR
-//                                        (dispara trg_usuario_estado_au -> bitácora)
-// Administrador / Moderador:
-//   GET  listar                          usuarios con conteos (vw_usuarios_admin)
-//   POST cambiar_estado      (JSON)      aprobar/rechazar/banear  -> CAMBIAR_ESTADO
-//                                        (dispara trg_usuario_estado_au -> Event_Log,
-//                                         que se consulta en reportes.php con vw_bitacora)
-// Solo Administrador:
-//   POST crear_moderador     (JSON)      clave temporal ENVIADA POR CORREO (Brevo);
-//                                        el administrador no la ve -> CREAR_MODERADOR
-// ============================================================
+// Usuarios y sesión. Sin sesión: registro, inicio de sesión, recuperar la contraseña y el
+// catálogo de carreras. Con sesión: ver perfiles, editar el propio, cambiar contraseña y foto, y
+// eliminar la cuenta. Con clave temporal solo se puede consultar la sesión, salir y cambiar la clave.
+// Administradores y moderadores aprueban, rechazan o banean cuentas, y solo el administrador da de
+// alta moderadores (su clave temporal llega por correo y nadie más la ve).
 require __DIR__ . "/config.php";
-require __DIR__ . "/correo.php"; // API externa de correo (Brevo, R12)
+require __DIR__ . "/correo.php"; // Envío de correos con Brevo
 
 const ROLES_STAFF      = ["Administrador", "Moderador"];
 const ESTADOS_GESTION   = ["Pendiente", "Aprobado", "Rechazado", "Baneado"];
@@ -43,8 +16,7 @@ const DUPLICADOS_USUARIO = [
     "correo"    => "Ese correo ya está registrado",
 ];
 
-// ---------- Helpers de la sección ----------
-
+// Funciones de apoyo
 // Llama a sp_usuario con los parámetros por nombre (los que falten van NULL)
 function spUsuario(mysqli $conn, string $accion, array $p = []): array {
     return callProcedure($conn, "sp_usuario", "siisssssiibsss", [
@@ -144,8 +116,7 @@ function generarClaveTemporal(int $largo = 12): string {
     return $clave;
 }
 
-// ---------- Acciones ----------
-
+// Acciones
 function accionRegistro(mysqli $conn): never {
     requireMethod("POST");
     $nombre    = inputStr($_POST, "nombre");
@@ -201,7 +172,7 @@ function accionLogin(mysqli $conn): never {
 
     $u = spUsuario($conn, "DATOS_LOGIN", ["correo" => $correo])[0] ?? null;
 
-    // Contraseña normal, o la temporal de recuperación si sigue vigente (Q2-A)
+    // Se acepta la contraseña normal o la temporal de recuperación si sigue vigente
     $usaTemporal = false;
     $valida = $u && $u["estado"] !== "Eliminado" && password_verify($pass, $u["contrasena"]);
     if (!$valida && $u && $u["estado"] !== "Eliminado" && $u["temporal_vigente"]
@@ -465,12 +436,12 @@ function accionCrearModerador(mysqli $conn): never {
     if (mb_strlen($nombre) > 250) jsonError(400, "El nombre es demasiado largo", "nombre");
     if (mb_strlen($alias) > 50)   jsonError(400, "El alias no puede tener más de 50 caracteres", "alias");
     validarCorreoUanl($correo);
-    // Todos los usuarios son estudiantes (P3)
+    // Todos los usuarios son estudiantes
     if (!preg_match('/^\d{7}$/', $matricula)) jsonError(400, "La matrícula debe tener 7 dígitos", "matricula");
     if ($idCarrera === null || $idCarrera <= 0) jsonError(400, "Selecciona la carrera", "carrera");
     if ($semestre === null || $semestre < 1 || $semestre > 10) jsonError(400, "Semestre no válido", "semestre");
 
-    // Q3-A: sin servicio de correo no se crea (la clave nunca se muestra)
+    // Sin servicio de correo no se crea la cuenta, porque la clave nunca se muestra en pantalla
     if (!correoConfigurado()) {
         jsonError(503, "El envío de correos no está configurado; no se puede crear el moderador");
     }
@@ -507,7 +478,7 @@ function accionCrearModerador(mysqli $conn): never {
     ], 201);
 }
 
-// "Olvidé mi contraseña" (R12, Q2-A). Respuesta idéntica exista o no la cuenta.
+// "Olvidé mi contraseña". La respuesta es la misma exista o no la cuenta.
 function accionRecuperarContrasena(mysqli $conn): never {
     requireMethod("POST");
     $correo = strtolower(inputStr(readJsonBody(), "correo"));
@@ -540,7 +511,7 @@ function accionRecuperarContrasena(mysqli $conn): never {
     jsonResponse(["success" => true, "message" => $mensaje]);
 }
 
-// ---------- Ruteo ----------
+// Según la acción pedida se llama a la función que corresponde
 $accion = inputStr($_GET, "accion");
 
 try {

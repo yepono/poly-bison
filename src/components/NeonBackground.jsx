@@ -1,20 +1,13 @@
 import { useEffect, useRef } from "react";
 
-// Fondo animado de las pantallas de acceso (red de nodos + rejilla en perspectiva).
-//
-// Optimizaciones respecto a la versión anterior:
-//  - Sin `filter: drop-shadow` en el <canvas>: el navegador re-filtraba toda la pantalla en
-//    cada cuadro. El brillo de cada nodo es ahora un sprite pre-dibujado (drawImage).
-//  - Conexiones con una rejilla espacial (solo se comparan nodos de celdas vecinas) en lugar
-//    de comparar todos contra todos (O(n²)).
-//  - Las líneas se agrupan por opacidad: unos pocos stroke() por cuadro en lugar de uno por línea.
-//  - Número de nodos con tope, canvas nítido en pantallas HiDPI (DPR máx. 2), movimiento por
-//    tiempo (igual de rápido a 60 o 144 Hz), pausa con la pestaña oculta y un cuadro estático
-//    si el usuario prefiere menos movimiento.
+// Fondo animado de las pantallas de acceso: una red de nodos que se unen entre sí y con el
+// puntero. Para que vaya fluido, el brillo de cada nodo se dibuja una sola vez y luego se copia,
+// solo se comparan nodos cercanos, las líneas se dibujan en pocos trazos y la animación se pausa
+// cuando la pestaña no se ve. Si el usuario prefiere menos movimiento, el fondo se queda quieto.
 
 const DISTANCIA = 120;          // distancia máxima de conexión (px CSS)
 const RADIO_MOUSE = 150;
-const AREA_POR_NODO = 11000;    // px² por nodo
+const AREA_POR_NODO = 11000;    // espacio de pantalla por cada nodo
 const MAX_NODOS = 150;
 const VELOCIDAD = 40;           // px por segundo (máx. por eje)
 const NIVELES = 4;              // grupos de opacidad para las líneas
@@ -27,7 +20,7 @@ function leerColores() {
     return { accent, danger };
 }
 
-// "#rrggbb" (o "#rgb") -> "rgba(r, g, b, a)"
+// Convierte un color hexadecimal a rgba con la transparencia indicada
 function conAlfa(hex, a) {
     let h = hex.replace("#", "");
     if (h.length === 3) h = h.split("").map((c) => c + c).join("");

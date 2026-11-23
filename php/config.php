@@ -1,13 +1,9 @@
 <?php
-// ============================================================
-// config.php - base de la API (no es un endpoint)
-// - Carga credenciales desde config.local.php (fuera de git)
-// - Manejo de errores sin filtrar información interna
-// - CORS por entorno
-// - Sesión, respuestas JSON y control de acceso (login / rol)
-// ============================================================
+// Base de la API (no se llama directamente). Carga la configuración local, maneja los errores
+// sin mostrar detalles internos, configura CORS y la sesión, y reúne las funciones comunes para
+// responder en JSON y revisar quién tiene permiso de hacer qué.
 
-// ---------- Configuración local ----------
+// Configuración local
 function appConfig(): array {
     static $config = null;
     if ($config === null) {
@@ -24,18 +20,18 @@ function appConfig(): array {
     return $config;
 }
 
-// ---------- Errores: nunca se muestran al cliente, solo se registran ----------
+// Errores: nunca se muestran al cliente, solo se registran
 ini_set("display_errors", "0");
 ini_set("log_errors", "1");
 error_reporting(E_ALL);
 
-// Warnings/notices -> excepción (respeta el operador @)
+// Los avisos de PHP se convierten en excepciones (salvo los silenciados con @)
 set_error_handler(function (int $severity, string $message, string $file, int $line): bool {
     if (!(error_reporting() & $severity)) return false;
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
 
-// Cualquier excepción no capturada -> 500 genérico
+// Cualquier excepción que nadie atrapó responde con un error 500 genérico
 set_exception_handler(function (Throwable $e): void {
     error_log("PolyBison: " . $e);
     if (!headers_sent()) {
@@ -45,7 +41,7 @@ set_exception_handler(function (Throwable $e): void {
     echo json_encode(["success" => false, "message" => "Error del servidor"]);
 });
 
-// Errores fatales -> 500 genérico
+// Los errores fatales también responden con un error 500 genérico
 register_shutdown_function(function (): void {
     $err = error_get_last();
     if ($err && in_array($err["type"], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
@@ -58,7 +54,7 @@ register_shutdown_function(function (): void {
     }
 });
 
-// ---------- CORS por entorno ----------
+// CORS por entorno
 function applyCors(): void {
     $origin  = $_SERVER["HTTP_ORIGIN"] ?? "";
     $allowed = appConfig()["cors_origins"] ?? [];
@@ -85,7 +81,7 @@ header("X-Content-Type-Options: nosniff");
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-// ---------- Conexión ----------
+// Conexión
 function getConnection(): mysqli {
     $db = appConfig()["db"];
     $conn = new mysqli($db["host"], $db["user"], $db["pass"], $db["name"], (int)$db["port"]);
@@ -96,12 +92,12 @@ function getConnection(): mysqli {
     return $conn;
 }
 
-// ---------- Sesión ----------
+// Sesión
 function startSession(): void {
     if (session_status() === PHP_SESSION_NONE) {
         $cfg = appConfig();
         session_set_cookie_params([
-            "lifetime" => 0,        // se borra sesion cuando se cierra el nav
+            "lifetime" => 0,        // la sesión se borra al cerrar el navegador
             "path"     => "/",
             "httponly" => true,
             "secure"   => (bool)($cfg["cookie_secure"] ?? false),
@@ -111,7 +107,7 @@ function startSession(): void {
     }
 }
 
-// ---------- Respuestas JSON ----------
+// Respuestas JSON
 function jsonResponse(array $data, int $code = 200): never {
     http_response_code($code);
     echo json_encode($data);
@@ -137,7 +133,7 @@ function readJsonBody(): array {
     return is_array($data) ? $data : [];
 }
 
-// ---------- Lectura segura de entradas ($_GET, $_POST o JSON) ----------
+// Lectura segura de entradas ($_GET, $_POST o JSON)
 // Texto recortado; "" si no existe o no es un valor simple (p. ej. un arreglo)
 function inputStr(array $src, string $key): string {
     $v = $src[$key] ?? "";
@@ -158,12 +154,12 @@ function inputInt(array $src, string $key): ?int {
     return null;
 }
 
-// ---------- Imágenes subidas (avatar, publicaciones, productos) ----------
+// Imágenes subidas (avatar, publicaciones, productos)
 const IMAGEN_MAX_BYTES = 2 * 1024 * 1024;          // 2 MB
 const IMAGEN_MIMES     = ["image/jpeg", "image/png", "image/webp"];
 
-// Valida $_FILES[$campo]. Regresa null si no se envió archivo, o
-// ["blob", "mime", "nombre", "tamanio"]. Si es inválido responde 400.
+// Revisa la imagen subida en ese campo. Regresa null si no se envió ninguna, sus datos si es
+// válida, o responde con un error si no lo es.
 function validarImagen(string $campo): ?array {
     $f = $_FILES[$campo] ?? null;
     if (!is_array($f) || ($f["error"] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
@@ -197,7 +193,7 @@ function validarImagen(string $campo): ?array {
     ];
 }
 
-// Envía un BLOB de imagen como respuesta (reemplaza el Content-Type JSON)
+// Responde con una imagen guardada en la base de datos en lugar de JSON
 function sendImage(string $blob, string $mime): never {
     if (!in_array($mime, IMAGEN_MIMES, true)) {
         $mime = "application/octet-stream";
@@ -209,10 +205,9 @@ function sendImage(string $blob, string $mime): never {
     exit;
 }
 
-// ---------- Rutinas (stored procedures) ----------
-// Llama a una rutina con parámetros preparados y regresa las filas del
-// primer resultado. Tipos como en bind_param: i, s, d, b (b = BLOB, se
-// envía por partes con send_long_data; null = NULL).
+// Rutinas (stored procedures)
+// Llama a una rutina de la base de datos con parámetros seguros y regresa las filas del primer
+// resultado. Los tipos se indican igual que en bind_param; las imágenes se envían por partes.
 function callProcedure(mysqli $conn, string $name, string $types, array $params): array {
     $params = array_values($params);
     $placeholders = implode(", ", array_fill(0, count($params), "?"));
@@ -255,10 +250,9 @@ function callProcedure(mysqli $conn, string $name, string $types, array $params)
     return $rows;
 }
 
-// Traduce errores de MySQL a respuestas controladas:
-//  - SIGNAL '45000' con MESSAGE_TEXT 'código|mensaje' (rutinas y triggers)
-//  - 1062 duplicado -> 409 con el mensaje de $duplicados[nombre_de_llave]
-// Cualquier otro error se relanza (el manejador global responde 500 genérico).
+// Convierte los errores de MySQL en respuestas para el usuario: los que lanzan las rutinas y los
+// triggers traen su propio código y mensaje, y un dato repetido responde con el mensaje indicado.
+// Cualquier otro error se vuelve a lanzar y termina en un error 500 genérico.
 function dbError(mysqli_sql_exception $e, array $duplicados = []): never {
     $code = $e->getCode();
     if ($code === 1644 && preg_match('/^([1-5]\d\d)\|(.+)$/s', $e->getMessage(), $m)) {
@@ -273,8 +267,8 @@ function dbError(mysqli_sql_exception $e, array $duplicados = []): never {
     throw $e;
 }
 
-// ---------- Usuario ----------
-// Datos públicos del usuario (vw_usuario_publico: sin contraseña, correo ni BLOB)
+// Usuario
+// Datos públicos del usuario, sin contraseña, correo ni foto
 function getUserById(mysqli $conn, int $id): ?array {
     $stmt = $conn->prepare("SELECT * FROM vw_usuario_publico WHERE id_usuario = ?");
     $stmt->bind_param("i", $id);
@@ -284,7 +278,7 @@ function getUserById(mysqli $conn, int $id): ?array {
     return $row ?: null;
 }
 
-// ---------- Control de acceso (siempre en el servidor) ----------
+// Control de acceso (siempre en el servidor)
 // Exige sesión válida. El usuario y su rol se leen de la BD en cada petición,
 // así un baneo o cambio de rol aplica de inmediato.
 // Si la cuenta tiene clave temporal (debe_cambiar_contrasena) responde 403,
@@ -309,7 +303,7 @@ function requireLogin(mysqli $conn, bool $permitirClaveTemporal = false): array 
     return $user;
 }
 
-// Exige sesión y que el rol esté en la lista. Ej: requireRole($conn, "Administrador", "Moderador")
+// Exige sesión y que el usuario tenga alguno de los roles indicados
 function requireRole(mysqli $conn, string ...$roles): array {
     $user = requireLogin($conn);
     if (!in_array($user["rol"], $roles, true)) {

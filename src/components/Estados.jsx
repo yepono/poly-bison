@@ -1,8 +1,6 @@
-// Estados estándar de cualquier lista o página:
-//   cargando  -> esqueletos con la forma del contenido (nunca "Cargando..." en texto)
-//   error     -> <EstadoError> con mensaje y "Reintentar"
-//   vacío     -> <EstadoVacio> con ícono, una línea y una acción si existe
-//   guardando -> el propio botón dice "Guardando…" y se deshabilita; el resultado va en un aviso
+// Estados comunes de cualquier lista o página: mientras carga se muestran bloques grises con la
+// forma del contenido, si falla un mensaje con "Reintentar", si no hay datos un aviso con ícono,
+// y al guardar es el propio botón el que dice "Guardando…".
 
 const ICONOS = {
     vacio: "M20 13V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6m16 0v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4m16 0h-4l-1.5 2h-5L8 13H4",
@@ -28,7 +26,7 @@ export function Esqueleto({ className = "h-4 w-full", redondo = false }) {
     return <span aria-hidden="true" className={`block animate-pulse bg-line motion-reduce:animate-none ${redondo ? "rounded-full" : "rounded-md"} ${className}`} />;
 }
 
-// Filas falsas de una tabla .admin-table (van dentro de <tbody>)
+// Filas de relleno para una tabla mientras carga
 export function EsqueletoFilas({ filas = 5, columnas = 4 }) {
     return Array.from({ length: filas }, (_, f) => (
         <tr key={f} aria-hidden="true">
@@ -85,10 +83,7 @@ export function EstadoError({ mensaje = "No se pudo cargar la información.", on
     );
 }
 
-/**
- * @param icono   vacio | buscar | calendario | publicacion | comentario | tienda | reloj
- * @param accion  { texto, onClick } o un elemento (p. ej. un <Link>)
- */
+// Aviso de lista vacía con ícono, título, detalle y, si hace falta, un botón o enlace.
 export function EstadoVacio({ icono = "vacio", titulo, detalle, accion, compacto = false }) {
     return (
         <div className={`flex flex-col items-center text-center ${compacto ? "gap-2 py-6" : "gap-3 py-10"}`}>

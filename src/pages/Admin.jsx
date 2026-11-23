@@ -10,7 +10,7 @@ import { useDialogos } from "../components/Dialogos";
 import PageHeader from "../components/PageHeader";
 import CustomSelect from "../components/CustomSelect";
 
-// Fila de usuarios.php?accion=listar (vw_usuarios_admin) -> forma usada en el panel
+// Adapta un usuario de la lista de la API a la forma que usa el panel
 function mapAdminUser(record) {
     return {
         id: record.id_usuario,
@@ -31,7 +31,7 @@ function mapAdminUser(record) {
 const emptyAccountForm = { nombre: "", alias: "", correo: "", matricula: "", id_carrera: "", semestre: "1" };
 
 const allSections = ["Resumen", "Estudiantes", "Administradores", "Rentas", "Horarios", "Tienda", "Eventos", "Bitácora"];
-// Solo Administrador: Resumen y Bitácora (reportes, D15), Horarios y Tienda (D15 y decisión 2 del Paso 2)
+// Solo el administrador ve Resumen, Bitácora, Horarios y Tienda
 const soloAdministrador = ["Resumen", "Horarios", "Tienda", "Bitácora"];
 const states = ["Pendiente", "Aprobado", "Rechazado", "Baneado"];
 
@@ -40,9 +40,9 @@ function Admin() {
     const esStaff = user.rol === "Administrador" || user.rol === "Moderador";
     const esAdministrador = user.rol === "Administrador";
     const { avisar, pedirTexto } = useDialogos();
-    const [users, setUsers] = useState(null); // null = cargando
+    const [users, setUsers] = useState(null); // null mientras carga
     const [errorUsuarios, setErrorUsuarios] = useState("");
-    // Resumen solo para Administrador; el Moderador entra a Estudiantes (R1-A)
+    // El resumen es solo para el administrador; el moderador entra directo a Estudiantes
     const [section, setSection] = useState(esAdministrador ? "Resumen" : "Estudiantes");
     const [search, setSearch] = useState("");
     const [careerFilter, setCareerFilter] = useState("");
@@ -50,9 +50,9 @@ function Admin() {
     const [postFilter, setPostFilter] = useState("");
     const [likeFilter, setLikeFilter] = useState("");
     const [stateFilter, setStateFilter] = useState("");
-    // Los avisos del panel ahora son notificaciones flotantes (antes, una franja fija arriba)
+    // Los avisos del panel se muestran como notificaciones flotantes
     const setNotice = useCallback((mensaje) => { if (mensaje) avisar(mensaje); }, [avisar]);
-    const [accountForm, setAccountForm] = useState(null); // null = panel cerrado
+    const [accountForm, setAccountForm] = useState(null); // null cuando el panel está cerrado
     const [errorAlta, setErrorAlta] = useState("");
     const [creatingAccount, setCreatingAccount] = useState(false);
     const [carreras, setCarreras] = useState([]);
@@ -68,7 +68,7 @@ function Admin() {
         return () => { cancelled = true; };
     }, [esAdministrador, setNotice]);
 
-    // Usuarios desde la BD (vw_usuarios_admin); la API valida el rol en el servidor
+    // Usuarios desde la base de datos; el servidor revisa que quien pide tenga permiso
     const cargarUsuarios = useCallback(() => api("usuarios", "listar")
         .then((response) => { setUsers(response.usuarios.map(mapAdminUser)); setErrorUsuarios(""); })
         .catch((err) => { setUsers((actual) => actual ?? []); setErrorUsuarios(err.message); }), []);
@@ -102,7 +102,7 @@ function Admin() {
         return <section className="settings-section mx-auto max-w-xl text-center"><h1 className="text-2xl font-bold text-ink">Acceso restringido</h1><p className="mt-2 text-ink-muted">Esta sección solo está disponible para administradores.</p><Link to="/feed" className="action-button mt-5">Volver al feed</Link></section>;
     }
 
-    // Alta de moderador (solo Administrador, D14). La clave temporal la genera el servidor.
+    // Alta de moderador (solo administrador). La clave temporal la genera el servidor.
     const createAccount = async () => {
         const setNotice = setErrorAlta; // los errores de validación se muestran dentro del panel
         const form = {
@@ -150,7 +150,7 @@ function Admin() {
         }
     };
 
-    // Aprobar / rechazar / banear (Administrador y Moderador, D15)
+    // Aprobar, rechazar o banear cuentas (administrador y moderador)
     const changeStatus = async (record, estado) => {
         if (estado === record.estado) return;
         let motivo = "";

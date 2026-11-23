@@ -72,8 +72,8 @@
   text-shadow: var(--glow-text);
 }
 
-/* TEMPORAL: apaga los brillos hardcodeados (shadow-[0_0_...]) en light.
-   Se elimina cuando todos usen shadow-glow / shadow-glow-brand. */
+/* En el tema claro se apagan los brillos escritos directamente en las clases, porque sobre
+   fondo claro se ven sucios. */
 :root[data-theme="light"] [class*="shadow-[0_0_"] {
   box-shadow: none !important;
 }
@@ -90,11 +90,11 @@
 }
 
 @layer components {
-  /* Barra de desplazamiento discreta (la clase se usaba pero no estaba definida) */
   /* Campos numéricos sin las flechas del navegador */
   .sin-flechas { appearance: textfield; -moz-appearance: textfield; }
   .sin-flechas::-webkit-inner-spin-button, .sin-flechas::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
+  /* Barra de desplazamiento discreta */
   .custom-scrollbar { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 
   /* Anchos estándar de página (ver PageHeader.jsx) */
@@ -102,14 +102,14 @@
   .pagina-media { @apply mx-auto w-full max-w-5xl space-y-6; }
   .pagina-ancha { @apply mx-auto w-full max-w-6xl space-y-6; }
 
-  /* Tarjeta estándar: TODAS las superficies de contenido usan esta (settings-section es un alias) */
+  /* Tarjeta que usan todas las superficies de contenido (settings-section es otro nombre para lo mismo) */
   .card,
   .settings-section {
     @apply rounded-2xl border border-line bg-surface/50 p-5 shadow-card sm:p-6;
   }
 
-  /* Tarjeta de las pantallas de acceso. Sin backdrop-blur: sobre un canvas animado obligaba a
-     volver a desenfocar todo el fondo en cada cuadro (era lo más costoso de la página). */
+  /* Tarjeta de las pantallas de acceso. No lleva desenfoque de fondo porque, sobre el fondo
+     animado, hacía que la página se trabara. */
   .auth-card {
     @apply relative z-20 w-full max-w-md rounded-2xl border border-line bg-surface/85 p-6 shadow-pop sm:p-8;
   }
@@ -136,7 +136,7 @@
     @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 font-semibold text-on-brand transition hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50;
   }
 
-  /* Variantes: -secondary (borde), -danger (rojo, texto blanco), -sm (barras y tarjetas pequeñas) */
+  /* Variantes del botón: secundario con borde, peligro en rojo y uno más pequeño */
   .action-button-danger {
     @apply bg-danger-solid text-white hover:bg-danger-solid-hover;
   }
@@ -186,7 +186,7 @@
     @apply border border-line bg-transparent text-ink hover:bg-field;
   }
 
-  /* Franja de cifras (misma idea que .profile-stats): neutra, sin bordes de color */
+  /* Franja de cifras con el mismo estilo que las cifras del perfil */
   .stat-strip { @apply grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-surface/50 shadow-card sm:grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))]; }
   .stat-strip > div { @apply -mb-px -mr-px border-b border-r border-line px-4 py-3; }
   .stat-strip > div:last-child:nth-child(odd) { @apply max-sm:col-span-2; }

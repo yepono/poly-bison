@@ -12,7 +12,7 @@ const ACCESOS = [
 
 // Columna derecha del feed: próximos eventos y accesos rápidos
 function FeedSidebar() {
-    const [eventos, setEventos] = useState(null); // null = cargando
+    const [eventos, setEventos] = useState(null); // null mientras carga
 
     useEffect(() => {
         let cancelled = false;

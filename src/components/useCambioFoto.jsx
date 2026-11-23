@@ -8,11 +8,8 @@ import { api, IMAGEN_TIPOS, validarImagen } from "../api/client";
 // es el recorte de 512 px, que pesa decenas de KB.
 const ORIGINAL_MAX_BYTES = 15 * 1024 * 1024;
 
-/**
- * Flujo completo para cambiar la foto de perfil: elegir archivo -> recortar -> subir.
- * Devuelve `seleccionar()` para abrir el selector y `elementos` (input oculto + modal)
- * que hay que renderizar en algún lugar del componente.
- */
+// Todo el proceso para cambiar la foto de perfil: elegir el archivo, recortarlo y subirlo.
+// Regresa la función para abrir el selector y los elementos que hay que mostrar en la página.
 export function useCambioFoto() {
     const { setSessionUser } = useAppData();
     const input = useRef(null);

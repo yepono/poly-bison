@@ -1,8 +1,7 @@
 import { useAppData } from "../context/AppDataContext";
 import Avatar from "./Avatar";
 
-// Barra de una línea que abre el formulario de publicación (en un modal).
-// Sustituye al formulario completo que antes ocupaba la parte superior del feed.
+// Barra de una línea que abre el formulario de publicación en una ventana
 function PostComposerBar({ onOpen }) {
     const { user } = useAppData();
     const nombre = user.alias || user.nombre;

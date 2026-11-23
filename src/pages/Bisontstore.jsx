@@ -85,7 +85,7 @@ function TarjetaCargando() {
 }
 
 function Bisontstore() {
-    // Catálogo desde la BD (productos.php?accion=listar -> vw_catalogo_productos)
+    // Catálogo de productos desde la base de datos
     const [products, setProducts] = useState(null);
     const [error, setError] = useState("");
     const [intento, setIntento] = useState(0);

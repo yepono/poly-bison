@@ -24,7 +24,7 @@ function Aulas() {
     const [paso, setPaso] = useState(1);
     const [aulas, setAulas] = useState([]);
     const [reserva, setReserva] = useState(reservaVacia);
-    // Horarios del aula/fecha elegidos: { clave, bloques }
+    // Horarios del aula y la fecha elegidas
     const [disponibilidad, setDisponibilidad] = useState(null);
     // Acompañantes (el titular se agrega solo en el servidor)
     const [asistentes, setAsistentes] = useState([]);
@@ -378,7 +378,7 @@ function Aulas() {
                 )}
             </AnimatePresence>
 
-            {/* Mis reservaciones (Q2-A) */}
+            {/* Mis reservaciones */}
             <section className="card">
                 <h2 className="text-xl font-bold text-ink mb-4">Mis reservaciones</h2>
                 {misReservaciones === null && <Cargando etiqueta="Cargando reservaciones"><EsqueletoLista filas={2} /></Cargando>}

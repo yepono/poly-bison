@@ -51,7 +51,7 @@ function ModalPublicar({ onClose }) {
 function Feed() {
     const { posts, postsStatus, postsError, loadPosts } = useAppData();
     const [mostrarBotonFlotante, setMostrarBotonFlotante] = useState(false);
-    // /feed?publicar=1 (p. ej. desde "Crear publicación" en el perfil) abre el formulario
+    // Si la dirección trae ?publicar=1 (por ejemplo, desde el perfil) se abre el formulario
     const [params, setParams] = useSearchParams();
     const [modalAbierto, setModalAbierto] = useState(() => params.get("publicar") === "1");
     const cerrarModal = useCallback(() => setModalAbierto(false), []);

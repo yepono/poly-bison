@@ -1,7 +1,6 @@
 import { useState } from "react";
 
-// Foto de perfil con respaldo local de iniciales.
-// Antes se usaba ui-avatars.com, que enviaba el nombre de cada usuario a un servicio externo.
+// Foto de perfil; si no hay foto, o no carga, se muestran las iniciales del usuario
 
 function iniciales(nombre) {
     const partes = String(nombre || "?").trim().split(/[\s._-]+/).filter(Boolean);
@@ -9,12 +8,8 @@ function iniciales(nombre) {
     return letras.toUpperCase();
 }
 
-/**
- * @param src       URL de la foto (vacía -> iniciales)
- * @param nombre    para las iniciales y el texto alternativo
- * @param className tamaño/borde (p. ej. "h-10 w-10 border border-line")
- * @param decorativo true si junto al avatar ya aparece el nombre (alt vacío)
- */
+// Con `decorativo` la imagen no se anuncia a lectores de pantalla, porque el nombre ya aparece
+// a un lado.
 function Avatar({ src, nombre, className = "h-10 w-10", decorativo = false }) {
     // Si la foto falla (borrada, sin conexión) se cae a las iniciales
     const [fallo, setFallo] = useState(null);

@@ -8,7 +8,7 @@ export const CAREERS = [
     "Ingeniería en Ciberseguridad",
 ];
 
-// Código guardado en la BD (tabla Carreras) -> nombre para mostrar
+// Convierte el código de la carrera guardado en la base de datos en su nombre completo
 const LEGACY_CAREERS = {
     LSTI: CAREERS[1],
     LMAD: CAREERS[0],
