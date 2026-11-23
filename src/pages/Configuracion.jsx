@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppData } from "../context/AppDataContext";
-import { api, CORREO_UANL, validarImagen } from "../api/client";
+import { api, CORREO_UANL } from "../api/client";
+import { useCambioFoto } from "../components/useCambioFoto";
 import { getCareerName } from "../utils/careers";
 
 function Configuracion() {
     const { user, preferences, updatePreferences, setSessionUser, logout, clearSession } = useAppData();
     const navigate = useNavigate();
-    const fileInput = useRef(null);
+    const foto = useCambioFoto();
     const [carreras, setCarreras] = useState([]);
     // Valores editados; null = sin tocar (se muestra el valor actual del usuario)
     const [correo, setCorreo] = useState(null);
@@ -20,8 +21,6 @@ function Configuracion() {
     const [guardandoContrasenia, setGuardandoContrasenia] = useState(false);
     const [mensaje, setMensaje] = useState("");
     const [error, setError] = useState("");
-    const [mensajeFoto, setMensajeFoto] = useState("");
-    const [errorFoto, setErrorFoto] = useState("");
     const [mensajeContrasenia, setMensajeContrasenia] = useState("");
     const [errorContrasenia, setErrorContrasenia] = useState("");
 
@@ -136,28 +135,6 @@ function Configuracion() {
         }
     };
 
-    const changeAvatar = async (event) => {
-        const file = event.target.files?.[0];
-        event.target.value = "";
-        if (!file) return;
-        setMensajeFoto("");
-        const problema = validarImagen(file);
-        if (problema) {
-            setErrorFoto(problema);
-            return;
-        }
-        setErrorFoto("");
-        const body = new FormData();
-        body.append("foto", file);
-        try {
-            const response = await api("usuarios", "actualizar_foto", { method: "POST", body });
-            setSessionUser(response.user, Date.now());
-            setMensajeFoto("Foto de perfil actualizada.");
-        } catch (err) {
-            setErrorFoto(err.message);
-        }
-    };
-
     const removeAccount = async () => {
         if (!window.confirm("¿Seguro que quieres eliminar tu cuenta? Tus publicaciones y comentarios se ocultarán y tus reservaciones futuras se cancelarán. Esta acción no se puede deshacer.")) return;
         setError("");
@@ -189,12 +166,12 @@ function Configuracion() {
                 <h2 className="text-lg font-bold text-ink">Foto de perfil</h2>
                 <div className="mt-5 flex flex-wrap items-center gap-4">
                     <img src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.alias || user.nombre)}&background=003366&color=fff`} alt="Foto de perfil actual" className="h-16 w-16 rounded-full border border-line object-cover" />
-                    <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={changeAvatar} className="sr-only" aria-label="Seleccionar foto de perfil" />
-                    <button type="button" onClick={() => fileInput.current?.click()} className="action-button">Cambiar foto</button>
+                    <button type="button" onClick={foto.seleccionar} className="action-button">{user.avatar ? "Cambiar foto" : "Agregar foto"}</button>
+                    {foto.elementos}
                 </div>
-                <p className="mt-3 text-sm text-ink-muted">JPG, PNG o WebP de máximo 2 MB.</p>
-                {mensajeFoto && <p role="status" className="mt-3 text-sm text-accent">{mensajeFoto}</p>}
-                {errorFoto && <p role="alert" className="mt-3 text-sm text-danger">{errorFoto}</p>}
+                <p className="mt-3 text-sm text-ink-muted">JPG, PNG o WebP. Podrás recortarla antes de guardarla.</p>
+                {foto.mensaje && <p role="status" className="mt-3 text-sm text-accent">{foto.mensaje}</p>}
+                {foto.error && <p role="alert" className="mt-3 text-sm text-danger">{foto.error}</p>}
             </section>
 
             <section className="settings-section">

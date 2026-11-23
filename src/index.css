@@ -112,52 +112,37 @@
     @apply flex flex-wrap items-center gap-5 border-b border-line pb-6;
   }
 
+  /* Perfil: una sola tarjeta con identidad + estadísticas compactas */
   .profile-hero {
-    @apply relative flex flex-wrap items-center gap-5 overflow-hidden rounded-2xl bg-linear-to-br from-brand via-hero-via to-hero-to p-6 shadow-lg sm:p-8;
+    @apply relative flex flex-col gap-4 overflow-hidden rounded-2xl bg-linear-to-br from-brand via-hero-via to-hero-to p-5 shadow-lg sm:p-6;
   }
 
-  .profile-joined {
-    @apply w-full border-t border-on-brand/20 pt-3 text-sm text-on-brand/80 sm:w-auto sm:border-0 sm:pt-0;
+  .profile-avatar-edit {
+    @apply absolute -bottom-0.5 -right-0.5 flex h-8 w-8 items-center justify-center rounded-full border-2 border-on-brand/80 bg-brand text-on-brand shadow-md transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-brand;
   }
 
-  .profile-metrics {
-    @apply mt-5 grid gap-3 sm:grid-cols-2;
+  .profile-chip {
+    @apply inline-flex min-w-0 items-center gap-1.5 rounded-lg bg-on-brand/15 px-2.5 py-1 text-xs font-medium leading-snug text-on-brand;
   }
 
-  .profile-metric {
-    @apply min-w-0 rounded-xl border border-line bg-surface/70 p-5;
+  .profile-chip svg {
+    @apply h-4 w-4 shrink-0;
   }
 
-  .profile-metric dt {
-    @apply text-sm font-semibold uppercase text-ink-muted;
+  .profile-stats {
+    @apply grid grid-cols-3 gap-2 border-t border-on-brand/20 pt-4;
   }
 
-  .profile-metric dd {
-    @apply mt-2 font-bold leading-tight text-ink;
+  .profile-stat {
+    @apply flex min-w-0 flex-col-reverse items-center rounded-lg bg-on-brand/10 px-2 py-2 text-center sm:flex-row-reverse sm:justify-center sm:gap-2;
   }
 
-  .profile-metric > p {
-    @apply mt-1 text-sm text-ink-muted;
+  .profile-stat dt {
+    @apply truncate text-2xs font-semibold uppercase tracking-wider text-on-brand/75 sm:text-xs;
   }
 
-  .profile-number {
-    @apply flex items-baseline gap-1 text-4xl sm:text-5xl;
-  }
-
-  .profile-number span {
-    @apply text-xl text-ink-muted;
-  }
-
-  .profile-career {
-    @apply sm:col-span-2;
-  }
-
-  .career-icon {
-    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand/15 text-accent;
-  }
-
-  .career-icon svg {
-    @apply h-6 w-6;
+  .profile-stat dd {
+    @apply text-lg font-bold leading-tight text-on-brand tabular-nums sm:text-xl;
   }
 
   .action-button-secondary {
