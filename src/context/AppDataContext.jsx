@@ -26,8 +26,10 @@ function readStoredData() {
 
 export function AppDataProvider({ children }) {
     const [data, setData] = useState(readStoredData);
+    // Sesión: "loading" mientras se consulta me; luego "authenticated" o "guest"
     const [user, setUser] = useState(null);
     const [authStatus, setAuthStatus] = useState("loading");
+    // Feed: "loading" | "ready" | "error"
     const [posts, setPosts] = useState([]);
     const [postsStatus, setPostsStatus] = useState("loading");
     const [postsError, setPostsError] = useState("");
@@ -38,6 +40,7 @@ export function AppDataProvider({ children }) {
         document.documentElement.dataset.fontSize = data.preferences.fontSize;
     }, [data]);
 
+    // Si la API responde 401 (sesión vencida, cuenta baneada...) se cierra la sesión local
     useEffect(() => {
         setUnauthorizedHandler(() => {
             setUser(null);
@@ -47,6 +50,7 @@ export function AppDataProvider({ children }) {
         return () => setUnauthorizedHandler(null);
     }, []);
 
+    // Al cargar la app se recupera la sesión del servidor
     useEffect(() => {
         let cancelled = false;
         api("usuarios", "me", { skipAuthHandler: true })
@@ -81,10 +85,12 @@ export function AppDataProvider({ children }) {
         }
     };
 
+    // Actualiza el usuario con la respuesta de la API (avatarVersion evita la caché del navegador)
     const setSessionUser = (apiUser, avatarVersion) => {
         setUser(mapUser(apiUser, avatarVersion));
     };
 
+    // Cierra la sesión local sin llamar a la API (p. ej. tras eliminar la cuenta)
     const clearSession = () => {
         setUser(null);
         setAuthStatus("guest");
@@ -164,6 +170,7 @@ export function AppDataProvider({ children }) {
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAppData() {
     const context = useContext(AppDataContext);
     if (!context) throw new Error("useAppData debe usarse dentro de AppDataProvider");

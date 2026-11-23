@@ -1,9 +1,19 @@
--- table_creation.sql - Tablas y catálogos iniciales de PolyBison despues correr alter_schema.sql
-
+-- ============================================================
+-- table_creation.sql - Tablas y catálogos iniciales de PolyBison
+-- Compatible con MySQL 8.0.19+ y MariaDB 10.5+ (IONOS: MariaDB 11).
+--
+-- ANTES DE EJECUTAR: selecciona la base de datos destino.
+--   * Local (Workbench): ejecuta primero 00_local_bd_y_usuario.sql y
+--     haz doble clic en "poly_bison" para dejarla como esquema por defecto.
+--   * Hosting (phpMyAdmin): abre la base de datos que te asignó el panel.
+-- Pensado para una base de datos VACÍA (instalación nueva).
+-- ============================================================
 
 -- Base de datos actual (debe mostrar la BD destino, no NULL)
-SELECT DATABASE() AS base_de_datos_actual; -- esto para el hosting environment
+SELECT DATABASE() AS base_de_datos_actual;
 
+-- Juego de caracteres de la BD: utf8mb4 (acentos y emojis).
+-- Va ANTES de crear rutinas para que sus parámetros también sean utf8mb4.
 ALTER DATABASE CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -182,6 +192,11 @@ CREATE TABLE Bloque_Horario (
 
 -- ------------------------------------------------------------
 -- 13. Reservacion
+-- Columna generada "ocupa": vale 1 si la reserva está Activa o Completada
+-- y NULL si fue Cancelada. Como UNIQUE permite varios NULL, las
+-- cancelaciones no bloquean nuevas reservas.
+--   - uq_aula_slot : evita empalmes (misma aula, fecha y bloque)
+--   - uq_user_dia  : máximo 1 hora diaria por estudiante
 -- ------------------------------------------------------------
 CREATE TABLE Reservacion (
   id_reservacion INT AUTO_INCREMENT PRIMARY KEY,
@@ -203,6 +218,7 @@ CREATE TABLE Reservacion (
 
 -- ------------------------------------------------------------
 -- 14. Estudiantes_Reservacion (asistentes)
+-- El SP de reserva debe validar que no excedan Aula.capacidad.
 -- ------------------------------------------------------------
 CREATE TABLE Estudiantes_Reservacion (
   id_asistente   INT AUTO_INCREMENT PRIMARY KEY,
@@ -262,6 +278,7 @@ CREATE TABLE Productos (
 
 -- ------------------------------------------------------------
 -- 18. Event_Log (bitácora)
+-- id_usuario NULL = acción automática del sistema (triggers)
 -- ------------------------------------------------------------
 CREATE TABLE Event_Log (
   id_log               INT AUTO_INCREMENT PRIMARY KEY,
@@ -292,4 +309,5 @@ INSERT INTO Bloque_Horario (hora_inicio, hora_fin) VALUES
 INSERT INTO Carreras (nombre, activo) VALUES
   ('IC', 1), ('LA', 1),  ('LCC', 1),  ('LF', 1),  ('LM', 1),  ('LMAD', 1),  ('LSTI', 1);
 
-
+-- El usuario de MySQL de la app (solo local) está en 00_local_bd_y_usuario.sql.
+-- Siguiente script: alter_schema.sql

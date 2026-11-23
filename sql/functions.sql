@@ -1,4 +1,10 @@
-
+-- ============================================================
+-- functions.sql - Funciones (CREATE FUNCTION)
+-- Se puede ejecutar más de una vez. MySQL 8.0.19+ (local, Workbench) o MariaDB 10.5+ (hosting, phpMyAdmin)
+-- Orden de ejecución: alter_schema.sql -> seed.sql -> functions.sql
+--                     -> views.sql -> triggers.sql -> procedures.sql
+-- ============================================================
+-- Ejecutar con la base de datos destino seleccionada (ver table_creation.sql).
 SELECT DATABASE() AS base_de_datos_actual;
 
 DROP FUNCTION IF EXISTS fn_total_reacciones;
@@ -8,9 +14,13 @@ DROP FUNCTION IF EXISTS fn_asistentes_reservacion;
 
 DELIMITER $$
 
+-- ------------------------------------------------------------
 -- fn_total_reacciones(id_publicacion, tipo)
 -- Cuenta las reacciones ('Like' o 'Dislike') de una publicación.
-
+-- La usan: vw_feed_publicaciones (publicaciones.php),
+--          reacciones.php (regresa el nuevo conteo tras dar/quitar like),
+--          sp_reaccion.
+-- ------------------------------------------------------------
 CREATE FUNCTION fn_total_reacciones(p_id_publicacion INT, p_tipo VARCHAR(10))
 RETURNS INT
 NOT DETERMINISTIC
@@ -24,9 +34,12 @@ BEGIN
   RETURN v_total;
 END$$
 
+-- ------------------------------------------------------------
 -- fn_aula_disponible(id_aula, fecha, id_bloque)
--- 1 si el aula y el bloque están activos y nadie ocupa ese horario (reservación Activa o Completada); 0 en caso contrario.
-
+-- 1 si el aula y el bloque están activos y nadie ocupa ese horario
+-- (reservación Activa o Completada); 0 en caso contrario.
+-- La usan: reservaciones.php (accion=disponibilidad), sp_reservacion (CREAR).
+-- ------------------------------------------------------------
 CREATE FUNCTION fn_aula_disponible(p_id_aula INT, p_fecha DATE, p_id_bloque INT)
 RETURNS TINYINT(1)
 NOT DETERMINISTIC
@@ -51,10 +64,12 @@ BEGIN
   RETURN 1;
 END$$
 
+-- ------------------------------------------------------------
 -- fn_generar_ticket()
 -- Genera un código único para Reservacion.codigo_ticket
 -- Formato: PB-AAMMDD-XXXXXX (16 caracteres; la columna admite 20).
-
+-- La usa: sp_reservacion (CREAR), llamado desde reservaciones.php.
+-- ------------------------------------------------------------
 CREATE FUNCTION fn_generar_ticket()
 RETURNS VARCHAR(20)
 NOT DETERMINISTIC
@@ -69,9 +84,12 @@ BEGIN
   RETURN v_ticket;
 END$$
 
+-- ------------------------------------------------------------
 -- fn_asistentes_reservacion(id_reservacion)
 -- Número de asistentes registrados en una reservación.
-
+-- La usan: trg_asistente_capacidad_bi (validar capacidad del aula),
+--          vw_reservaciones_detalle (reservaciones.php).
+-- ------------------------------------------------------------
 CREATE FUNCTION fn_asistentes_reservacion(p_id_reservacion INT)
 RETURNS INT
 NOT DETERMINISTIC
@@ -87,5 +105,6 @@ END$$
 DELIMITER ;
 
 -- Verificación: deben aparecer 4 funciones
-
+-- (SHOW en lugar de consultar el catálogo del sistema: phpMyAdmin cambia
+-- la BD activa al catálogo si el script lo menciona, y el CREATE falla con #1044)
 SHOW FUNCTION STATUS WHERE Db = DATABASE();

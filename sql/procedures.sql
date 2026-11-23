@@ -1,6 +1,20 @@
--- procedures.sql - Rutinas globales
-
--- en caso de q ya existan, se eliminan para poder recrearlas
+-- ============================================================
+-- procedures.sql - Rutinas globales: UNA por entidad, acciones con CASE
+-- Se puede ejecutar más de una vez. MySQL 8.0.19+ (local, Workbench) o MariaDB 10.5+ (hosting, phpMyAdmin)
+-- Requiere: alter_schema.sql, functions.sql, triggers.sql
+--
+-- Reglas comunes:
+--  * Escrituras con rutinas; lecturas con vistas.
+--  * p_id_actor = usuario de la sesión (lo manda PHP, nunca el cliente).
+--    Las rutinas vuelven a validar permisos (defensa en profundidad).
+--  * Errores de negocio:
+--      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '<código HTTP>|<mensaje>'
+--    Duplicados (UNIQUE) llegan a PHP como error 1062 -> HTTP 409.
+--  * Las rutinas NO abren transacciones; cuando una operación usa varias
+--    llamadas (o varias tablas), PHP la envuelve en una transacción.
+--  * Cada acción termina con un SELECT (id creado o filas afectadas).
+-- ============================================================
+-- Ejecutar con la base de datos destino seleccionada (ver table_creation.sql).
 SELECT DATABASE() AS base_de_datos_actual;
 
 DROP PROCEDURE IF EXISTS sp_usuario;
@@ -19,26 +33,26 @@ DELIMITER $$
 -- sp_usuario  -> usuarios.php
 -- Acciones:
 --   REGISTRAR           alta de estudiante (rol por DEFAULT, estado Pendiente)
---   CREAR_MODERADOR     solo Administrador; pide matrícula, carrera y
+--   CREAR_MODERADOR     solo Administrador (D14); pide matrícula, carrera y
 --                       semestre (todos son estudiantes); queda Aprobado y con
 --                       debe_cambiar_contrasena = TRUE (clave temporal)
 --   DATOS_LOGIN         id, hash, estado y motivo por correo (o por id si
 --                       p_correo es NULL), más el hash de la clave temporal
 --                       de recuperación y si sigue vigente. Los hashes nunca
 --                       salen de PHP.
---   SOLICITAR_RECUPERACION  guarda el hash de una clave temporal
+--   SOLICITAR_RECUPERACION  (R12, Q2-A) guarda el hash de una clave temporal
 --                       que vence en 30 min. Solo cuentas Aprobadas; máximo
 --                       una solicitud cada 5 min. Regresa enviar = 1/0 (PHP
 --                       responde igual en ambos casos). Registra en Event_Log.
 --   USAR_TEMPORAL       al entrar con la clave temporal: pasa a ser la
 --                       contraseña, se borra la temporal y se exige cambiarla
---   ACTUALIZAR_PERFIL   correo, carrera, semestre - solo la propia cuenta
+--   ACTUALIZAR_PERFIL   correo, carrera, semestre (D13) - solo la propia cuenta
 --   CAMBIAR_CONTRASENA  guarda el nuevo hash y quita la marca de clave
 --                       temporal y cualquier recuperación pendiente - solo la
 --                       propia cuenta
 --   ACTUALIZAR_FOTO     guarda/quita el avatar (BLOB) - solo la propia cuenta
---   CAMBIAR_ESTADO      Admin/Moderador: Pendiente/Aprobado/Rechazado/Baneado 
---   ELIMINAR            borrado lógico + anonimización de la propia cuenta 
+--   CAMBIAR_ESTADO      Admin/Moderador: Pendiente/Aprobado/Rechazado/Baneado (D15)
+--   ELIMINAR            borrado lógico + anonimización de la propia cuenta (D12)
 -- ------------------------------------------------------------
 CREATE PROCEDURE sp_usuario(
   IN p_accion      VARCHAR(30),
@@ -61,6 +75,7 @@ BEGIN
   DECLARE v_rol_obj    VARCHAR(50);
   DECLARE v_estado_obj VARCHAR(20);
 
+  -- Para la bitácora (trg_usuario_estado_au)
   SET @pb_id_actor = p_id_actor;
 
   SET v_rol_actor = (SELECT r.nombre FROM Usuario u JOIN Rol r ON r.id_rol = u.id_rol
@@ -92,7 +107,7 @@ BEGIN
     IF v_rol_actor IS NULL OR v_rol_actor <> 'Administrador' THEN
       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '403|Solo un administrador puede dar de alta moderadores';
     END IF;
-    -- Todos los usuarios son estudiantes: matrícula, carrera y semestre obligatorios 
+    -- Todos los usuarios son estudiantes: matrícula, carrera y semestre obligatorios (P3)
     IF p_matricula IS NULL OR p_matricula NOT REGEXP '^[0-9]{7}$' THEN
       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '400|La matrícula debe tener 7 dígitos';
     END IF;
@@ -271,9 +286,9 @@ END$$
 -- ------------------------------------------------------------
 -- sp_publicacion  -> publicaciones.php
 -- Acciones:
---   CREAR     título (obligatorio), descripción y una etiqueta 
+--   CREAR     título (obligatorio, D4), descripción (D5) y una etiqueta (D6)
 --   EDITAR    solo el autor; parámetros NULL = no cambiar
---   ELIMINAR  borrado lógico; el autor o Administrador/Moderador 
+--   ELIMINAR  borrado lógico; el autor o Administrador/Moderador (D15)
 -- ------------------------------------------------------------
 CREATE PROCEDURE sp_publicacion(
   IN p_accion          VARCHAR(30),
@@ -360,7 +375,7 @@ END$$
 
 -- ------------------------------------------------------------
 -- sp_multimedia  -> publicaciones.php (crear / editar)
--- Una imagen O un video por publicación. Solo el autor.
+-- Una imagen O un video por publicación (D7). Solo el autor.
 -- Acciones:
 --   AGREGAR_IMAGEN  BLOB + MIME (PHP ya validó tipo y tamaño)
 --   AGREGAR_VIDEO   URL externa (PHP ya validó que sea YouTube)
@@ -432,8 +447,8 @@ END$$
 -- ------------------------------------------------------------
 -- sp_comentario  -> comentarios.php
 -- Acciones:
---   CREAR     en una publicación activa (máx. 500 caracteres)
---   ELIMINAR  borrado lógico; el autor o Administrador/Moderador
+--   CREAR     en una publicación activa (máx. 500 caracteres, D5)
+--   ELIMINAR  borrado lógico; el autor o Administrador/Moderador (D15)
 -- ------------------------------------------------------------
 CREATE PROCEDURE sp_comentario(
   IN p_accion          VARCHAR(30),
@@ -534,8 +549,8 @@ END$$
 --   CREAR              valida aula/bloque/disponibilidad (fn_aula_disponible)
 --                      y genera el ticket (fn_generar_ticket).
 --                      Fecha pasada -> trg_reservacion_fecha_bi.
---                      1 por día por usuario -> UNIQUE uq_user_dia.
---   AGREGAR_ASISTENTE  matrícula de 7 dígitos; capacidad ->
+--                      1 por día por usuario -> UNIQUE uq_user_dia (1062).
+--   AGREGAR_ASISTENTE  matrícula de 7 dígitos (D16); capacidad ->
 --                      trg_asistente_capacidad_bi. PHP lo llama una vez por
 --                      asistente dentro de la misma transacción que CREAR.
 --   CANCELAR           solo el dueño, solo si está Activa y no es pasada
@@ -621,10 +636,10 @@ BEGIN
 END$$
 
 -- ------------------------------------------------------------
--- sp_bloque_horario  -> reservaciones.php (panel admin "Horarios")
+-- sp_bloque_horario  -> reservaciones.php (panel admin "Horarios", D9)
 -- Solo Administrador.
 -- Acciones:
---   CREAR       nuevo bloque (hora_fin > hora_inicio)
+--   CREAR       nuevo bloque (hora_fin > hora_inicio; duplicado -> 1062)
 --   EDITAR      cambia horas solo si el bloque NO tiene reservaciones
 --   ACTIVAR     vuelve a ofrecer el bloque
 --   DESACTIVAR  deja de ofrecerlo (no se borra: puede tener reservaciones)
@@ -684,7 +699,7 @@ END$$
 
 -- ------------------------------------------------------------
 -- sp_evento  -> eventos.php
--- Administrador o Moderador.
+-- Administrador o Moderador (D15).
 -- Acciones:
 --   CREAR     título, tipo, inicio/fin (fin >= inicio), lugar, descripción
 --   EDITAR    parámetros NULL = no cambiar
@@ -778,9 +793,9 @@ END$$
 
 -- ------------------------------------------------------------
 -- sp_producto  -> productos.php
--- Solo Administrador.
+-- Solo Administrador (D15).
 -- Acciones:
---   CREAR       categoría, nombre, descripción, precio, stock, foto BLOB
+--   CREAR       categoría, nombre, descripción, precio, stock, foto BLOB (D10)
 --   EDITAR      parámetros NULL = no cambiar (la foto solo si se manda)
 --   DESACTIVAR  estado = 0 (botón "Eliminar" del panel; no se borra)
 -- ------------------------------------------------------------
@@ -866,4 +881,5 @@ END$$
 DELIMITER ;
 
 -- Verificación: deben aparecer 9 procedimientos
+-- (SHOW en lugar del catálogo del sistema: ver nota en functions.sql)
 SHOW PROCEDURE STATUS WHERE Db = DATABASE();
