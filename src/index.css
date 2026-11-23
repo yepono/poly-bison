@@ -106,9 +106,20 @@
     @apply rounded-2xl border border-line bg-surface/50 p-5 shadow-card sm:p-6;
   }
 
-  /* Tarjeta de las pantallas de acceso (sobre el fondo animado: vidrio) */
+  /* Tarjeta de las pantallas de acceso. Sin backdrop-blur: sobre un canvas animado obligaba a
+     volver a desenfocar todo el fondo en cada cuadro (era lo más costoso de la página). */
   .auth-card {
-    @apply relative z-20 w-full max-w-md rounded-2xl border border-line bg-surface/20 p-6 shadow-pop backdrop-blur-md sm:p-8;
+    @apply relative z-20 w-full max-w-md rounded-2xl border border-line bg-surface/85 p-6 shadow-pop sm:p-8;
+  }
+
+  /* Estrellas secundarias de la constelación del bisonte */
+  .estrella-titila { animation: estrella-titila 3s ease-in-out infinite; }
+  @keyframes estrella-titila {
+    0%, 100% { opacity: 0.85; }
+    50% { opacity: 0.3; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .estrella-titila { animation: none; opacity: 0.7; }
   }
 
   .form-label {

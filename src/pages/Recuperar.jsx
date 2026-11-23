@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import NeonBackground from "../components/NeonBackground";
+import PantallaAuth from "../components/PantallaAuth";
 import { api, CORREO_UANL } from "../api/client";
 
 // "Olvidé mi contraseña" (R12): usuarios.php?accion=recuperar_contrasena envía una
@@ -33,16 +32,7 @@ function Recuperar() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-canvas p-4 relative">
-
-            <NeonBackground />
-
-            <motion.div
-                initial={{ scale: 0.5, x: -50 }}
-                animate={{ scale: 1, x: 0 }}
-                transition={{ type: "spring", duration: 1.5 }}
-                className="relative z-10 flex min-h-[calc(100dvh-2rem)] w-full max-w-5xl items-center justify-center py-4 sm:p-8 lg:justify-end lg:p-12"
-            >
+        <PantallaAuth>
                 <div className="auth-card">
 
                     <h1 className="text-3xl font-bold text-center text-ink mb-4">
@@ -58,7 +48,7 @@ function Recuperar() {
                     <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
                         <div className="flex flex-col gap-1.5">
                             <label htmlFor="correo" className="text-sm font-semibold text-ink-soft">
-                                Correo Institucional
+                                Correo institucional
                             </label>
                             <input
                                 type="email"
@@ -87,8 +77,7 @@ function Recuperar() {
                         </Link>
                     </p>
                 </div>
-            </motion.div>
-        </div>
+        </PantallaAuth>
     );
 }
 
