@@ -8,12 +8,10 @@ const capitalizar = (texto) => texto.charAt(0).toUpperCase() + texto.slice(1);
 
 function Calendario() {
     const [fechaSeleccionada, setFechaSeleccionada] = useState(null);
-    // Mes mostrado (D11): inicia en el mes actual
     const [mesActual, setMesActual] = useState(() => {
         const hoy = new Date();
         return { anio: hoy.getFullYear(), mes: hoy.getMonth() };
     });
-    // { clave: "AAAA-MM", lista } eventos visibles del mes (eventos.php?accion=listar)
     const [eventosMes, setEventosMes] = useState(null);
     const [error, setError] = useState("");
 
@@ -56,10 +54,8 @@ function Calendario() {
         }
     };
 
-    // Eventos del día seleccionado para el Panel[cite: 9]
     const eventosDelDia = fechaSeleccionada ? eventosDelDiaDe(fechaSeleccionada) : [];
 
-    // Estilos dinámicos para las etiquetas de eventos[cite: 9]
     const getEstilosPorTipo = (tipo) => {
         switch (tipo) {
             case 'Examen': return 'bg-neon-red/10 text-neon-red border-neon-red/40';
@@ -71,7 +67,6 @@ function Calendario() {
         }
     };
 
-    // Estilos para los puntitos (cuando está contraído)[cite: 9]
     const getColorPunto = (tipo) => {
         switch (tipo) {
             case 'Examen': return 'bg-neon-red shadow-[0_0_5px_rgba(255,77,77,0.8)]';

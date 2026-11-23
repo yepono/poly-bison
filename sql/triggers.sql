@@ -1,14 +1,9 @@
--- ============================================================
 -- triggers.sql - Triggers
--- Se puede ejecutar más de una vez. MySQL 8.0.19+ (local, Workbench) o MariaDB 10.5+ (hosting, phpMyAdmin)
--- Requiere functions.sql (fn_asistentes_reservacion).
---
--- Convención de errores (igual en procedures.sql):
---   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '<código HTTP>|<mensaje para el usuario>'
---   El PHP separa el código y responde con ese status y ese mensaje.
--- ============================================================
--- Ejecutar con la base de datos destino seleccionada (ver table_creation.sql).
+
+-- Ejecutar con la base de datos destino seleccionada. Por tema de hosting
 SELECT DATABASE() AS base_de_datos_actual;
+
+-- en caso de que existan, eliminarlos para poder recrearlos
 
 DROP TRIGGER IF EXISTS trg_usuario_estado_au;
 DROP TRIGGER IF EXISTS trg_asistente_capacidad_bi;

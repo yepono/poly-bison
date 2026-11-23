@@ -26,7 +26,6 @@ function mapAdminUser(record) {
 const emptyAccountForm = { nombre: "", alias: "", correo: "", matricula: "", id_carrera: "", semestre: "1" };
 
 const allSections = ["Resumen", "Estudiantes", "Administradores", "Rentas", "Horarios", "Tienda", "Eventos", "Bitácora"];
-// Solo Administrador: Resumen y Bitácora (reportes, D15), Horarios y Tienda (D15 y decisión 2 del Paso 2)
 const soloAdministrador = ["Resumen", "Horarios", "Tienda", "Bitácora"];
 const states = ["Pendiente", "Aprobado", "Rechazado", "Baneado"];
 
@@ -52,7 +51,6 @@ function Admin() {
     const [carreras, setCarreras] = useState([]);
     const sections = allSections.filter((item) => esAdministrador || !soloAdministrador.includes(item));
 
-    // Carreras para el alta de moderador (solo Administrador)
     useEffect(() => {
         if (!esAdministrador) return undefined;
         let cancelled = false;
@@ -62,8 +60,7 @@ function Admin() {
         return () => { cancelled = true; };
     }, [esAdministrador]);
 
-    // Usuarios desde la BD (vw_usuarios_admin); la API valida el rol en el servidor
-    useEffect(() => {
+    // Usuarios desde la BD (vw_usuarios_admin); 
         if (!esStaff) return undefined;
         let cancelled = false;
         api("usuarios", "listar")
@@ -93,7 +90,6 @@ function Admin() {
         return <section className="settings-section mx-auto max-w-xl text-center"><h1 className="text-2xl font-bold text-text-title-dark">Acceso restringido</h1><p className="mt-2 text-text-muted-dark">Esta sección solo está disponible para administradores.</p><Link to="/feed" className="action-button mt-5">Volver al feed</Link></section>;
     }
 
-    // Alta de moderador (solo Administrador, D14). La clave temporal la genera el servidor.
     const createAccount = async (event) => {
         event.preventDefault();
         const form = {
@@ -142,7 +138,6 @@ function Admin() {
         }
     };
 
-    // Aprobar / rechazar / banear (Administrador y Moderador, D15)
     const changeStatus = async (record, estado) => {
         if (estado === record.estado) return;
         let motivo = "";

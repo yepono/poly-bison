@@ -6,7 +6,6 @@ import CustomSelect from "../components/CustomSelect";
 import { api, CORREO_UANL, MATRICULA, validarImagen } from "../api/client";
 import { getCareerName } from "../utils/careers";
 
-// Paso del formulario donde está cada campo (para regresar al que tiene error)
 const PASO_DE_CAMPO = { nombre: 1, alias: 1, correo: 1, matricula: 1, carrera: 2, semestre: 2, contrasenia: 2, foto: 3 };
 
 function validarPaso(paso, datos) {

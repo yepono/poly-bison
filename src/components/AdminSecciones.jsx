@@ -9,7 +9,7 @@ function Metric({ label, value, detail, tone = "blue" }) {
     return <article className={`admin-metric admin-metric-${tone}`}><p>{label}</p><strong>{value}</strong><span>{detail}</span></article>;
 }
 
-// ---------- Resumen / Dashboard (solo Administrador, Paso 6) ----------
+// ---------- Resumen / Dashboard ----------
 // Datos: reportes.php -> vw_resumen_usuarios, vw_usuarios_mas_activos,
 // vw_publicaciones_mayor_interaccion
 export function AdminResumen({ setNotice }) {
@@ -37,7 +37,7 @@ export function AdminResumen({ setNotice }) {
     const r = resumen ?? {};
     const valor = (campo) => (resumen ? r[campo] : "—");
 
-    // Gráfica (R2-B): una sola serie -> un solo color, sin leyenda; etiqueta directa con el valor
+    // Gráfica: una sola serie -> un solo color, sin leyenda; etiqueta directa con el valor
     const porEstado = [
         { estado: "Aprobados", total: r.usuarios_activos ?? 0 },
         { estado: "Pendientes", total: r.pendientes ?? 0 },
@@ -93,7 +93,7 @@ export function AdminResumen({ setNotice }) {
     </>;
 }
 
-// ---------- Bitácora (solo Administrador, D18) ----------
+// ---------- Bitácora ----------
 // Datos: reportes.php?accion=bitacora -> vw_bitacora (Event_Log que llenan los triggers)
 export function AdminBitacora({ search, setSearch, setNotice }) {
     const [registros, setRegistros] = useState(null);
@@ -130,7 +130,7 @@ export function AdminRentas({ search, setSearch, setNotice }) {
     return <section className="settings-section"><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-lg font-bold text-text-title-dark">Historial global de rentas de aulas</h2><p className="mt-1 text-sm text-text-muted-dark">{reservations === null ? "Cargando..." : `${reservations.length} reservaciones registradas`}</p></div><label className="form-label w-full sm:max-w-sm">Buscar usuario, aula o ticket<input className="form-input" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Alias, matrícula, aula o ticket"/></label></div><div className="admin-table-wrap mt-4"><table className="admin-table"><thead><tr><th>Aula</th><th>Usuario</th><th>Matrícula</th><th>Fecha</th><th>Horario</th><th>Ticket</th><th>Estado</th></tr></thead><tbody>{lista.map((item) => <tr key={item.id_reservacion}><td>{item.aula}<small>{item.total_asistentes} asistente(s)</small></td><td>@{item.alias}</td><td>{item.matricula || "-"}</td><td>{item.fecha_reserva}</td><td>{item.hora_inicio} - {item.hora_fin}</td><td className="font-mono">{item.codigo_ticket}</td><td>{item.estado}</td></tr>)}</tbody></table>{reservations !== null && !lista.length && <p className="p-6 text-center text-text-muted-dark">No hay reservaciones que coincidan.</p>}</div></section>;
 }
 
-// ---------- Horarios (solo Administrador, D9) ----------
+// ---------- Horarios (solo Administrador) ----------
 export function AdminHorarios({ setNotice }) {
     const [bloques, setBloques] = useState([]);
 
@@ -184,7 +184,7 @@ export function AdminHorarios({ setNotice }) {
     return <section className="settings-section"><h2 className="text-lg font-bold text-text-title-dark">Editar horarios disponibles</h2><p className="mt-1 text-sm text-text-muted-dark">Los horarios activos se ofrecen en Reserva de Aulas. Un horario con reservaciones no se puede editar: desactívalo y crea uno nuevo.</p><form className="mt-5 flex flex-wrap items-end gap-3" onSubmit={agregar}><label className="form-label">Agregar bloque<input required name="start" type="time" className="form-input"/></label><label className="form-label">Fin<input required name="end" type="time" className="form-input"/></label><button className="action-button">Agregar horario</button></form><div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{bloques.map((bloque) => { const slot = `${bloque.hora_inicio} - ${bloque.hora_fin}`; return <div key={bloque.id_bloque} className={`flex items-center justify-between gap-3 rounded-lg border border-border-dark bg-bg-dark p-3 ${bloque.activo ? "" : "opacity-60"}`}><span className="font-semibold text-text-title-dark">{slot}{!bloque.activo && <small className="block text-xs font-normal text-text-muted-dark">Inactivo</small>}</span><div><button type="button" onClick={() => editar(bloque)} aria-label={`Editar ${slot}`} className="min-h-11 rounded-md px-3 text-neon-blue hover:bg-primary/10">Editar</button>{bloque.activo ? <button type="button" onClick={() => ejecutar("bloque_desactivar", { id_bloque: bloque.id_bloque }, "Horario desactivado.")} aria-label={`Desactivar ${slot}`} className="min-h-11 rounded-md px-3 text-neon-red hover:bg-secondary/10">Desactivar</button> : <button type="button" onClick={() => ejecutar("bloque_activar", { id_bloque: bloque.id_bloque }, "Horario activado.")} aria-label={`Activar ${slot}`} className="min-h-11 rounded-md px-3 text-neon-blue hover:bg-primary/10">Activar</button>}</div></div>; })}</div></section>;
 }
 
-// ---------- Tienda (solo Administrador, D10) ----------
+// ---------- Tienda (solo Administrador) ----------
 const productoVacio = { titulo: "", precio: "", id_categoria: "", stock: "0", descripcionCorta: "" };
 
 // Mensaje de error de los campos de un producto, o ""
@@ -201,7 +201,7 @@ export function AdminTienda({ setNotice }) {
     const [categorias, setCategorias] = useState([]);
     const [productForm, setProductForm] = useState(productoVacio);
     const [imagen, setImagen] = useState(null);
-    const [borradores, setBorradores] = useState({}); // ediciones por fila sin guardar
+    const [borradores, setBorradores] = useState({});
     const [guardando, setGuardando] = useState(false);
 
     const cargar = useCallback(() => {
@@ -310,7 +310,7 @@ export function AdminTienda({ setNotice }) {
     return <section className="space-y-5"><section className="settings-section"><h2 className="text-lg font-bold text-text-title-dark">Agregar artículo</h2><form onSubmit={createProduct} className="mt-4 grid gap-4 sm:grid-cols-2" noValidate><label className="form-label">Nombre<input required maxLength={200} className="form-input" value={productForm.titulo} onChange={(event) => setProductForm({ ...productForm, titulo: event.target.value })}/></label><label className="form-label">Precio<input required type="number" min="0" max="999999.99" step="0.01" className="form-input" value={productForm.precio} onChange={(event) => setProductForm({ ...productForm, precio: event.target.value })}/></label><label className="form-label">Categoría<select required className="form-input" value={productForm.id_categoria} onChange={(event) => setProductForm({ ...productForm, id_categoria: event.target.value })}><option value="">Selecciona una categoría</option>{categorias.map((categoria) => <option key={categoria.id_categoria} value={String(categoria.id_categoria)}>{categoria.nombre}</option>)}</select></label><label className="form-label">Stock<input required type="number" min="0" max="100000" step="1" className="form-input" value={productForm.stock} onChange={(event) => setProductForm({ ...productForm, stock: event.target.value })}/></label><label className="form-label">Descripción breve<input maxLength={500} className="form-input" value={productForm.descripcionCorta} onChange={(event) => setProductForm({ ...productForm, descripcionCorta: event.target.value })}/></label><label className="form-label">Imagen (JPG, PNG o WebP, máx. 2 MB)<input type="file" accept="image/jpeg,image/png,image/webp" className="form-input" onChange={(event) => setImagen(event.target.files?.[0] ?? null)}/></label><button disabled={guardando} className="action-button sm:col-span-2 sm:justify-self-start disabled:cursor-not-allowed disabled:opacity-50">{guardando ? "Guardando..." : "Agregar artículo"}</button></form></section><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Producto</th><th>Categoría</th><th>Precio / Stock</th><th>Acción</th></tr></thead><tbody>{products.map((product) => <tr key={product.id}><td><input aria-label={`Nombre ${product.titulo}`} maxLength={200} className="form-input min-w-44" value={valor(product, "titulo")} onChange={(event) => cambiar(product, "titulo", event.target.value)}/><input aria-label={`Descripción ${product.titulo}`} maxLength={500} className="form-input mt-2 min-w-44" value={valor(product, "descripcionCorta")} onChange={(event) => cambiar(product, "descripcionCorta", event.target.value)}/></td><td>{product.categoria}<small>{product.tieneFoto ? "Con imagen" : "Sin imagen"}</small></td><td><input aria-label={`Precio ${product.titulo}`} type="number" min="0" step="0.01" className="form-input min-w-28" value={valor(product, "precio")} onChange={(event) => cambiar(product, "precio", event.target.value)}/><small>{formatPrecio(product.precioValor)}</small><input aria-label={`Stock ${product.titulo}`} type="number" min="0" step="1" className="form-input mt-2 min-w-28" value={valor(product, "stock")} onChange={(event) => cambiar(product, "stock", event.target.value)}/></td><td><div className="flex flex-col gap-2"><button type="button" disabled={!borradores[product.id]} className="min-h-11 px-3 text-neon-blue disabled:opacity-40" onClick={() => guardarFila(product)}>Guardar</button><label className="min-h-11 cursor-pointer px-3 py-2.5 text-center text-neon-blue">Imagen<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => { cambiarImagen(product, event.target.files?.[0]); event.target.value = ""; }}/></label><button type="button" className="min-h-11 px-3 text-neon-red" onClick={() => desactivar(product)}>Eliminar</button></div></td></tr>)}</tbody></table>{!products.length && <p className="p-6 text-center text-text-muted-dark">Aún no hay productos.</p>}</div></section>;
 }
 
-// ---------- Eventos (Administrador y Moderador, D15) ----------
+// ---------- Eventos (Administrador y Moderador) ----------
 const eventoVacio = { titulo: "", descripcion: "", tipo: "Académico", fecha_inicio: "", fecha_fin: "", lugar: "" };
 
 function validarEvento(evento) {

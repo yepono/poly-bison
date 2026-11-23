@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import NeonBackground from "../components/NeonBackground";
 import { api, CORREO_UANL } from "../api/client";
 
-// "Olvidé mi contraseña" (R12): usuarios.php?accion=recuperar_contrasena envía una
+// "Olvidé mi contraseña" usuarios.php?accion=recuperar_contrasena envía una
 // contraseña temporal con la API de Brevo. Mismo diseño que Login.
 function Recuperar() {
     const [correo, setCorreo] = useState("");

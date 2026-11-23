@@ -9,9 +9,7 @@ function Perfil() {
     const { user: currentUser } = useAppData();
     const { userId } = useParams();
     const esOtroUsuario = Boolean(userId) && String(currentUser.id) !== userId;
-    // { id, user } del perfil consultado; user null = no encontrado
     const [perfilConsultado, setPerfilConsultado] = useState(null);
-    // { id, lista } publicaciones del perfil (publicaciones.php?accion=por_usuario)
     const [publicaciones, setPublicaciones] = useState(null);
     const perfilId = String(esOtroUsuario ? userId : currentUser.id);
 

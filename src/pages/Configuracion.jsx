@@ -25,9 +25,9 @@ function Configuracion() {
     const [mensajeContrasenia, setMensajeContrasenia] = useState("");
     const [errorContrasenia, setErrorContrasenia] = useState("");
 
-    // Catálogo de carreras (todos los usuarios son estudiantes de la FCFM)
+    // Catálogo de carreras
     useEffect(() => {
-        if (user.debeCambiarContrasena) return; // con clave temporal la API solo permite cambiarla
+        if (user.debeCambiarContrasena) return; 
         api("usuarios", "carreras")
             .then((response) => setCarreras(response.carreras))
             .catch(() => setError("No se pudieron cargar las carreras."));
@@ -36,7 +36,6 @@ function Configuracion() {
     const idCarreraActual = String(carreras.find((item) => item.nombre === user.carrera)?.id_carrera ?? "");
     const semestreActual = String(user.semestre || "");
 
-    // Valores que se muestran en el formulario
     const correoForm = correo ?? user.correo;
     const carreraForm = carrera ?? idCarreraActual;
     const semestreForm = semestre ?? semestreActual;
@@ -63,7 +62,6 @@ function Configuracion() {
             return;
         }
 
-        // Validaciones (las mismas que aplica usuarios.php)
         if (correoCambio && !CORREO_UANL.test(correoLimpio)) {
             setError("Usa tu correo institucional @uanl.edu.mx.");
             return;

@@ -12,9 +12,7 @@ function Publicacion({ modal = false }) {
     const [comment, setComment] = useState("");
     const [enviando, setEnviando] = useState(false);
     const [errorComentario, setErrorComentario] = useState("");
-    // Detalle pedido a la API cuando la publicación no está en el feed: { id, post | null }
     const [detalle, setDetalle] = useState(null);
-    // Comentarios de la publicación: { id, lista, error }
     const [comentarios, setComentarios] = useState(null);
     const navigate = useNavigate();
     const esStaff = user.rol === "Administrador" || user.rol === "Moderador";
