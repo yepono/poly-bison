@@ -15,7 +15,7 @@ function TechTag({ etiqueta }) {
                 <div className={`w-1 h-1.5 rounded-full ${indicatorColor} opacity-50`}></div>
             </div>
 
-            <span className={`font-bold tracking-widest uppercase text-[11px] ${textColor} mt-px`}>
+            <span className={`font-bold tracking-widest uppercase text-2xs ${textColor} mt-px`}>
                 {etiqueta}
             </span>
 

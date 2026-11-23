@@ -2,8 +2,22 @@
 
 @import "./styles/themes.css";
 
+/* Tipografías autoalojadas (variables: un archivo cubre todos los pesos) */
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/space-grotesk";
+@import "@fontsource-variable/jetbrains-mono";
+
 /* Expone los roles de themes.css como utilidades de Tailwind (bg-canvas, text-ink,
    border-line, shadow-glow...). "inline" hace que cambien solos al cambiar data-theme. */
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* Un paso por debajo de text-xs. En rem para respetar el ajuste de tamaño de fuente. */
+  --text-2xs: 0.6875rem;
+}
+
 @theme inline {
   --color-canvas: var(--canvas);
   --color-surface: var(--surface);
@@ -64,6 +78,13 @@
 
 :root[data-theme="light"] [class*="drop-shadow-"] {
   filter: none !important;
+}
+
+@layer base {
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
 }
 
 @layer components {

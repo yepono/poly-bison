@@ -134,7 +134,7 @@ function Mapa() {
                                         className="p-3 bg-field border border-line rounded-lg hover:border-ink-muted transition-colors cursor-default"
                                     >
                                         <p className="font-bold text-ink text-sm mb-1">{loc.nombre}</p>
-                                        <span className="text-[10px] uppercase tracking-wider text-accent font-semibold bg-brand/10 px-2 py-0.5 rounded">
+                                        <span className="text-2xs uppercase tracking-wider text-accent font-semibold bg-brand/10 px-2 py-0.5 rounded">
                                             {loc.tipo}
                                         </span>
                                     </motion.div>
@@ -164,7 +164,7 @@ function Mapa() {
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-1 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
                         </svg>
-                        <span className="text-[10px] uppercase tracking-widest">Desliza para explorar</span>
+                        <span className="text-2xs uppercase tracking-widest">Desliza para explorar</span>
                     </div>
                 </div>
 

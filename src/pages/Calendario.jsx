@@ -183,7 +183,7 @@ function Calendario() {
                                         eventosHoy.map((evento, idx) => (
                                             <div
                                                 key={idx}
-                                                className={`text-[10px] md:text-xs font-semibold px-2 py-1 rounded border truncate ${getEstilosPorTipo(evento.tipo)}`}
+                                                className={`text-2xs md:text-xs font-semibold px-2 py-1 rounded border truncate ${getEstilosPorTipo(evento.tipo)}`}
                                                 title={evento.titulo}
                                             >
                                                 {evento.titulo}

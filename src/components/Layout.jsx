@@ -55,7 +55,7 @@ function Layout() {
 
             <div className="relative z-10 flex min-w-0 flex-1 flex-col">
                 <header className="sticky top-0 z-30 flex min-h-14 items-center justify-between border-b border-line bg-canvas/90 px-4 backdrop-blur-md lg:hidden">
-                    <Link to="/feed" className="text-lg font-bold text-ink">PolyBison</Link>
+                    <Link to="/feed" className="font-display text-lg font-bold text-ink">PolyBison</Link>
                     <button type="button" aria-label={menuAbierto ? "Cerrar menú" : "Abrir menú"} aria-expanded={menuAbierto} aria-controls="mobile-navigation" onClick={() => setMenuAbierto(!menuAbierto)} className="flex h-11 w-11 items-center justify-center rounded-lg text-ink hover:bg-surface focus-visible:outline-2 focus-visible:outline-accent">
                         <svg aria-hidden="true" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" d={menuAbierto ? "M6 6l12 12M18 6L6 18" : "M4 6h16M4 12h16M4 18h16"} /></svg>
                     </button>
