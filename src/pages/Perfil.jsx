@@ -42,9 +42,9 @@ function Perfil() {
     }, [esOtroUsuario, userId]);
 
     const cargando = esOtroUsuario && perfilConsultado?.id !== userId;
-    if (cargando) return <section className="settings-section mx-auto max-w-xl text-center" aria-busy="true"><p className="text-text-muted-dark">Cargando perfil...</p></section>;
+    if (cargando) return <section className="settings-section mx-auto max-w-xl text-center" aria-busy="true"><p className="text-ink-muted">Cargando perfil...</p></section>;
     const user = esOtroUsuario ? perfilConsultado.user : currentUser;
-    if (!user) return <section className="settings-section mx-auto max-w-xl text-center"><h1 className="text-2xl font-bold text-text-title-dark">Perfil no encontrado</h1><Link to="/admin" className="action-button mt-5">Volver al panel</Link></section>;
+    if (!user) return <section className="settings-section mx-auto max-w-xl text-center"><h1 className="text-2xl font-bold text-ink">Perfil no encontrado</h1><Link to="/admin" className="action-button mt-5">Volver al panel</Link></section>;
     const ownPosts = publicaciones?.id === perfilId ? publicaciones.lista : [];
     const totalLikes = ownPosts.reduce((total, post) => total + post.likes, 0);
     const careerName = getCareerName(user.carrera);
@@ -56,9 +56,9 @@ function Perfil() {
             <header className="profile-hero">
                 <img src={avatar} alt={`Foto de ${user.alias || user.nombre}`} className="h-24 w-24 rounded-full border-4 border-white/70 object-cover shadow-lg sm:h-28 sm:w-28" />
                 <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold uppercase tracking-wider text-white/80">Comunidad PolyBison</p>
-                    <h1 className="mt-2 break-words text-3xl font-bold text-white">{user.alias || "Sin alias"}</h1>
-                    <p className="mt-1 text-lg text-white/90">{user.nombre}</p>
+                    <p className="text-sm font-bold uppercase tracking-wider text-on-brand/80">Comunidad PolyBison</p>
+                    <h1 className="mt-2 break-words text-3xl font-bold text-on-brand">{user.alias || "Sin alias"}</h1>
+                    <p className="mt-1 text-lg text-on-brand/90">{user.nombre}</p>
                 </div>
                 <span className="profile-joined">Desde {user.fechaRegistro || "fecha no disponible"}</span>
             </header>
@@ -76,14 +76,14 @@ function Perfil() {
                 <div className="profile-metric"><dt>Me gusta</dt><dd className="profile-number">{totalLikes}</dd><p>recibidos</p></div>
             </dl>
 
-            <div className="mt-10 flex items-baseline justify-between gap-4 border-b border-border-dark pb-3">
-                <h2 className="text-xl font-bold text-text-title-dark">Publicaciones</h2>
-                <p className="text-sm text-text-muted-dark">{totalLikes} likes en total</p>
+            <div className="mt-10 flex items-baseline justify-between gap-4 border-b border-line pb-3">
+                <h2 className="text-xl font-bold text-ink">Publicaciones</h2>
+                <p className="text-sm text-ink-muted">{totalLikes} likes en total</p>
             </div>
             {ownPosts.length ? (
                 <div className="mt-5 flex flex-col gap-2">{ownPosts.map((post) => <PostCard key={post.id} post={post} onPostChange={actualizarPublicacion} onPostDeleted={quitarPublicacion} />)}</div>
             ) : (
-                <p className="py-10 text-center text-text-muted-dark">Todavía no has publicado. Tus publicaciones aparecerán aquí.</p>
+                <p className="py-10 text-center text-ink-muted">Todavía no has publicado. Tus publicaciones aparecerán aquí.</p>
             )}
         </section>
     );

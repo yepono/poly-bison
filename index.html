@@ -5,6 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Poly-bison</title>
+    <script>
+      // Aplica tema y tamaño de letra guardados ANTES de pintar, para evitar el
+      // destello del tema por defecto. Misma clave y valores que AppDataContext.
+      try {
+        var prefs = (JSON.parse(localStorage.getItem("polybison-app-data")) || {}).preferences || {};
+        var root = document.documentElement;
+        if (["dark", "gray", "light"].indexOf(prefs.theme) !== -1) root.dataset.theme = prefs.theme;
+        if (["small", "normal", "large"].indexOf(prefs.fontSize) !== -1) root.dataset.fontSize = prefs.fontSize;
+      } catch (e) { /* sin localStorage: se usa el tema por defecto */ }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -21,7 +21,7 @@ function CustomSelect({ label, options, value, onChange, placeholder = "Seleccio
     return (
         <div className="flex flex-col gap-1.5 relative w-full" ref={selectRef}>
             {label && (
-                <label className="text-sm font-semibold text-text-body-dark">
+                <label className="text-sm font-semibold text-ink-soft">
                     {label}
                 </label>
             )}
@@ -29,9 +29,9 @@ function CustomSelect({ label, options, value, onChange, placeholder = "Seleccio
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full p-2.5 flex items-center justify-between border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue transition-all"
+                className="w-full p-2.5 flex items-center justify-between border border-line rounded-lg bg-field text-ink focus:outline-none focus:ring-2 focus:ring-accent transition-all"
             >
-                <span className={selectedOption ? "text-text-title-dark" : "text-text-muted-dark"}>
+                <span className={selectedOption ? "text-ink" : "text-ink-muted"}>
                     {selectedOption ? selectedOption.label : placeholder}
                 </span>
 
@@ -39,7 +39,7 @@ function CustomSelect({ label, options, value, onChange, placeholder = "Seleccio
                 <motion.span
                     animate={{ rotate: isOpen ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
-                    className="text-neon-blue text-xs ml-2"
+                    className="text-accent text-xs ml-2"
                 >
                     ▼
                 </motion.span>
@@ -53,7 +53,7 @@ function CustomSelect({ label, options, value, onChange, placeholder = "Seleccio
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute z-50 top-[calc(100%+6px)] left-0 w-full max-h-48 overflow-y-auto bg-surface-dark border border-border-dark rounded-lg shadow-[0_10px_25px_rgba(0,0,0,0.7)] custom-scrollbar"
+                        className="absolute z-50 top-[calc(100%+6px)] left-0 w-full max-h-48 overflow-y-auto bg-surface border border-line rounded-lg shadow-pop custom-scrollbar"
                     >
                         {options.map((option) => (
                             <li
@@ -62,10 +62,10 @@ function CustomSelect({ label, options, value, onChange, placeholder = "Seleccio
                                     onChange(option.value);
                                     setIsOpen(false);
                                 }}
-                                className={`px-4 py-2 text-sm cursor-pointer transition-colors hover:bg-primary/40 hover:text-neon-blue ${
+                                className={`px-4 py-2 text-sm cursor-pointer transition-colors hover:bg-brand/40 hover:text-accent ${
                                     value === option.value
-                                        ? "bg-primary/30 text-neon-blue font-semibold"
-                                        : "text-text-body-dark"
+                                        ? "bg-brand/30 text-accent font-semibold"
+                                        : "text-ink-soft"
                                 }`}
                             >
                                 {option.label}

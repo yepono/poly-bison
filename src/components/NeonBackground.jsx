@@ -141,14 +141,14 @@ function NeonBackground() {
     }, []);
 
     return (
-        <div className="absolute inset-0 z-0 overflow-hidden bg-bg-deep pointer-events-auto">
+        <div className="absolute inset-0 z-0 overflow-hidden bg-canvas pointer-events-auto">
             <div className="absolute bottom-0 left-0 w-full h-[40%] opacity-20 pointer-events-none"
-                style={{ backgroundImage: 'linear-gradient(transparent 95%, var(--color-neon-blue) 100%), linear-gradient(90deg, transparent 95%, var(--color-neon-blue) 100%)', backgroundSize: '40px 40px', transform: 'perspective(500px) rotateX(60deg)' }}>
+                style={{ backgroundImage: 'linear-gradient(transparent 95%, var(--accent) 100%), linear-gradient(90deg, transparent 95%, var(--accent) 100%)', backgroundSize: '40px 40px', transform: 'perspective(500px) rotateX(60deg)' }}>
             </div>
 
             <canvas
                 ref={canvasRef}
-                className="block w-full h-full drop-shadow-[0_0_8px_var(--color-neon-blue)]"
+                className="block w-full h-full drop-shadow-[0_0_8px_var(--accent)]"
             />
         </div>
     );

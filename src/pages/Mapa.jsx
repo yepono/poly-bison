@@ -77,8 +77,8 @@ function Mapa() {
             <div className="flex w-full flex-col gap-6 lg:w-80 lg:shrink-0">
 
                 {/* Selector de Niveles */}
-                <div className="bg-surface-dark/20 backdrop-blur-md border border-border-dark rounded-2xl p-5 shadow-lg">
-                    <h1 className="theme-glow mb-4 text-2xl font-bold text-text-title-dark">
+                <div className="bg-surface/20 backdrop-blur-md border border-line rounded-2xl p-5 shadow-lg">
+                    <h1 className="theme-glow mb-4 text-2xl font-bold text-ink">
                         Navegación
                     </h1>
                     <div className="flex flex-col gap-2">
@@ -87,13 +87,13 @@ function Mapa() {
                                 key={clave}
                                 onClick={() => setNivelActivo(clave)}
                                 className={`flex justify-between items-center p-3 rounded-lg border transition-all font-semibold ${nivelActivo === clave
-                                    ? 'bg-primary/20 border-neon-blue text-neon-blue shadow-[0_0_15px_rgba(0,191,255,0.2)]'
-                                    : 'bg-transparent border-transparent text-text-body-dark hover:bg-surface-dark hover:text-text-title-dark'
+                                    ? 'bg-brand/20 border-accent text-accent shadow-glow'
+                                    : 'bg-transparent border-transparent text-ink-soft hover:bg-surface hover:text-ink'
                                     }`}
                             >
                                 <span>{datos.titulo}</span>
                                 {nivelActivo === clave && (
-                                    <span className="w-2 h-2 rounded-full bg-neon-blue shadow-[0_0_5px_var(--color-neon-blue)]"></span>
+                                    <span className="w-2 h-2 rounded-full bg-accent shadow-glow"></span>
                                 )}
                             </button>
                         ))}
@@ -101,9 +101,9 @@ function Mapa() {
                 </div>
 
                 {/* Directorio con Buscador */}
-                <div className="flex max-h-[32rem] flex-1 flex-col overflow-hidden rounded-2xl border border-border-dark bg-surface-dark/20 p-5 shadow-lg backdrop-blur-md lg:max-h-none">
-                    <h2 className="text-lg font-bold text-text-title-dark mb-4 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-neon-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="flex max-h-[32rem] flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-surface/20 p-5 shadow-lg backdrop-blur-md lg:max-h-none">
+                    <h2 className="text-lg font-bold text-ink mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                         </svg>
                         Directorio
@@ -115,9 +115,9 @@ function Mapa() {
                             placeholder="Buscar aula, lab..."
                             value={busqueda}
                             onChange={(e) => setBusqueda(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-all text-sm"
+                            className="w-full pl-10 pr-4 py-2.5 border border-line rounded-lg bg-field text-ink focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all text-sm"
                         />
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-3.5 text-text-muted-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-3.5 text-ink-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                     </div>
@@ -131,16 +131,16 @@ function Mapa() {
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0, scale: 0.95 }}
-                                        className="p-3 bg-bg-dark border border-border-dark rounded-lg hover:border-text-muted-dark transition-colors cursor-default"
+                                        className="p-3 bg-field border border-line rounded-lg hover:border-ink-muted transition-colors cursor-default"
                                     >
-                                        <p className="font-bold text-text-title-dark text-sm mb-1">{loc.nombre}</p>
-                                        <span className="text-[10px] uppercase tracking-wider text-neon-blue font-semibold bg-primary/10 px-2 py-0.5 rounded">
+                                        <p className="font-bold text-ink text-sm mb-1">{loc.nombre}</p>
+                                        <span className="text-[10px] uppercase tracking-wider text-accent font-semibold bg-brand/10 px-2 py-0.5 rounded">
                                             {loc.tipo}
                                         </span>
                                     </motion.div>
                                 ))
                             ) : (
-                                <p className="text-text-muted-dark text-sm text-center mt-4">
+                                <p className="text-ink-muted text-sm text-center mt-4">
                                     No se encontraron resultados en este nivel.
                                 </p>
                             )}
@@ -150,17 +150,17 @@ function Mapa() {
             </div>
 
             {/* PANEL DERECHO: Visor del Mapa */}
-            <div className="relative flex min-h-[24rem] flex-1 flex-col overflow-hidden rounded-2xl border border-border-dark bg-surface-dark/20 shadow-lg backdrop-blur-md lg:min-h-0">
+            <div className="relative flex min-h-[24rem] flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-surface/20 shadow-lg backdrop-blur-md lg:min-h-0">
 
                 {/* Cabecera del Visor */}
-                <div className="p-4 md:p-6 border-b border-border-dark flex justify-between items-center bg-surface-dark/50 z-10">
+                <div className="p-4 md:p-6 border-b border-line flex justify-between items-center bg-surface/50 z-10">
                     <div>
                         <TechTag etiqueta={datosActuales.nivel} />
-                        <h2 className="text-2xl font-bold text-text-title-dark mt-2">{datosActuales.titulo}</h2>
+                        <h2 className="text-2xl font-bold text-ink mt-2">{datosActuales.titulo}</h2>
                     </div>
 
                     {/* Indicador para móviles */}
-                    <div className="lg:hidden flex flex-col items-end text-text-muted-dark">
+                    <div className="lg:hidden flex flex-col items-end text-ink-muted">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-1 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
                         </svg>
@@ -169,7 +169,7 @@ function Mapa() {
                 </div>
 
                 {/* Área de la Imagen (Scrollable) */}
-                <div className="flex-1 overflow-auto bg-bg-deep/50 p-4 md:p-8 custom-scrollbar relative flex items-center justify-center">
+                <div className="flex-1 overflow-auto bg-canvas/50 p-4 md:p-8 custom-scrollbar relative flex items-center justify-center">
                     <AnimatePresence mode="wait">
                         <motion.img
                             key={nivelActivo}
@@ -180,7 +180,7 @@ function Mapa() {
                             src={datosActuales.imagen}
                             alt={`Mapa de ${datosActuales.titulo}`}
                             // Min-width asegura que la imagen no se encoja en móviles, obligando al usuario a hacer scroll para ver detalles
-                            className="h-auto min-w-[600px] rounded-xl border border-border-dark bg-surface-dark object-contain shadow-2xl md:min-w-full"
+                            className="h-auto min-w-[600px] rounded-xl border border-line bg-surface object-contain shadow-2xl md:min-w-full"
                         />
                     </AnimatePresence>
                 </div>

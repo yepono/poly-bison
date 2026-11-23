@@ -62,24 +62,24 @@ function Calendario() {
     // Estilos dinámicos para las etiquetas de eventos[cite: 9]
     const getEstilosPorTipo = (tipo) => {
         switch (tipo) {
-            case 'Examen': return 'bg-neon-red/10 text-neon-red border-neon-red/40';
-            case 'Académico': return 'bg-neon-blue/10 text-neon-blue border-neon-blue/40';
-            case 'Asueto': return 'bg-secondary/10 text-secondary border-secondary/40';
-            case 'Cultural': return 'bg-purple-500/10 text-purple-400 border-purple-500/40';
-            case 'Deportivo': return 'bg-green-500/10 text-green-400 border-green-500/40';
-            default: return 'bg-surface-dark border-border-dark text-text-body-dark';
+            case 'Examen': return 'bg-cal-examen/10 text-cal-examen border-cal-examen/40';
+            case 'Académico': return 'bg-cal-academico/10 text-cal-academico border-cal-academico/40';
+            case 'Asueto': return 'bg-cal-asueto/10 text-cal-asueto border-cal-asueto/40';
+            case 'Cultural': return 'bg-cal-cultural/10 text-cal-cultural border-cal-cultural/40';
+            case 'Deportivo': return 'bg-cal-deportivo/10 text-cal-deportivo border-cal-deportivo/40';
+            default: return 'bg-surface border-line text-ink-soft';
         }
     };
 
     // Estilos para los puntitos (cuando está contraído)[cite: 9]
     const getColorPunto = (tipo) => {
         switch (tipo) {
-            case 'Examen': return 'bg-neon-red shadow-[0_0_5px_rgba(255,77,77,0.8)]';
-            case 'Académico': return 'bg-neon-blue shadow-[0_0_5px_rgba(0,191,255,0.8)]';
-            case 'Asueto': return 'bg-secondary shadow-[0_0_5px_rgba(204,0,0,0.8)]';
-            case 'Cultural': return 'bg-purple-500 shadow-[0_0_5px_rgba(168,85,247,0.8)]';
-            case 'Deportivo': return 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.8)]';
-            default: return 'bg-text-muted-dark';
+            case 'Examen': return 'bg-cal-examen shadow-[0_0_5px_var(--cal-examen)]';
+            case 'Académico': return 'bg-cal-academico shadow-[0_0_5px_var(--cal-academico)]';
+            case 'Asueto': return 'bg-cal-asueto shadow-[0_0_5px_var(--cal-asueto)]';
+            case 'Cultural': return 'bg-cal-cultural shadow-[0_0_5px_var(--cal-cultural)]';
+            case 'Deportivo': return 'bg-cal-deportivo shadow-[0_0_5px_var(--cal-deportivo)]';
+            default: return 'bg-ink-muted';
         }
     };
 
@@ -112,33 +112,33 @@ function Calendario() {
         <div className="w-full flex flex-col relative gap-6">
             <motion.div
                 layout
-                className="w-full bg-surface-dark/20 backdrop-blur-md border border-border-dark rounded-2xl p-6 md:p-8 shadow-lg overflow-hidden"
+                className="w-full bg-surface/20 backdrop-blur-md border border-line rounded-2xl p-6 md:p-8 shadow-lg overflow-hidden"
             >
                 {/* Header del Calendario */}
-                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border-dark pb-4">
-                    <h1 className="theme-glow text-2xl font-bold text-text-title-dark sm:text-3xl">
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+                    <h1 className="theme-glow text-2xl font-bold text-ink sm:text-3xl">
                         {nombreMes} {mesActual.anio}
                     </h1>
                     {!fechaSeleccionada && (
                         <div className="flex flex-wrap gap-2">
-                            <button type="button" onClick={() => cambiarMes(-1)} className="min-h-11 rounded-lg border border-border-dark px-3 py-2 text-sm font-bold text-text-title-dark transition-colors hover:bg-surface-dark sm:px-4 sm:text-base">
+                            <button type="button" onClick={() => cambiarMes(-1)} className="min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-bold text-ink transition-colors hover:bg-surface sm:px-4 sm:text-base">
                                 &lt; Anterior
                             </button>
-                            <button type="button" onClick={() => cambiarMes(1)} className="min-h-11 rounded-lg border border-border-dark px-3 py-2 text-sm font-bold text-text-title-dark transition-colors hover:bg-surface-dark sm:px-4 sm:text-base">
+                            <button type="button" onClick={() => cambiarMes(1)} className="min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-bold text-ink transition-colors hover:bg-surface sm:px-4 sm:text-base">
                                 Siguiente &gt;
                             </button>
                         </div>
                     )}
                     {fechaSeleccionada && (
-                        <button onClick={() => setFechaSeleccionada(null)} className="text-text-muted-dark hover:text-white font-bold text-sm underline transition-colors">
+                        <button onClick={() => setFechaSeleccionada(null)} className="text-ink-muted hover:text-ink font-bold text-sm underline transition-colors">
                             Ver mes completo
                         </button>
                     )}
                 </div>
 
-                {error && <p role="alert" className="mb-4 text-sm text-neon-red">{error}</p>}
+                {error && <p role="alert" className="mb-4 text-sm text-danger">{error}</p>}
 
-                <div className="grid grid-cols-7 gap-2 md:gap-4 mb-4 text-center text-sm font-bold text-text-muted-dark uppercase tracking-wider">
+                <div className="grid grid-cols-7 gap-2 md:gap-4 mb-4 text-center text-sm font-bold text-ink-muted uppercase tracking-wider">
                     <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div>
                 </div>
 
@@ -157,13 +157,13 @@ function Calendario() {
                                 layout
                                 key={celda.key}
                                 onClick={() => toggleDia(dia)}
-                                className={`min-h-[100px] md:min-h-[140px] rounded-xl border p-2 md:p-3 cursor-pointer transition-colors flex flex-col relative overflow-hidden group shadow-sm hover:shadow-[0_0_15px_rgba(0,191,255,0.15)]
+                                className={`min-h-[100px] md:min-h-[140px] rounded-xl border p-2 md:p-3 cursor-pointer transition-colors flex flex-col relative overflow-hidden group shadow-sm hover:shadow-glow
                                     ${esSeleccionado
-                                        ? 'border-neon-blue bg-primary/10 shadow-[0_0_15px_rgba(0,191,255,0.2)]'
-                                        : 'border-border-dark bg-surface-dark/40 hover:bg-surface-dark hover:border-neon-blue/50'
+                                        ? 'border-cal-selected bg-cal-selected/10 shadow-glow'
+                                        : 'border-cal-grid bg-cal-cell/40 hover:bg-cal-cell-hover hover:border-cal-selected/50'
                                     }`}
                             >
-                                <span className={`text-sm font-bold mb-2 transition-colors ${esSeleccionado ? 'text-neon-blue' : 'text-text-body-dark group-hover:text-neon-blue'}`}>
+                                <span className={`text-sm font-bold mb-2 transition-colors ${esSeleccionado ? 'text-cal-selected' : 'text-ink-soft group-hover:text-cal-selected'}`}>
                                     {dia}
                                 </span>
 
@@ -206,16 +206,16 @@ function Calendario() {
                         transition={{ duration: 0.4, ease: "easeInOut" }}
                         className="w-full overflow-hidden"
                     >
-                        <div className="w-full h-full bg-surface-dark/20 backdrop-blur-md border border-border-dark rounded-2xl p-6 md:p-8 shadow-lg flex flex-col">
+                        <div className="w-full h-full bg-surface/20 backdrop-blur-md border border-line rounded-2xl p-6 md:p-8 shadow-lg flex flex-col">
 
-                            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border-dark pb-4">
-                                <h2 className="flex min-w-0 items-center gap-3 text-xl font-bold text-text-title-dark sm:text-2xl">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-neon-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+                                <h2 className="flex min-w-0 items-center gap-3 text-xl font-bold text-ink sm:text-2xl">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
                                     Eventos del {fechaSeleccionada} de {nombreMes}
                                 </h2>
-                                <button onClick={() => setFechaSeleccionada(null)} className="text-text-muted-dark hover:text-white transition-colors bg-bg-dark rounded-full p-2 border border-border-dark">
+                                <button onClick={() => setFechaSeleccionada(null)} className="text-ink-muted hover:text-ink transition-colors bg-field rounded-full p-2 border border-line">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
@@ -226,31 +226,31 @@ function Calendario() {
                             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 overflow-y-auto custom-scrollbar flex-1 pr-2">
                                 {eventosDelDia.length > 0 ? (
                                     eventosDelDia.map((evento) => (
-                                        <div key={evento.id_evento} className="bg-bg-dark border border-border-dark rounded-xl p-5 hover:border-neon-blue/50 transition-colors flex flex-col">
+                                        <div key={evento.id_evento} className="bg-field border border-line rounded-xl p-5 hover:border-accent/50 transition-colors flex flex-col">
                                             <div className="flex justify-between items-start mb-3">
                                                 <TechTag etiqueta={evento.tipo} />
                                             </div>
-                                            <h3 className="font-bold text-text-title-dark text-xl mb-2">{evento.titulo}</h3>
+                                            <h3 className="font-bold text-ink text-xl mb-2">{evento.titulo}</h3>
 
-                                            <div className="text-sm text-text-muted-dark mb-4 space-y-1.5 border-l-2 border-border-dark pl-3 flex-1">
+                                            <div className="text-sm text-ink-muted mb-4 space-y-1.5 border-l-2 border-line pl-3 flex-1">
                                                 <p className="flex items-center gap-2">
-                                                    <strong className="text-text-body-dark">Horario:</strong>
+                                                    <strong className="text-ink-soft">Horario:</strong>
                                                     {parseFechaMySQL(evento.fecha_inicio).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })} - {parseFechaMySQL(evento.fecha_fin).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}
                                                 </p>
                                                 <p className="flex items-center gap-2">
-                                                    <strong className="text-text-body-dark">Lugar:</strong>
+                                                    <strong className="text-ink-soft">Lugar:</strong>
                                                     {evento.lugar || "Por definir"}
                                                 </p>
                                             </div>
 
-                                            <p className="text-sm text-text-body-dark leading-relaxed bg-surface-dark/50 p-3 rounded-lg border border-border-dark/50">
+                                            <p className="text-sm text-ink-soft leading-relaxed bg-surface/50 p-3 rounded-lg border border-line/50">
                                                 {evento.descripcion}
                                             </p>
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="col-span-full text-center py-10 bg-bg-dark border border-border-dark rounded-xl">
-                                        <p className="text-text-muted-dark text-lg">No hay eventos programados para este día.</p>
+                                    <div className="col-span-full text-center py-10 bg-field border border-line rounded-xl">
+                                        <p className="text-ink-muted text-lg">No hay eventos programados para este día.</p>
                                     </div>
                                 )}
                             </div>

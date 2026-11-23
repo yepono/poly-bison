@@ -9,6 +9,8 @@ const initialData = {
     preferences: { theme: "dark", fontSize: "normal" },
 };
 
+const THEMES = ["dark", "gray", "light"];
+
 const AppDataContext = createContext(null);
 
 function readStoredData() {
@@ -18,7 +20,10 @@ function readStoredData() {
         const parsed = JSON.parse(stored);
         // Solo se lee "preferences" (versiones anteriores guardaban usuario,
         // publicaciones, reservaciones, etc.; ya no se usan)
-        return { preferences: { ...initialData.preferences, ...parsed.preferences } };
+        const preferences = { ...initialData.preferences, ...parsed.preferences };
+        // Un valor guardado que ya no existe (o alterado a mano) vuelve al tema por defecto
+        if (!THEMES.includes(preferences.theme)) preferences.theme = initialData.preferences.theme;
+        return { preferences };
     } catch {
         return initialData;
     }

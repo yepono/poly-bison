@@ -178,27 +178,27 @@ function Configuracion() {
     return (
         <section className="mx-auto w-full max-w-3xl space-y-8">
             <header>
-                <p className="text-sm font-semibold uppercase tracking-wider text-neon-blue">Tu cuenta</p>
-                <h1 className="mt-2 text-3xl font-bold text-text-title-dark">Configuración</h1>
-                <p className="mt-2 text-text-muted-dark">Personaliza tu perfil y la forma en que usas PolyBison.</p>
+                <p className="text-sm font-semibold uppercase tracking-wider text-accent">Tu cuenta</p>
+                <h1 className="mt-2 text-3xl font-bold text-ink">Configuración</h1>
+                <p className="mt-2 text-ink-muted">Personaliza tu perfil y la forma en que usas PolyBison.</p>
             </header>
 
-            {user.debeCambiarContrasena && <p role="alert" className="rounded-lg border border-secondary/50 bg-secondary/10 p-4 text-sm font-semibold text-neon-red">Estás usando una contraseña temporal. Cámbiala en la sección «Contraseña» (escribe la temporal como «Contraseña actual») para poder usar el resto de PolyBison.</p>}
+            {user.debeCambiarContrasena && <p role="alert" className="rounded-lg border border-danger/50 bg-danger/10 p-4 text-sm font-semibold text-danger">Estás usando una contraseña temporal. Cámbiala en la sección «Contraseña» (escribe la temporal como «Contraseña actual») para poder usar el resto de PolyBison.</p>}
 
             <section className="settings-section">
-                <h2 className="text-lg font-bold text-text-title-dark">Foto de perfil</h2>
+                <h2 className="text-lg font-bold text-ink">Foto de perfil</h2>
                 <div className="mt-5 flex flex-wrap items-center gap-4">
-                    <img src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.alias || user.nombre)}&background=003366&color=fff`} alt="Foto de perfil actual" className="h-16 w-16 rounded-full border border-border-dark object-cover" />
+                    <img src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.alias || user.nombre)}&background=003366&color=fff`} alt="Foto de perfil actual" className="h-16 w-16 rounded-full border border-line object-cover" />
                     <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={changeAvatar} className="sr-only" aria-label="Seleccionar foto de perfil" />
                     <button type="button" onClick={() => fileInput.current?.click()} className="action-button">Cambiar foto</button>
                 </div>
-                <p className="mt-3 text-sm text-text-muted-dark">JPG, PNG o WebP de máximo 2 MB.</p>
-                {mensajeFoto && <p role="status" className="mt-3 text-sm text-neon-blue">{mensajeFoto}</p>}
-                {errorFoto && <p role="alert" className="mt-3 text-sm text-neon-red">{errorFoto}</p>}
+                <p className="mt-3 text-sm text-ink-muted">JPG, PNG o WebP de máximo 2 MB.</p>
+                {mensajeFoto && <p role="status" className="mt-3 text-sm text-accent">{mensajeFoto}</p>}
+                {errorFoto && <p role="alert" className="mt-3 text-sm text-danger">{errorFoto}</p>}
             </section>
 
             <section className="settings-section">
-                <h2 className="text-lg font-bold text-text-title-dark">Datos de cuenta</h2>
+                <h2 className="text-lg font-bold text-ink">Datos de cuenta</h2>
                 <form onSubmit={saveEmail} className="mt-4 flex flex-col gap-4" noValidate>
                     <label className="form-label">Correo electrónico
                         <input type="email" value={correoForm} onChange={(event) => setCorreo(event.target.value)} maxLength={150} placeholder="usuario@uanl.edu.mx" autoComplete="email" className="form-input" />
@@ -220,12 +220,12 @@ function Configuracion() {
                         {hayCambios && <button type="button" onClick={() => { reiniciarFormulario(); setError(""); setMensaje(""); }} className="action-button action-button-secondary">Cancelar</button>}
                     </div>
                 </form>
-                {mensaje && <p role="status" className="mt-3 text-sm text-neon-blue">{mensaje}</p>}
-                {error && <p role="alert" className="mt-3 text-sm text-neon-red">{error}</p>}
+                {mensaje && <p role="status" className="mt-3 text-sm text-accent">{mensaje}</p>}
+                {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
             </section>
 
             <section className="settings-section">
-                <h2 className="text-lg font-bold text-text-title-dark">Contraseña</h2>
+                <h2 className="text-lg font-bold text-ink">Contraseña</h2>
                 <form onSubmit={savePassword} className="mt-4 flex flex-col gap-4" noValidate>
                     <label className="form-label">Contraseña actual
                         <input type="password" value={contraseniaActual} onChange={(event) => setContraseniaActual(event.target.value)} autoComplete="current-password" className="form-input" />
@@ -240,16 +240,17 @@ function Configuracion() {
                         <button type="submit" disabled={guardandoContrasenia} className="action-button disabled:cursor-not-allowed disabled:opacity-50">{guardandoContrasenia ? "Guardando..." : "Cambiar contraseña"}</button>
                     </div>
                 </form>
-                {mensajeContrasenia && <p role="status" className="mt-3 text-sm text-neon-blue">{mensajeContrasenia}</p>}
-                {errorContrasenia && <p role="alert" className="mt-3 text-sm text-neon-red">{errorContrasenia}</p>}
+                {mensajeContrasenia && <p role="status" className="mt-3 text-sm text-accent">{mensajeContrasenia}</p>}
+                {errorContrasenia && <p role="alert" className="mt-3 text-sm text-danger">{errorContrasenia}</p>}
             </section>
 
             <section className="settings-section">
-                <h2 className="text-lg font-bold text-text-title-dark">Apariencia</h2>
+                <h2 className="text-lg font-bold text-ink">Apariencia</h2>
                 <div className="mt-5 grid gap-5 sm:grid-cols-2">
                     <label className="form-label">Tema
                         <select value={preferences.theme} onChange={(event) => updatePreferences({ theme: event.target.value })} className="form-input">
                             <option value="dark">Oscuro</option>
+                            <option value="gray">Gris oscuro</option>
                             <option value="light">Claro</option>
                         </select>
                     </label>
@@ -265,15 +266,15 @@ function Configuracion() {
 
             <section className="settings-section flex flex-wrap items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-lg font-bold text-text-title-dark">Sesión</h2>
-                    <p className="mt-1 text-sm text-text-muted-dark">Cierra la sesión en este dispositivo.</p>
+                    <h2 className="text-lg font-bold text-ink">Sesión</h2>
+                    <p className="mt-1 text-sm text-ink-muted">Cierra la sesión en este dispositivo.</p>
                 </div>
                 <button type="button" onClick={cerrarSesion} className="action-button action-button-danger">Cerrar sesión</button>
             </section>
 
-            {user.rol !== "Administrador" && <section className="settings-section border-secondary/50">
-                <h2 className="text-lg font-bold text-neon-red">Zona de peligro</h2>
-                <p className="mt-1 text-sm text-text-muted-dark">Eliminará tu cuenta; tus publicaciones y comentarios dejarán de mostrarse.</p>
+            {user.rol !== "Administrador" && <section className="settings-section border-danger/50">
+                <h2 className="text-lg font-bold text-danger">Zona de peligro</h2>
+                <p className="mt-1 text-sm text-ink-muted">Eliminará tu cuenta; tus publicaciones y comentarios dejarán de mostrarse.</p>
                 <button type="button" onClick={removeAccount} className="action-button action-button-danger mt-4">Eliminar cuenta</button>
             </section>}
         </section>
