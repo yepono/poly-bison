@@ -1,152 +1,233 @@
 import { useEffect, useRef } from "react";
 
+// Fondo animado de las pantallas de acceso: una red de nodos que se unen entre sí y con el
+// puntero. Para que vaya fluido, el brillo de cada nodo se dibuja una sola vez y luego se copia,
+// solo se comparan nodos cercanos, las líneas se dibujan en pocos trazos y la animación se pausa
+// cuando la pestaña no se ve. Si el usuario prefiere menos movimiento, el fondo se queda quieto.
+
+const DISTANCIA = 120;          // distancia máxima de conexión (px CSS)
+const RADIO_MOUSE = 150;
+const AREA_POR_NODO = 11000;    // espacio de pantalla por cada nodo
+const MAX_NODOS = 150;
+const VELOCIDAD = 40;           // px por segundo (máx. por eje)
+const NIVELES = 4;              // grupos de opacidad para las líneas
+
+// Colores del tema actual (variables CSS de themes.css)
+function leerColores() {
+    const css = getComputedStyle(document.documentElement);
+    const accent = css.getPropertyValue("--accent").trim() || "#00bfff";
+    const danger = css.getPropertyValue("--danger").trim() || "#ff4d4d";
+    return { accent, danger };
+}
+
+// Convierte un color hexadecimal a rgba con la transparencia indicada
+function conAlfa(hex, a) {
+    let h = hex.replace("#", "");
+    if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+    const n = parseInt(h.slice(0, 6), 16);
+    if (Number.isNaN(n)) return `rgba(0, 191, 255, ${a})`;
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+
+// Círculo con halo dibujado una sola vez; luego se copia con drawImage
+function crearSprite(color, radio, dpr) {
+    const halo = radio * 3;
+    const lado = Math.ceil(halo * 2 * dpr);
+    const c = document.createElement("canvas");
+    c.width = c.height = lado;
+    const g = c.getContext("2d");
+    g.scale(dpr, dpr);
+    const grad = g.createRadialGradient(halo, halo, 0, halo, halo, halo);
+    grad.addColorStop(0, color);
+    grad.addColorStop(radio / halo, color);
+    grad.addColorStop(radio / halo + 0.05, conAlfa(color, 0.35));
+    grad.addColorStop(1, conAlfa(color, 0));
+    g.fillStyle = grad;
+    g.fillRect(0, 0, halo * 2, halo * 2);
+    return { img: c, halo };
+}
+
 function NeonBackground() {
     const canvasRef = useRef(null);
 
     useEffect(() => {
         const canvas = canvasRef.current;
-        const ctx = canvas.getContext("2d");
-        let animationFrameId;
-        let particles = [];
-        
-        // Coordenadas del mouse
-        let mouse = { x: null, y: null, radius: 150 };
+        const ctx = canvas.getContext("2d", { alpha: true });
+        const reducido = window.matchMedia("(prefers-reduced-motion: reduce)");
+        let ancho = 0, alto = 0, dpr = 1;
+        let nodos = [];
+        let sprites = [];
+        let colores = leerColores();
+        let raf = 0;
+        let ultimo = 0;
+        const mouse = { x: null, y: null };
 
-        const colors = ['#00bfff', '#ff4d4d']; 
-
-        // tamano de canvas
-        const resizeCanvas = () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            initParticles(); 
+        const prepararSprites = () => {
+            sprites = [colores.accent, colores.danger].map((color) => [2, 3, 4].map((r) => crearSprite(color, r, dpr)));
         };
 
+        const crearNodo = () => ({
+            x: Math.random() * ancho,
+            y: Math.random() * alto,
+            vx: (Math.random() - 0.5) * 2 * VELOCIDAD,
+            vy: (Math.random() - 0.5) * 2 * VELOCIDAD,
+            color: Math.random() < 0.5 ? 0 : 1,
+            tam: Math.floor(Math.random() * 3),
+        });
 
-        class Particle {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
-                // velocidad random
-                this.vx = (Math.random() - 0.5) * 1.5;
-                this.vy = (Math.random() - 0.5) * 1.5;
-                this.radius = Math.random() * 2 + 2;
-                this.color = colors[Math.floor(Math.random() * colors.length)];
+        const ajustarTamano = () => {
+            const anterior = { ancho, alto };
+            ancho = window.innerWidth;
+            alto = window.innerHeight;
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = Math.round(ancho * dpr);
+            canvas.height = Math.round(alto * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            prepararSprites();
+
+            // Conserva los nodos (reescalados) y solo agrega o quita los necesarios
+            const objetivo = Math.min(MAX_NODOS, Math.round((ancho * alto) / AREA_POR_NODO));
+            if (anterior.ancho) {
+                const sx = ancho / anterior.ancho, sy = alto / anterior.alto;
+                nodos.forEach((n) => { n.x *= sx; n.y *= sy; });
             }
+            while (nodos.length < objetivo) nodos.push(crearNodo());
+            nodos.length = objetivo;
+        };
 
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.fill();
-            }
-
-            update() {
-                // Rebote en los bordes
-                if (this.x + this.radius > canvas.width || this.x - this.radius < 0) this.vx = -this.vx;
-                if (this.y + this.radius > canvas.height || this.y - this.radius < 0) this.vy = -this.vy;
-
-
-                this.x += this.vx;
-                this.y += this.vy;
-
-                this.draw();
-            }
-        }
-
-        // Inicializar arreglo de partículas
-        const initParticles = () => {
-            particles = [];
-            // cantidad de nodos segun tamanio de la pantalla
-            const numberOfParticles = (canvas.width * canvas.height) / 9000;
-            for (let i = 0; i < numberOfParticles; i++) {
-                particles.push(new Particle());
+        const mover = (dt) => {
+            for (const n of nodos) {
+                n.x += n.vx * dt;
+                n.y += n.vy * dt;
+                if (n.x < 0) { n.x = 0; n.vx = Math.abs(n.vx); } else if (n.x > ancho) { n.x = ancho; n.vx = -Math.abs(n.vx); }
+                if (n.y < 0) { n.y = 0; n.vy = Math.abs(n.vy); } else if (n.y > alto) { n.y = alto; n.vy = -Math.abs(n.vy); }
             }
         };
 
-        // dibujado de lineas entre nodos
-        const connectParticles = () => {
-            for (let a = 0; a < particles.length; a++) {
-                for (let b = a; b < particles.length; b++) {
-                    const dx = particles[a].x - particles[b].x;
-                    const dy = particles[a].y - particles[b].y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
+        const dibujar = () => {
+            ctx.clearRect(0, 0, ancho, alto);
 
-                    // Conexion entre nodos
-                    if (distance < 120) {
-                        const opacity = 1 - (distance / 120);
-                        ctx.strokeStyle = `rgba(0, 191, 255, ${opacity * 0.5})`; 
-                        ctx.lineWidth = 1;
-                        ctx.beginPath();
-                        ctx.moveTo(particles[a].x, particles[a].y);
-                        ctx.lineTo(particles[b].x, particles[b].y);
-                        ctx.stroke();
-                    }
-                }
+            // Rejilla espacial: celda = distancia de conexión
+            const columnas = Math.ceil(ancho / DISTANCIA) + 1;
+            const celdas = new Map();
+            nodos.forEach((n, i) => {
+                const k = Math.floor(n.y / DISTANCIA) * columnas + Math.floor(n.x / DISTANCIA);
+                const celda = celdas.get(k);
+                if (celda) celda.push(i); else celdas.set(k, [i]);
+            });
 
-                // conexion con el mouse
-                if (mouse.x != null && mouse.y != null) {
-                    const dxMouse = particles[a].x - mouse.x;
-                    const dyMouse = particles[a].y - mouse.y;
-                    const distanceMouse = Math.sqrt(dxMouse * dxMouse + dyMouse * dyMouse);
-
-                    if (distanceMouse < mouse.radius) {
-                        ctx.strokeStyle = `rgba(255, 77, 77, 0.6)`;
-                        ctx.lineWidth = 1.5;
-                        ctx.beginPath();
-                        ctx.moveTo(particles[a].x, particles[a].y);
-                        ctx.lineTo(mouse.x, mouse.y);
-                        ctx.stroke();
+            // Un trazo por nivel de opacidad
+            const trazos = Array.from({ length: NIVELES }, () => new Path2D());
+            const D2 = DISTANCIA * DISTANCIA;
+            for (let i = 0; i < nodos.length; i++) {
+                const a = nodos[i];
+                const cx = Math.floor(a.x / DISTANCIA), cy = Math.floor(a.y / DISTANCIA);
+                for (let oy = 0; oy <= 1; oy++) {
+                    for (let ox = -1; ox <= 1; ox++) {
+                        if (oy === 0 && ox < 0) continue; // cada par de celdas una sola vez
+                        const celda = celdas.get((cy + oy) * columnas + cx + ox);
+                        if (!celda) continue;
+                        for (const j of celda) {
+                            if (oy === 0 && ox === 0 && j <= i) continue;
+                            const b = nodos[j];
+                            const dx = a.x - b.x, dy = a.y - b.y;
+                            const d2 = dx * dx + dy * dy;
+                            if (d2 >= D2) continue;
+                            const nivel = Math.min(NIVELES - 1, Math.floor((Math.sqrt(d2) / DISTANCIA) * NIVELES));
+                            trazos[nivel].moveTo(a.x, a.y);
+                            trazos[nivel].lineTo(b.x, b.y);
+                        }
                     }
                 }
             }
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = colores.accent;
+            trazos.forEach((trazo, nivel) => {
+                ctx.globalAlpha = 0.5 * (1 - (nivel + 0.5) / NIVELES);
+                ctx.stroke(trazo);
+            });
+
+            // Conexiones con el puntero
+            if (mouse.x !== null) {
+                const lineas = new Path2D();
+                const R2 = RADIO_MOUSE * RADIO_MOUSE;
+                for (const n of nodos) {
+                    const dx = n.x - mouse.x, dy = n.y - mouse.y;
+                    if (dx * dx + dy * dy < R2) { lineas.moveTo(n.x, n.y); lineas.lineTo(mouse.x, mouse.y); }
+                }
+                ctx.globalAlpha = 0.6;
+                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = colores.danger;
+                ctx.stroke(lineas);
+            }
+
+            ctx.globalAlpha = 1;
+            for (const n of nodos) {
+                const { img, halo } = sprites[n.color][n.tam];
+                ctx.drawImage(img, n.x - halo, n.y - halo, halo * 2, halo * 2);
+            }
         };
 
-        // Bucle principal de animación
-        const animate = () => {
-            // Limpiar frame anterior
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Actualizar nodos y conexiones
-            particles.forEach(particle => particle.update());
-            connectParticles();
-            
-            animationFrameId = requestAnimationFrame(animate);
+        const cuadro = (ahora) => {
+            const dt = Math.min((ahora - ultimo) / 1000, 0.05); // tras una pausa no "salta"
+            ultimo = ahora;
+            mover(dt);
+            dibujar();
+            raf = requestAnimationFrame(cuadro);
         };
 
-        
-        window.addEventListener("resize", resizeCanvas);
-        window.addEventListener("mousemove", (e) => {
-            mouse.x = e.x;
-            mouse.y = e.y;
-        });
-        window.addEventListener("mouseout", () => {
-            mouse.x = null;
-            mouse.y = null;
-        });
+        const iniciar = () => {
+            cancelAnimationFrame(raf);
+            if (reducido.matches || document.hidden) { dibujar(); return; }
+            ultimo = performance.now();
+            raf = requestAnimationFrame(cuadro);
+        };
 
-        // Ejecucion inicial
-        resizeCanvas();
-        animate();
+        let esperaResize = 0;
+        const onResize = () => {
+            clearTimeout(esperaResize);
+            esperaResize = setTimeout(() => { ajustarTamano(); if (reducido.matches) dibujar(); }, 120);
+        };
+        const onMove = (e) => { mouse.x = e.clientX; mouse.y = e.clientY; };
+        const onSalir = () => { mouse.x = null; mouse.y = null; };
+        const onVisible = () => iniciar();
 
-        // Cleanup al desmontar el componente
+        // Cambio de tema (html[data-theme]): nuevos colores y sprites
+        const observador = new MutationObserver(() => {
+            colores = leerColores();
+            prepararSprites();
+            if (reducido.matches) dibujar();
+        });
+        observador.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+        window.addEventListener("resize", onResize);
+        window.addEventListener("pointermove", onMove, { passive: true });
+        document.documentElement.addEventListener("pointerleave", onSalir);
+        document.addEventListener("visibilitychange", onVisible);
+        reducido.addEventListener("change", iniciar);
+
+        ajustarTamano();
+        iniciar();
+
         return () => {
-            window.removeEventListener("resize", resizeCanvas);
-            window.removeEventListener("mousemove", null);
-            window.removeEventListener("mouseout", null);
-            cancelAnimationFrame(animationFrameId);
+            cancelAnimationFrame(raf);
+            clearTimeout(esperaResize);
+            observador.disconnect();
+            window.removeEventListener("resize", onResize);
+            window.removeEventListener("pointermove", onMove);
+            document.documentElement.removeEventListener("pointerleave", onSalir);
+            document.removeEventListener("visibilitychange", onVisible);
+            reducido.removeEventListener("change", iniciar);
         };
     }, []);
 
     return (
-        <div className="absolute inset-0 z-0 overflow-hidden bg-bg-deep pointer-events-auto">
-            <div className="absolute bottom-0 left-0 w-full h-[40%] opacity-20 pointer-events-none" 
-                 style={{ backgroundImage: 'linear-gradient(transparent 95%, var(--color-neon-blue) 100%), linear-gradient(90deg, transparent 95%, var(--color-neon-blue) 100%)', backgroundSize: '40px 40px', transform: 'perspective(500px) rotateX(60deg)' }}>
-            </div>
-            
-            <canvas 
-                ref={canvasRef} 
-                className="block w-full h-full drop-shadow-[0_0_8px_var(--color-neon-blue)]"
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-canvas" aria-hidden="true">
+            <div
+                className="absolute bottom-0 left-0 h-[40%] w-full opacity-20"
+                style={{ backgroundImage: "linear-gradient(transparent 95%, var(--accent) 100%), linear-gradient(90deg, transparent 95%, var(--accent) 100%)", backgroundSize: "40px 40px", transform: "perspective(500px) rotateX(60deg)" }}
             />
+            <canvas ref={canvasRef} className="block h-full w-full" />
         </div>
     );
 }

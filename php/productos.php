@@ -1,23 +1,11 @@
 <?php
-// ============================================================
-// productos.php - Sección Bisontstore (catálogo)
-// Acción por parámetro: productos.php?accion=...
-// Todas requieren sesión.
-//
-//   GET  listar                     catálogo (vw_catalogo_productos)
-//   GET  categorias                 categorías activas
-//   GET  foto&id=                   imagen (BLOB) de un producto activo
-// Solo Administrador (D15):
-//   POST crear      (multipart)     id_categoria, nombre, descripcion, precio,
-//                                   stock, imagen (opcional)   -> sp_producto CREAR
-//   POST editar     (multipart)     id_producto + campos a cambiar -> EDITAR
-//   POST desactivar (JSON)          id_producto                 -> DESACTIVAR
-// ============================================================
+// Catálogo de la Bisontstore. Con sesión se pueden ver los productos, las categorías y las
+// fotos. Solo el administrador puede crear, editar o desactivar productos.
 require __DIR__ . "/config.php";
 
 const NOMBRE_MAX      = 200;
 const DESCRIPCION_MAX = 500;
-const PRECIO_MAX      = 999999.99;   // DECIMAL(8,2)
+const PRECIO_MAX      = 999999.99;   // el precio más alto que cabe en la base de datos
 const STOCK_MAX       = 100000;
 
 function spProducto(mysqli $conn, string $accion, array $p): array {
@@ -28,7 +16,7 @@ function spProducto(mysqli $conn, string $accion, array $p): array {
         $p["id_categoria"] ?? null,
         $p["nombre"]       ?? null,
         $p["descripcion"]  ?? null,
-        $p["precio"]       ?? null,   // texto "123.45" (DECIMAL exacto)
+        $p["precio"]       ?? null,   // se envía como texto para no perder centavos
         $p["stock"]        ?? null,
         $p["foto"]         ?? null,
         $p["foto_mime"]    ?? null,
@@ -40,7 +28,7 @@ function productoResponse(array $r): array {
         "id_producto"  => (int)$r["id_producto"],
         "nombre"       => $r["nombre"],
         "descripcion"  => $r["descripcion"],
-        "precio"       => $r["precio"],          // texto con 2 decimales
+        "precio"       => $r["precio"],          // texto con dos decimales
         "stock"        => (int)$r["stock"],
         "id_categoria" => (int)$r["id_categoria"],
         "categoria"    => $r["categoria"],
@@ -96,8 +84,7 @@ function getProducto(mysqli $conn, int $id): ?array {
     return $row ? productoResponse($row) : null;
 }
 
-// ---------- Acciones ----------
-
+// Acciones
 function accionListar(mysqli $conn): never {
     requireMethod("GET");
     requireLogin($conn);

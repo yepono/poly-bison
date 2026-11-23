@@ -1,11 +1,11 @@
 function TechTag({ etiqueta }) {
     const isAlert = etiqueta === "Aviso" || etiqueta === "Urgente";
 
-    const textColor = isAlert ? "text-neon-red" : "text-neon-blue";
-    const bgColor = isAlert ? "bg-neon-red/10" : "bg-neon-blue/10";
-    const borderColor = isAlert ? "border-neon-red/40" : "border-neon-blue/40";
-    const glowClass = isAlert ? "shadow-[0_0_12px_rgba(255,77,77,0.3)]" : "shadow-[0_0_12px_rgba(0,191,255,0.3)]";
-    const indicatorColor = isAlert ? "bg-neon-red" : "bg-neon-blue";
+    const textColor = isAlert ? "text-danger" : "text-accent";
+    const bgColor = isAlert ? "bg-danger/10" : "bg-accent/10";
+    const borderColor = isAlert ? "border-danger/40" : "border-accent/40";
+    const glowClass = isAlert ? "shadow-glow-danger" : "shadow-glow";
+    const indicatorColor = isAlert ? "bg-danger" : "bg-accent";
 
     return (
         <div className={`relative inline-flex items-center gap-2 px-3 py-1 rounded-full border ${bgColor} ${borderColor} ${glowClass}`}>
@@ -15,7 +15,7 @@ function TechTag({ etiqueta }) {
                 <div className={`w-1 h-1.5 rounded-full ${indicatorColor} opacity-50`}></div>
             </div>
 
-            <span className={`font-bold tracking-widest uppercase text-[11px] ${textColor} mt-px`}>
+            <span className={`font-bold tracking-widest uppercase text-2xs ${textColor} mt-px`}>
                 {etiqueta}
             </span>
 

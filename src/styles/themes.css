@@ -1,0 +1,154 @@
+/*
+ * Temas de PolyBison: dark (por defecto), gray y light.
+ * index.css convierte estas variables en clases de Tailwind.
+ * Se aplican con <html data-theme="dark|gray|light"> (ver AppDataContext).
+ *
+ * Roles (no colores):
+ *   canvas  fondo de la página      surface  tarjetas, formularios, modales
+ *   field   inputs / zonas hundidas line     bordes y divisores
+ *   ink*    texto (fuerte, normal, atenuado)
+ *   brand   botones principales     accent   enlaces, activo, foco (el "neón")
+ *   danger / success / warning      estados
+ *   cal-*   sistema de color propio del Calendario
+ * Contraste de texto verificado >= 4.5:1 (WCAG AA) en los tres temas.
+ */
+
+/* Tema oscuro: azul casi negro con neón intenso */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --canvas: #05020a;
+  --surface: #1e293b;
+  --field: #0f172a;
+  --line: #334155;
+
+  --ink: #f8fafc;
+  --ink-soft: #cbd5e1;
+  --ink-muted: #94a3b8;
+
+  --brand: #003366;
+  --brand-hover: #002244;
+  --on-brand: #ffffff;
+  --accent: #00bfff;
+  /* Colores de las gráficas, elegidos para distinguirse también con daltonismo */
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --on-accent: #04121c;
+
+  --danger: #ff5a5a;
+  --danger-solid: #cc0000; /* fondo de botones destructivos (texto blanco) */
+  --danger-solid-hover: #990000;
+  --success: #34d399;
+  --warning: #fbbf24;
+
+  --scrim: rgb(2 1 8 / 0.75);
+  --elev-card: 0 5px 15px rgb(0 0 0 / 0.3);
+  --elev-pop: 0 0 30px rgb(0 0 0 / 0.8);
+  --glow-accent: 0 0 15px rgb(0 191 255 / 0.25);
+  --glow-brand: 0 0 10px #003366;
+  --glow-text: 0 0 8px #00bfff;
+  --glow-danger: 0 0 12px rgb(255 90 90 / 0.3);
+
+  /* Degradado del encabezado de perfil (igual en todos los temas: lleva texto blanco) */
+  --hero-via: #07538a;
+  --hero-to: #007c88;
+
+  /* Calendario */
+  --cal-cell: var(--surface);
+  --cal-cell-hover: var(--field);
+  --cal-grid: var(--line);
+  --cal-today: var(--accent);
+  --cal-selected: var(--accent);
+  --cal-examen: #ff6b86;
+  --cal-academico: #19c3ff;
+  --cal-asueto: #ffb020;
+  --cal-cultural: #c694ff;
+  --cal-deportivo: #2ee59d;
+}
+
+/* Tema gris: grafito neutro, con menos contraste y neón más suave */
+[data-theme="gray"] {
+  color-scheme: dark;
+
+  --canvas: #16181d;
+  --surface: #272b33;
+  --field: #1f2228;
+  --line: #3b414c;
+
+  --ink: #f3f5f7;
+  --ink-soft: #c8cdd5;
+  --ink-muted: #98a1ae;
+
+  --brand: #0b4a85;
+  --brand-hover: #083a69;
+  --on-brand: #ffffff;
+  --accent: #1cc3ff;
+  /* Colores de las gráficas, elegidos para distinguirse también con daltonismo */
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --on-accent: #04121c;
+
+  --danger: #ff6b6b;
+  --danger-solid: #cc2f2f; /* fondo de botones destructivos (texto blanco) */
+  --danger-solid-hover: #a32222;
+  --success: #3ddc97;
+  --warning: #f5b83d;
+
+  --scrim: rgb(10 11 14 / 0.72);
+  --elev-card: 0 5px 15px rgb(0 0 0 / 0.25);
+  --elev-pop: 0 0 30px rgb(0 0 0 / 0.6);
+  --glow-accent: 0 0 12px rgb(28 195 255 / 0.18);
+  --glow-brand: 0 0 8px #0b4a85;
+  --glow-text: 0 0 6px rgb(28 195 255 / 0.7);
+  --glow-danger: 0 0 10px rgb(255 107 107 / 0.25);
+
+  --cal-examen: #ff7a92;
+  --cal-academico: #2ec8ff;
+  --cal-asueto: #ffb938;
+  --cal-cultural: #bf8cff;
+  --cal-deportivo: #43e3a6;
+}
+
+/* Tema claro: sin brillos, el neón se vuelve tonos más profundos */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --canvas: #eaeff5;
+  --surface: #ffffff;
+  --field: #f3f6fa;
+  --line: #cbd5e1;
+
+  --ink: #0f172a;
+  --ink-soft: #334155;
+  --ink-muted: #55657a;
+
+  --brand: #003366;
+  --brand-hover: #002244;
+  --on-brand: #ffffff;
+  --accent: #0071a8;
+  /* Colores de las gráficas, elegidos para distinguirse también con daltonismo */
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --on-accent: #ffffff;
+
+  --danger: #c62828;
+  --danger-solid: #c62828; /* fondo de botones destructivos (texto blanco) */
+  --danger-solid-hover: #a31f1f;
+  --success: #15803d;
+  --warning: #b45309;
+
+  --scrim: rgb(15 23 42 / 0.55);
+  --elev-card: 0 1px 3px rgb(15 23 42 / 0.12);
+  --elev-pop: 0 10px 40px rgb(15 23 42 / 0.25);
+  --glow-accent: none;
+  --glow-brand: none;
+  --glow-text: none;
+  --glow-danger: none;
+
+  --cal-examen: #be123c;
+  --cal-academico: #0369a1;
+  --cal-asueto: #9a4506;
+  --cal-cultural: #7e22ce;
+  --cal-deportivo: #166534;
+}

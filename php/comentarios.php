@@ -1,15 +1,7 @@
 <?php
-// ============================================================
-// comentarios.php - Sección Comentarios
-// Acción por parámetro: comentarios.php?accion=...
-// Todas requieren sesión.
-//
-//   GET  listar&id_publicacion=    comentarios activos (vw_comentarios_activos)
-//   POST crear    (JSON)           id_publicacion, contenido (máx. 500)
-//                                  -> sp_comentario CREAR
-//   POST eliminar (JSON)           id_comentario; el autor o Administrador/Moderador
-//                                  -> sp_comentario ELIMINAR
-// ============================================================
+// Comentarios de las publicaciones: ver los de una publicación, crear uno nuevo y
+// eliminarlo (lo puede borrar su autor, un administrador o un moderador).
+// Todas las acciones necesitan una sesión iniciada.
 require __DIR__ . "/config.php";
 
 const COMENTARIO_MAX = 500;
@@ -100,7 +92,7 @@ function accionEliminar(mysqli $conn): never {
     $id = inputInt(readJsonBody(), "id_comentario");
     if ($id === null || $id <= 0) jsonError(400, "Comentario no válido");
 
-    // ELIMINAR valida: existe (404), autor o Administrador/Moderador (403)
+    // La rutina revisa que exista y que quien borra sea el autor, un administrador o un moderador
     spComentario($conn, "ELIMINAR", ["id_comentario" => $id, "id_actor" => (int)$u["id_usuario"]]);
     jsonResponse(["success" => true, "message" => "Comentario eliminado"]);
 }

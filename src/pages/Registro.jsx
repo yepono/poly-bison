@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-import NeonBackground from "../components/NeonBackground";
+import PantallaAuth from "../components/PantallaAuth";
+import Pasos from "../components/Pasos";
 import CustomSelect from "../components/CustomSelect";
 import { api, CORREO_UANL, MATRICULA, validarImagen } from "../api/client";
 import { getCareerName } from "../utils/careers";
@@ -124,51 +124,37 @@ function Registro() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-bg-deep p-4 relative">
-            <NeonBackground />
+        <PantallaAuth>
+                <div className="auth-card custom-scrollbar max-h-[calc(100dvh-2rem)] overflow-y-auto">
 
-            <motion.div
-                initial={{ scale: 0.5 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", duration: 1.5 }}
-                className="relative z-10 flex min-h-[calc(100dvh-2rem)] w-full max-w-5xl items-center justify-center py-4 sm:p-8 lg:justify-end lg:p-12"
-            >
-                <div className="relative z-20 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-border-dark bg-surface-dark/20% p-5 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-md custom-scrollbar sm:p-8">
-
-                    <h1 className="text-3xl font-bold text-center text-text-title-dark mb-2">
+                    <h1 className="text-3xl font-bold text-center text-ink mb-2">
                         Registro - Paso {paso} de 3
                     </h1>
 
-                    <div className="flex items-center justify-center gap-2 mb-6 mt-4">
-                        <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${paso >= 1 ? 'bg-primary text-white shadow-[0_0_10px_var(--color-primary)]' : 'bg-border-dark text-text-muted-dark'}`}>1</span>
-                        <span className={`h-0.5 w-8 transition-colors ${paso >= 2 ? 'bg-primary' : 'bg-border-dark'}`}></span>
-                        <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${paso >= 2 ? 'bg-primary text-white shadow-[0_0_10px_var(--color-primary)]' : 'bg-border-dark text-text-muted-dark'}`}>2</span>
-                        <span className={`h-0.5 w-8 transition-colors ${paso >= 3 ? 'bg-primary' : 'bg-border-dark'}`}></span>
-                        <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${paso >= 3 ? 'bg-primary text-white shadow-[0_0_10px_var(--color-primary)]' : 'bg-border-dark text-text-muted-dark'}`}>3</span>
-                    </div>
+                    <Pasos actual={paso} className="mb-6 mt-4 justify-center" />
 
-                    {error && <p role="alert" className="mb-4 text-sm text-neon-red">{error}</p>}
+                    {error && <p role="alert" className="mb-4 text-sm text-danger">{error}</p>}
 
                     {paso === 1 && (
                         <form className="flex flex-col gap-4" onSubmit={handleSiguiente} noValidate>
                             <div className="flex flex-col gap-1.5">
-                                <label htmlFor="nombre" className="text-sm font-semibold text-text-body-dark">Nombre Completo</label>
-                                <input type="text" id="nombre" required maxLength={250} autoComplete="name" value={formData.nombre} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
+                                <label htmlFor="nombre" className="text-sm font-semibold text-ink-soft">Nombre completo</label>
+                                <input type="text" id="nombre" required maxLength={250} autoComplete="name" value={formData.nombre} onChange={handleChange} className="form-input" />
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                <label htmlFor="alias" className="text-sm font-semibold text-text-body-dark">Alias</label>
-                                <input type="text" id="alias" required maxLength={50} value={formData.alias} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
+                                <label htmlFor="alias" className="text-sm font-semibold text-ink-soft">Alias</label>
+                                <input type="text" id="alias" required maxLength={50} value={formData.alias} onChange={handleChange} className="form-input" />
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                <label htmlFor="correo" className="text-sm font-semibold text-text-body-dark">Correo electrónico</label>
-                                <input type="email" id="correo" required maxLength={150} placeholder="usuario@uanl.edu.mx" autoComplete="email" value={formData.correo} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
+                                <label htmlFor="correo" className="text-sm font-semibold text-ink-soft">Correo electrónico</label>
+                                <input type="email" id="correo" required maxLength={150} placeholder="usuario@uanl.edu.mx" autoComplete="email" value={formData.correo} onChange={handleChange} className="form-input" />
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                <label htmlFor="matricula" className="text-sm font-semibold text-text-body-dark">Matrícula</label>
-                                <input type="text" id="matricula" required maxLength={7} inputMode="numeric" pattern="[0-9]{7}" value={formData.matricula} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
+                                <label htmlFor="matricula" className="text-sm font-semibold text-ink-soft">Matrícula</label>
+                                <input type="text" id="matricula" required maxLength={7} inputMode="numeric" pattern="[0-9]{7}" value={formData.matricula} onChange={handleChange} className="form-input" />
                             </div>
 
-                            <button type="submit" className="mt-4 w-full bg-primary hover:bg-primary-hover text-text-title-dark font-bold py-3 px-4 rounded-lg transition-colors">
+                            <button type="submit" className="action-button mt-4 w-full">
                                 Siguiente
                             </button>
                         </form>
@@ -193,47 +179,46 @@ function Registro() {
                                 }))}
                             />
                             <div className="flex flex-col gap-1.5">
-                                <label htmlFor="contrasenia" className="text-sm font-semibold text-text-body-dark">Contraseña</label>
-                                <input type="password" id="contrasenia" required minLength={8} maxLength={72} autoComplete="new-password" value={formData.contrasenia} onChange={handleChange} className="w-full p-2.5 border border-border-dark rounded-lg bg-bg-dark text-text-title-dark focus:outline-none focus:ring-2 focus:ring-neon-blue" />
+                                <label htmlFor="contrasenia" className="text-sm font-semibold text-ink-soft">Contraseña</label>
+                                <input type="password" id="contrasenia" required minLength={8} maxLength={72} autoComplete="new-password" value={formData.contrasenia} onChange={handleChange} className="form-input" />
                             </div>
 
                             <div className="flex gap-4 mt-4">
-                                <button type="button" onClick={handleAnterior} className="flex-1 border border-border-dark text-text-body-dark font-bold py-3 px-4 rounded-lg hover:bg-bg-dark transition-colors">Atrás</button>
-                                <button type="submit" className="flex-1 bg-primary hover:bg-primary-hover text-text-title-dark font-bold py-3 px-4 rounded-lg transition-colors">Siguiente</button>
+                                <button type="button" onClick={handleAnterior} className="action-button action-button-secondary flex-1">Atrás</button>
+                                <button type="submit" className="action-button flex-1">Siguiente</button>
                             </div>
                         </form>
                     )}
 
-                    {/* PASO 3: Foto de Perfil */}
+                    {/* Paso 3: foto de perfil */}
                     {paso === 3 && (
                         <form className="flex flex-col gap-4" onSubmit={handleSubmitFinal} noValidate>
                             <div className="flex flex-col gap-1.5">
-                                <label htmlFor="foto" className="text-sm font-semibold text-text-body-dark text-center">Sube tu Foto de Perfil</label>
-                                <input type="file" id="foto" accept="image/jpeg,image/png,image/webp" onChange={handleCambioFoto} className="w-full p-2 border border-border-dark rounded-lg bg-bg-dark text-text-body-dark file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover transition-all" />
+                                <label htmlFor="foto" className="text-sm font-semibold text-ink-soft text-center">Sube tu foto de perfil</label>
+                                <input type="file" id="foto" accept="image/jpeg,image/png,image/webp" onChange={handleCambioFoto} className="w-full p-2 border border-line rounded-lg bg-field text-ink-soft file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-brand file:text-on-brand hover:file:bg-brand-hover transition-all" />
                             </div>
 
                             {previewFoto && (
-                                <div className="mx-auto w-32 h-32 mt-4 rounded-full overflow-hidden border-4 border-neon-blue shadow-[0_0_15px_var(--color-neon-blue)]">
+                                <div className="mx-auto w-32 h-32 mt-4 rounded-full overflow-hidden border-4 border-accent shadow-glow">
                                     <img src={previewFoto} alt="Previsualización" className="w-full h-full object-cover" />
                                 </div>
                             )}
 
                             <div className="flex gap-4 mt-6">
-                                <button type="button" onClick={handleAnterior} className="flex-1 border border-border-dark text-text-body-dark font-bold py-3 px-4 rounded-lg hover:bg-bg-dark transition-colors">Atrás</button>
-                                <button type="submit" disabled={enviando} className="flex-1 bg-linear-to-r from-primary to-neon-blue hover:from-primary-hover text-text-title-dark font-bold py-3 px-4 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50">{enviando ? "Enviando..." : "Finalizar"}</button>
+                                <button type="button" onClick={handleAnterior} className="action-button action-button-secondary flex-1">Atrás</button>
+                                <button type="submit" disabled={enviando} className="action-button flex-1">{enviando ? "Enviando..." : "Finalizar"}</button>
                             </div>
                         </form>
                     )}
-                    <p className="text-center text-sm text-text-muted-dark mt-6">
+                    <p className="text-center text-sm text-ink-muted mt-6">
                         ¿Ya tienes cuenta?{" "}
-                        <Link to="/login" className="text-neon-blue font-bold hover:underline transition-all">
-                            Inicia Sesión
+                        <Link to="/login" className="text-accent font-bold hover:underline transition-all">
+                            Inicia sesión
                         </Link>
                     </p>
 
                 </div>
-            </motion.div>
-        </div>
+        </PantallaAuth>
     );
 }
 

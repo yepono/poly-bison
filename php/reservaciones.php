@@ -1,29 +1,8 @@
 <?php
-// ============================================================
-// reservaciones.php - Sección Reservación de aulas (+ horarios)
-// Acción por parámetro: reservaciones.php?accion=...
-// Todas requieren sesión.
-//
-//   GET  aulas                         aulas activas
-//   GET  bloques                       horarios activos (todos=1 -> también
-//                                      inactivos, solo Administrador)
-//   GET  disponibilidad&id_aula=&fecha=  horarios del día con fn_aula_disponible
-//   POST crear            (JSON)       id_aula, fecha, id_bloque, asistentes[]
-//                                      quien reserva se agrega solo (Q1-A)
-//                                      -> sp_reservacion CREAR (usa fn_aula_disponible y
-//                                         fn_generar_ticket) + AGREGAR_ASISTENTE
-//                                         Disparan: trg_reservacion_fecha_bi (fecha pasada)
-//                                         y trg_asistente_capacidad_bi (capacidad, con
-//                                         fn_asistentes_reservacion)
-//   GET  mis_reservaciones             vw_reservaciones_detalle del usuario
-//                                      (total_asistentes = fn_asistentes_reservacion)
-//   POST cancelar         (JSON)       id_reservacion -> sp_reservacion CANCELAR
-// Administrador / Moderador:
-//   GET  historial                     vw_reservaciones_detalle (todas)
-// Solo Administrador (panel "Horarios", D9):
-//   POST bloque_crear | bloque_editar | bloque_activar | bloque_desactivar (JSON)
-//                                      -> sp_bloque_horario
-// ============================================================
+// Reservación de aulas. Con sesión se pueden ver las aulas, los horarios y su disponibilidad,
+// reservar (quien reserva se agrega solo y puede sumar acompañantes) y ver o cancelar las
+// reservaciones propias. Administradores y moderadores ven el historial completo, y solo el
+// administrador puede crear, editar, activar o desactivar horarios.
 require __DIR__ . "/config.php";
 
 const ROLES_STAFF = ["Administrador", "Moderador"];
@@ -35,8 +14,7 @@ const DUPLICADOS_RESERVACION = [
     "hora_inicio"    => "Ese horario ya existe",
 ];
 
-// ---------- Helpers ----------
-
+// Funciones de apoyo
 function spReservacion(mysqli $conn, string $accion, array $p): array {
     return callProcedure($conn, "sp_reservacion", "siiisiss", [
         $accion,
@@ -67,7 +45,7 @@ function leerFecha(?string $valor): ?string {
     return checkdate($m, $d, $a) ? $valor : null;
 }
 
-// Hora HH:MM válida -> "HH:MM:00" o null
+// Convierte una hora HH:MM al formato de MySQL, o null si no es válida
 function leerHora(string $valor): ?string {
     return preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $valor) ? $valor . ":00" : null;
 }
@@ -106,8 +84,7 @@ function bloqueYaPaso(string $fecha, string $horaInicio): bool {
     return $fecha === date("Y-m-d") && substr($horaInicio, 0, 5) <= date("H:i");
 }
 
-// ---------- Acciones ----------
-
+// Acciones
 function accionAulas(mysqli $conn): never {
     requireMethod("GET");
     requireLogin($conn);
@@ -175,7 +152,7 @@ function accionCrear(mysqli $conn): never {
     if ($fecha < date("Y-m-d")) jsonError(400, "No puedes reservar en una fecha pasada", "fecha");
     if ($idBloque === null || $idBloque <= 0) jsonError(400, "Selecciona un horario", "horario");
 
-    // Quien reserva: nombre y matrícula salen de la BD (Q1-A)
+    // Quien reserva se agrega solo, con su nombre y matrícula de la base de datos
     $stmt = $conn->prepare("SELECT nombre_completo, matricula FROM Usuario WHERE id_usuario = ?");
     $stmt->bind_param("i", $actor);
     $stmt->execute();
@@ -272,7 +249,7 @@ function accionCancelar(mysqli $conn): never {
     $u = requireLogin($conn);
     $id = inputInt(readJsonBody(), "id_reservacion");
     if ($id === null || $id <= 0) jsonError(400, "Reservación no válida");
-    // CANCELAR valida: existe (404), es del usuario (403), sigue activa y no es pasada (409)
+    // La rutina revisa que la reservación exista, sea del usuario, siga activa y no haya pasado
     spReservacion($conn, "CANCELAR", ["id_reservacion" => $id, "id_actor" => (int)$u["id_usuario"]]);
     jsonResponse(["success" => true, "message" => "Reservación cancelada"]);
 }
@@ -313,7 +290,7 @@ function accionBloque(mysqli $conn, string $accionSp): never {
     jsonResponse(["success" => true, "message" => "Horario actualizado"]);
 }
 
-// ---------- Ruteo ----------
+// Según la acción pedida se llama a la función que corresponde
 $accion = inputStr($_GET, "accion");
 
 try {

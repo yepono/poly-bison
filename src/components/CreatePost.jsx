@@ -7,8 +7,8 @@ const TITULO_MAX = 250;
 const CONTENIDO_MAX = 600;
 
 // Crear publicación, o editarla si recibe `post` (solo el autor).
-// onDone(post) se llama al guardar correctamente.
-function CreatePost({ post = null, onDone }) {
+// Al guardar bien se llama a onDone con la publicación.
+function CreatePost({ post = null, onDone, enModal = false, autoFocus = false }) {
     const { createPost, updatePost } = useAppData();
     const editando = Boolean(post);
     const [etiquetas, setEtiquetas] = useState([]);
@@ -22,7 +22,7 @@ function CreatePost({ post = null, onDone }) {
     const [error, setError] = useState("");
     const [enviando, setEnviando] = useState(false);
 
-    // Catálogo de etiquetas (D6)
+    // Catálogo de etiquetas
     useEffect(() => {
         let cancelled = false;
         api("publicaciones", "etiquetas")
@@ -119,11 +119,11 @@ function CreatePost({ post = null, onDone }) {
     };
 
     return (
-        <div className="bg-surface-dark/50 border border-border-dark rounded-2xl p-6 shadow-[0_5px_15px_rgba(0,0,0,0.5)] mb-8">
+        <div className={enModal ? "p-6" : "card mb-8"}>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
 
 
-                <div className={`relative w-full rounded-xl overflow-hidden transition-all duration-300 ${previewURL ? 'h-64 sm:h-72' : 'h-auto border-b border-border-dark'}`}>
+                <div className={`relative w-full rounded-xl overflow-hidden transition-all duration-300 ${previewURL ? 'h-64 sm:h-72' : 'h-auto border-b border-line'}`}>
 
                     {previewURL && (
                         <>
@@ -133,13 +133,13 @@ function CreatePost({ post = null, onDone }) {
                                 className="absolute inset-0 w-full h-full object-cover"
                             />
 
-                            <div className="absolute inset-0 bg-linear-to-b from-bg-deep/90 via-bg-deep/30 to-transparent"></div>
+                            <div className="absolute inset-0 bg-linear-to-b from-black/70 via-black/30 to-transparent"></div>
 
                             <button
                                 type="button"
                                 onClick={removerImagen}
                                 aria-label="Quitar imagen"
-                                className="absolute top-3 right-3 bg-bg-deep/60 hover:bg-secondary/80 text-white rounded-full p-2 backdrop-blur-sm transition-colors z-20"
+                                className="absolute top-3 right-3 bg-black/50 hover:bg-danger-solid/80 text-white rounded-full p-2 backdrop-blur-sm transition-colors z-20"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -155,17 +155,18 @@ function CreatePost({ post = null, onDone }) {
                         maxLength={TITULO_MAX}
                         required
                         aria-label="Título de la publicación"
+                        autoFocus={autoFocus}
                         onChange={(e) => setTitulo(e.target.value)}
                         className={`w-full bg-transparent font-bold focus:outline-none relative z-10 transition-all
                             ${previewURL
                                 ? 'absolute top-4 left-4 right-4 text-2xl sm:text-3xl text-white placeholder-white/70 drop-shadow-md w-[calc(100%-2rem)]'
-                                : 'p-2 text-xl sm:text-2xl text-text-title-dark placeholder-text-muted-dark'
+                                : 'p-2 text-xl sm:text-2xl text-ink placeholder-ink-muted'
                             }`}
                     />
                 </div>
 
                 <textarea
-                    className="w-full min-h-20 p-2 bg-transparent text-text-title-dark placeholder-text-muted-dark focus:outline-none resize-none custom-scrollbar text-sm sm:text-base"
+                    className="w-full min-h-20 p-2 bg-transparent text-ink placeholder-ink-muted focus:outline-none resize-none custom-scrollbar text-sm sm:text-base"
                     placeholder="¿Qué está pasando en la facultad?"
                     value={contenido}
                     maxLength={CONTENIDO_MAX}
@@ -182,25 +183,25 @@ function CreatePost({ post = null, onDone }) {
                         onChange={(e) => setVideoUrl(e.target.value)}
                         placeholder="Enlace de YouTube (https://www.youtube.com/watch?v=...)"
                         aria-label="Enlace de video de YouTube"
-                        className="w-full p-2 bg-transparent border-b border-border-dark text-text-title-dark placeholder-text-muted-dark focus:outline-none text-sm"
+                        className="w-full p-2 bg-transparent border-b border-line text-ink placeholder-ink-muted focus:outline-none text-sm"
                     />
                 )}
 
-                {error && <p role="alert" className="text-sm text-neon-red">{error}</p>}
+                {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 
-                <div className="flex flex-wrap items-center justify-between gap-4 mt-2 pt-4 border-t border-border-dark">
+                <div className="flex flex-wrap items-center justify-between gap-4 mt-2 pt-4 border-t border-line">
 
                     <div className="flex items-center gap-4 w-full sm:w-auto">
 
-                        <label className="cursor-pointer text-text-body-dark hover:text-neon-blue transition-colors flex items-center gap-2 p-2 rounded-lg hover:bg-primary/50">
+                        <label className="cursor-pointer text-ink-soft hover:text-accent transition-colors flex items-center gap-2 p-2 rounded-lg hover:bg-accent/10 focus-within:outline-2 focus-within:outline-accent">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            <span className="text-sm font-semibold hidden sm:inline">Añadir Foto</span>
-                            <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImagen} />
+                            <span className="text-sm font-semibold hidden sm:inline">Añadir foto</span>
+                            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={handleImagen} />
                         </label>
 
-                        <button type="button" onClick={alternarVideo} aria-pressed={mostrarVideo} className="cursor-pointer text-text-body-dark hover:text-neon-blue transition-colors flex items-center gap-2 p-2 rounded-lg hover:bg-primary/50">
+                        <button type="button" onClick={alternarVideo} aria-pressed={mostrarVideo} className="cursor-pointer text-ink-soft hover:text-accent transition-colors flex items-center gap-2 p-2 rounded-lg hover:bg-accent/10">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
@@ -213,11 +214,12 @@ function CreatePost({ post = null, onDone }) {
                                 onChange={(val) => setEtiqueta(val)}
                                 options={etiquetas.map((item) => ({ value: String(item.id_etiqueta), label: item.nombre }))}
                                 placeholder="Etiqueta"
+                                ariaLabel="Etiqueta de la publicación"
                             />
                         </div>
                     </div>
 
-                    <button type="submit" disabled={!contenido.trim() || !titulo.trim() || enviando} className="min-h-11 bg-linear-to-r from-primary to-secondary hover:from-primary-hover hover:to-secondary-hover text-white font-bold py-2 px-6 rounded-lg transition-colors w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-50">
+                    <button type="submit" disabled={!contenido.trim() || !titulo.trim() || enviando} className="action-button w-full px-6 sm:w-auto">
                         {enviando ? "Guardando..." : editando ? "Guardar cambios" : "Publicar"}
                     </button>
                 </div>

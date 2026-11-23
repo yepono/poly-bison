@@ -1,13 +1,5 @@
 <?php
-// ============================================================
-// reacciones.php - Sección Reacciones (likes)
-// Acción por parámetro: reacciones.php?accion=...
-// Requiere sesión.
-//
-//   POST reaccionar (JSON)   id_publicacion; da o quita "Like"
-//                            -> sp_reaccion ALTERNAR (usa fn_total_reacciones)
-//                            Regresa { liked, total_likes }
-// ============================================================
+// Da o quita el "me gusta" de una publicación y regresa si quedó marcado y el total.
 require __DIR__ . "/config.php";
 
 function accionReaccionar(mysqli $conn): never {
