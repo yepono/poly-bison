@@ -6,6 +6,7 @@ import { useDialogos } from "../components/Dialogos";
 import PageHeader from "../components/PageHeader";
 import Pasos from "../components/Pasos";
 import SelectorFecha, { fechaLarga } from "../components/SelectorFecha";
+import { Cargando, EsqueletoLista, EstadoError, EstadoVacio } from "../components/Estados";
 
 
 // Íconos de las tarjetas de aula (se asignan en orden)
@@ -44,10 +45,11 @@ function Aulas() {
             .catch((err) => setError(err.message));
     }, []);
 
+    const [errorMisReservaciones, setErrorMisReservaciones] = useState("");
     const cargarMisReservaciones = useCallback(() => {
         api("reservaciones", "mis_reservaciones")
-            .then((response) => setMisReservaciones(response.reservaciones))
-            .catch((err) => setError(err.message));
+            .then((response) => { setMisReservaciones(response.reservaciones); setErrorMisReservaciones(""); })
+            .catch((err) => { setMisReservaciones((actual) => actual ?? []); setErrorMisReservaciones(err.message); });
     }, []);
 
     useEffect(() => { cargarMisReservaciones(); }, [cargarMisReservaciones]);
@@ -379,8 +381,9 @@ function Aulas() {
             {/* Mis reservaciones (Q2-A) */}
             <section className="card">
                 <h2 className="text-xl font-bold text-ink mb-4">Mis reservaciones</h2>
-                {misReservaciones === null && <p className="text-sm text-ink-muted" aria-busy="true">Cargando...</p>}
-                {misReservaciones?.length === 0 && <p className="text-sm text-ink-muted">Aún no tienes reservaciones.</p>}
+                {misReservaciones === null && <Cargando etiqueta="Cargando reservaciones"><EsqueletoLista filas={2} /></Cargando>}
+                {misReservaciones !== null && errorMisReservaciones && <EstadoError compacto mensaje="No se pudieron cargar tus reservaciones." onReintentar={() => { setMisReservaciones(null); setErrorMisReservaciones(""); cargarMisReservaciones(); }} />}
+                {misReservaciones?.length === 0 && !errorMisReservaciones && <EstadoVacio compacto icono="calendario" titulo="Aún no tienes reservaciones" detalle="Las aulas que apartes aparecerán aquí con su ticket." />}
                 <div className="flex flex-col gap-3">
                     {misReservaciones?.map((item) => {
                         const cancelable = item.estado === "Activa" && item.fecha_reserva >= hoyISO();
@@ -391,7 +394,7 @@ function Aulas() {
                                     <p className="text-xs text-ink-muted">Ticket <span className="font-mono">{item.codigo_ticket}</span> · {item.total_asistentes} asistente(s) · {item.estado}</p>
                                 </div>
                                 {cancelable && (
-                                    <button type="button" onClick={() => cancelarReservacion(item)} className="p-2.5 bg-danger/20 text-danger rounded-lg hover:bg-danger/40 transition-colors text-sm font-semibold">
+                                    <button type="button" onClick={() => cancelarReservacion(item)} className="action-button action-button-secondary action-button-sm text-danger">
                                         Cancelar
                                     </button>
                                 )}

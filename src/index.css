@@ -89,6 +89,10 @@
 
 @layer components {
   /* Barra de desplazamiento discreta (la clase se usaba pero no estaba definida) */
+  /* Campos numéricos sin las flechas del navegador */
+  .sin-flechas { appearance: textfield; -moz-appearance: textfield; }
+  .sin-flechas::-webkit-inner-spin-button, .sin-flechas::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
   .custom-scrollbar { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 
   /* Anchos estándar de página (ver PageHeader.jsx) */
@@ -176,7 +180,6 @@
   .stat-strip dt { @apply text-xs font-medium text-ink-muted; }
   .stat-strip dd { @apply mt-0.5 text-2xl font-bold tabular-nums text-ink; }
 
-  .admin-filters { @apply grid gap-4 sm:grid-cols-2 lg:grid-cols-4; }
   .admin-table-wrap { @apply w-full overflow-x-auto rounded-xl border border-line; }
   .admin-table { @apply w-full min-w-[760px] border-collapse text-left text-sm; }
   .admin-table th { @apply whitespace-nowrap bg-surface px-4 py-3 font-bold text-ink; }

@@ -1,9 +1,16 @@
 // Secciones del panel de administración conectadas a la API (Paso 5).
-// Mismo marcado y clases que tenían en Admin.jsx; solo cambia el origen de datos.
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 import { useDialogos } from "./Dialogos";
 import CustomSelect from "./CustomSelect";
+import PanelLateral from "./PanelLateral";
+import MenuAcciones from "./MenuAcciones";
+import Interruptor from "./Interruptor";
+import CampoFechaHora from "./CampoFechaHora";
+import { EsqueletoFilas, EstadoError, EstadoVacio } from "./Estados";
+import { EstadoStock, ImagenProducto } from "./ProductModal";
+import { colorPuntoEvento } from "../utils/eventStyles";
 import { api, formatDia, formatFechaHora, formatHora, formatPrecio, formatRangoFechaHora, formatRangoHoras, mapProducto, toDateTimeLocal, validarImagen } from "../api/client";
 
 const EVENT_TYPES = ["Académico", "Examen", "Asueto", "Cultural", "Deportivo"];
@@ -188,358 +195,543 @@ export function AdminResumen({ setNotice, onIrA }) {
     </>;
 }
 
+// =====================================================================================
+// Patrón común de las pestañas con tabla:
+//   tarjeta -> título + conteo -> barra (búsqueda a la izquierda, filtros, botón principal a la
+//   derecha) -> tabla de solo lectura con estados (cargando / error / vacío).
+//   Crear y editar abren el MISMO <PanelLateral>. Cambios de un solo valor (estado, visible,
+//   activo) se hacen en la fila. Acciones secundarias van en el menú "⋯"; eliminar siempre pide
+//   confirmación.
+// =====================================================================================
+
+// Carga una lista: datos = null mientras carga. `cargar` debe ser estable (función de módulo).
+function useLista(cargar) {
+    const [datos, setDatos] = useState(null);
+    const [error, setError] = useState("");
+    const recargar = useCallback(() => cargar()
+        .then((lista) => { setDatos(lista); setError(""); })
+        .catch((err) => { setError(err.message); setDatos((actual) => actual ?? []); }), [cargar]);
+    useEffect(() => { recargar(); }, [recargar]);
+    // "Reintentar": vuelve a mostrar el esqueleto
+    const reintentar = () => { setDatos(null); setError(""); recargar(); };
+    return { datos, setDatos, error, recargar, reintentar };
+}
+
+export function SeccionAdmin({ titulo, detalle, busqueda, onBusqueda, placeholder = "Buscar…", filtros, accion, children }) {
+    return (
+        <section className="card">
+            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                <div>
+                    <h2 className="text-lg font-bold text-ink">{titulo}</h2>
+                    {detalle && <p className="mt-0.5 text-sm text-ink-muted">{detalle}</p>}
+                </div>
+            </div>
+            <div className="mt-4 flex flex-wrap items-end gap-3">
+                {onBusqueda && (
+                    <div className="relative min-w-48 flex-1 sm:max-w-sm">
+                        <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                            <path strokeLinecap="round" d="M21 21l-5-5m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+                        </svg>
+                        <input type="search" aria-label={placeholder} placeholder={placeholder} value={busqueda} onChange={(e) => onBusqueda(e.target.value)} className="form-input pl-9" />
+                    </div>
+                )}
+                {filtros}
+                {accion && <div className="ml-auto">{accion}</div>}
+            </div>
+            {children}
+        </section>
+    );
+}
+
+export function TablaAdmin({ columnas, cargando, error, onReintentar, hayFilas, vacio, children }) {
+    return (
+        <div className="admin-table-wrap mt-4" aria-busy={cargando || undefined}>
+            <table className="admin-table">
+                <thead><tr>{columnas.map((c) => <th key={c} className={c === "Acciones" ? "w-px text-right" : undefined}>{c}</th>)}</tr></thead>
+                <tbody>{cargando ? <EsqueletoFilas columnas={columnas.length} /> : children}</tbody>
+            </table>
+            {cargando && <span className="sr-only" role="status">Cargando…</span>}
+            {!cargando && error && <EstadoError compacto mensaje={error} onReintentar={onReintentar} />}
+            {!cargando && !error && !hayFilas && <EstadoVacio compacto {...vacio} />}
+        </div>
+    );
+}
+
+// Botón "Editar" + menú "⋯" (última columna de todas las tablas)
+function AccionesFila({ nombre, onEditar, extra = [] }) {
+    return (
+        <div className="flex items-center justify-end gap-1">
+            {onEditar && (
+                <button type="button" onClick={onEditar} aria-label={`Editar ${nombre}`} className="min-h-9 rounded-lg px-3 text-sm font-semibold text-accent hover:bg-accent/10">
+                    Editar
+                </button>
+            )}
+            <MenuAcciones etiqueta={`Más acciones para ${nombre}`} acciones={extra} />
+        </div>
+    );
+}
+
+// Fila oculta/inactiva: se atenúan los datos, no los controles (interruptor y acciones)
+const ATENUADA = "[&>td:not(:nth-last-child(-n+2))]:opacity-55";
+const coincide = (texto, busqueda) => texto.toLowerCase().includes(busqueda.trim().toLowerCase());
+const vacioBusqueda = (limpiar) => ({ icono: "buscar", titulo: "Sin resultados", detalle: "Prueba con otra búsqueda o quita los filtros.", accion: { texto: "Limpiar filtros", onClick: limpiar } });
+
 // ---------- Bitácora (solo Administrador, D18) ----------
 // Datos: reportes.php?accion=bitacora -> vw_bitacora (Event_Log que llenan los triggers)
-export function AdminBitacora({ search, setSearch, setNotice }) {
-    const [registros, setRegistros] = useState(null);
+const cargarBitacora = () => api("reportes", "bitacora").then((r) => r.registros);
 
-    useEffect(() => {
-        let cancelled = false;
-        api("reportes", "bitacora")
-            .then((response) => { if (!cancelled) setRegistros(response.registros); })
-            .catch((err) => { if (!cancelled) { setRegistros([]); setNotice(err.message); } });
-        return () => { cancelled = true; };
-    }, [setNotice]);
+export function AdminBitacora({ search, setSearch }) {
+    const { datos, error, reintentar } = useLista(cargarBitacora);
+    const lista = (datos ?? []).filter((item) => coincide(`${item.accion} ${item.detalle || ""} ${item.realizado_por} ${item.tabla_afectada}`, search));
 
-    const lista = (registros ?? []).filter((item) => `${item.accion} ${item.detalle || ""} ${item.realizado_por}`.toLowerCase().includes(search.toLowerCase()));
-
-    return <section className="settings-section"><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-lg font-bold text-ink">Bitácora del sistema</h2><p className="mt-1 text-sm text-ink-muted">{registros === null ? "Cargando..." : `Últimos ${registros.length} movimientos registrados`}</p></div><label className="form-label w-full sm:max-w-sm">Buscar<input className="form-input" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Acción, detalle o usuario"/></label></div><div className="admin-table-wrap mt-4"><table className="admin-table"><thead><tr><th>Fecha</th><th>Acción</th><th>Detalle</th><th>Realizado por</th></tr></thead><tbody>{lista.map((item) => <tr key={item.id_log}><td className="whitespace-nowrap">{formatFechaHora(item.fecha)}</td><td>{item.accion}<small>{item.tabla_afectada}{item.id_registro_afectado ? ` #${item.id_registro_afectado}` : ""}</small></td><td>{item.detalle}</td><td>{item.realizado_por === "Sistema" ? "Sistema" : `@${item.realizado_por}`}</td></tr>)}</tbody></table>{registros !== null && !lista.length && <p className="p-6 text-center text-ink-muted">No hay movimientos que coincidan.</p>}</div></section>;
+    return (
+        <SeccionAdmin titulo="Bitácora del sistema" detalle={datos && !error ? `Últimos ${datos.length} movimientos registrados` : " "} busqueda={search} onBusqueda={setSearch} placeholder="Acción, detalle o usuario">
+            <TablaAdmin
+                columnas={["Fecha", "Acción", "Detalle", "Realizado por"]}
+                cargando={datos === null} error={error} onReintentar={reintentar} hayFilas={lista.length > 0}
+                vacio={search ? vacioBusqueda(() => setSearch("")) : { icono: "reloj", titulo: "Sin movimientos", detalle: "Aquí aparecerán los cambios que se hagan en el sistema." }}
+            >
+                {lista.map((item) => (
+                    <tr key={item.id_log}>
+                        <td className="whitespace-nowrap">{formatFechaHora(item.fecha)}</td>
+                        <td>{item.accion}<small>{item.tabla_afectada}{item.id_registro_afectado ? ` #${item.id_registro_afectado}` : ""}</small></td>
+                        <td>{item.detalle}</td>
+                        <td>{item.realizado_por === "Sistema" ? "Sistema" : `@${item.realizado_por}`}</td>
+                    </tr>
+                ))}
+            </TablaAdmin>
+        </SeccionAdmin>
+    );
 }
-const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
-const PRECIO = /^\d{1,6}(\.\d{1,2})?$/;
 
 // ---------- Rentas: historial global (Administrador y Moderador) ----------
-export function AdminRentas({ search, setSearch, setNotice }) {
-    const [reservations, setReservations] = useState(null);
+const cargarRentas = () => api("reservaciones", "historial").then((r) => r.reservaciones);
 
-    useEffect(() => {
-        let cancelled = false;
-        api("reservaciones", "historial")
-            .then((response) => { if (!cancelled) setReservations(response.reservaciones); })
-            .catch((err) => { if (!cancelled) { setReservations([]); setNotice(err.message); } });
-        return () => { cancelled = true; };
-    }, [setNotice]);
+export function AdminRentas({ search, setSearch }) {
+    const { datos, error, reintentar } = useLista(cargarRentas);
+    const [estado, setEstado] = useState("");
+    const estados = [...new Set((datos ?? []).map((r) => r.estado))].sort();
+    const lista = (datos ?? []).filter((item) => (!estado || item.estado === estado)
+        && coincide(`${item.aula} ${item.alias} ${item.matricula || ""} ${item.codigo_ticket}`, search));
+    const limpiar = () => { setSearch(""); setEstado(""); };
 
-    const lista = (reservations ?? []).filter((item) => `${item.aula} ${item.alias} ${item.matricula || ""} ${item.codigo_ticket}`.toLowerCase().includes(search.toLowerCase()));
-
-    return <section className="settings-section"><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-lg font-bold text-ink">Historial global de rentas de aulas</h2><p className="mt-1 text-sm text-ink-muted">{reservations === null ? "Cargando..." : `${reservations.length} reservaciones registradas`}</p></div><label className="form-label w-full sm:max-w-sm">Buscar usuario, aula o ticket<input className="form-input" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Alias, matrícula, aula o ticket"/></label></div><div className="admin-table-wrap mt-4"><table className="admin-table"><thead><tr><th>Aula</th><th>Usuario</th><th>Matrícula</th><th>Fecha</th><th>Horario</th><th>Ticket</th><th>Estado</th></tr></thead><tbody>{lista.map((item) => <tr key={item.id_reservacion}><td>{item.aula}<small>{item.total_asistentes} asistente(s)</small></td><td>@{item.alias}</td><td>{item.matricula || "-"}</td><td className="whitespace-nowrap">{formatDia(item.fecha_reserva)}</td><td className="whitespace-nowrap">{formatRangoHoras(item.hora_inicio, item.hora_fin)}</td><td className="font-mono">{item.codigo_ticket}</td><td>{item.estado}</td></tr>)}</tbody></table>{reservations !== null && !lista.length && <p className="p-6 text-center text-ink-muted">No hay reservaciones que coincidan.</p>}</div></section>;
+    return (
+        <SeccionAdmin
+            titulo="Historial de rentas de aulas"
+            detalle={datos && !error ? `${datos.length} reservaciones registradas` : " "}
+            busqueda={search} onBusqueda={setSearch} placeholder="Alias, matrícula, aula o ticket"
+            filtros={estados.length > 1 && <CustomSelect ariaLabel="Filtrar por estado" className="w-44" value={estado} onChange={setEstado} options={[{ value: "", label: "Todos los estados" }, ...estados.map((e) => ({ value: e, label: e }))]} />}
+        >
+            <TablaAdmin
+                columnas={["Aula", "Usuario", "Matrícula", "Fecha", "Horario", "Ticket", "Estado"]}
+                cargando={datos === null} error={error} onReintentar={reintentar} hayFilas={lista.length > 0}
+                vacio={search || estado ? vacioBusqueda(limpiar) : { icono: "calendario", titulo: "Aún no hay reservaciones", detalle: "Cuando alguien aparte un aula aparecerá aquí." }}
+            >
+                {lista.map((item) => (
+                    <tr key={item.id_reservacion}>
+                        <td>{item.aula}<small>{item.total_asistentes} asistente(s)</small></td>
+                        <td>@{item.alias}</td>
+                        <td>{item.matricula || "—"}</td>
+                        <td className="whitespace-nowrap">{formatDia(item.fecha_reserva)}</td>
+                        <td className="whitespace-nowrap">{formatRangoHoras(item.hora_inicio, item.hora_fin)}</td>
+                        <td className="font-mono">{item.codigo_ticket}</td>
+                        <td>{item.estado}</td>
+                    </tr>
+                ))}
+            </TablaAdmin>
+        </SeccionAdmin>
+    );
 }
 
 // ---------- Horarios (solo Administrador, D9) ----------
+const cargarBloques = () => api("reservaciones", "bloques", { params: { todos: 1 } }).then((r) => r.bloques);
+// Horas cada 30 minutos de 06:00 a 22:00
+const HORAS_BLOQUE = Array.from({ length: 33 }, (_, i) => `${String(6 + Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`);
+
 export function AdminHorarios({ setNotice }) {
-    const { pedirTexto } = useDialogos();
-    const [bloques, setBloques] = useState([]);
-
-    const cargar = useCallback(() => {
-        return api("reservaciones", "bloques", { params: { todos: 1 } })
-            .then((response) => setBloques(response.bloques))
-            .catch((err) => setNotice(err.message));
-    }, [setNotice]);
-
-    useEffect(() => { cargar(); }, [cargar]);
-
-    const ejecutar = async (accion, body, mensaje) => {
-        try {
-            await api("reservaciones", accion, { method: "POST", body });
-            setNotice(mensaje);
-            await cargar();
-        } catch (err) {
-            setNotice(err.message);
-        }
-    };
-
-    const agregar = (event) => {
-        event.preventDefault();
-        const form = event.currentTarget;
-        const start = form.elements.start.value;
-        const end = form.elements.end.value;
-        if (!HORA.test(start) || !HORA.test(end) || end <= start) {
-            setNotice("La hora de fin debe ser posterior a la de inicio.");
-            return;
-        }
-        ejecutar("bloque_crear", { hora_inicio: start, hora_fin: end }, "Horario agregado.").then(() => form.reset());
-    };
-
-    const editar = async (bloque) => {
-        const actual = `${formatHora(bloque.hora_inicio)} - ${formatHora(bloque.hora_fin)}`;
-        const replacement = await pedirTexto({
-            titulo: "Editar horario",
-            etiqueta: "Bloque (HH:MM - HH:MM)",
-            valor: actual,
-            maxLength: 13,
-            validar: (texto) => {
-                const match = texto.match(/^([01]\d|2[0-3]):([0-5]\d) - ([01]\d|2[0-3]):([0-5]\d)$/);
-                if (!match) return "Formato no válido. Usa HH:MM - HH:MM, por ejemplo 07:00 - 08:00.";
-                const [inicio, fin] = texto.split(" - ");
-                return fin <= inicio ? "La hora de fin debe ser posterior a la de inicio." : "";
-            },
-        });
-        if (replacement === null || replacement === actual) return;
-        const [inicio, fin] = replacement.split(" - ");
-        ejecutar("bloque_editar", { id_bloque: bloque.id_bloque, hora_inicio: inicio, hora_fin: fin }, "Horario actualizado.");
-    };
-
-    return <section className="settings-section"><h2 className="text-lg font-bold text-ink">Editar horarios disponibles</h2><p className="mt-1 text-sm text-ink-muted">Los horarios activos se ofrecen en Reserva de Aulas. Un horario con reservaciones no se puede editar: desactívalo y crea uno nuevo.</p><form className="mt-5 flex flex-wrap items-end gap-3" onSubmit={agregar}><label className="form-label">Agregar bloque<input required name="start" type="time" className="form-input"/></label><label className="form-label">Fin<input required name="end" type="time" className="form-input"/></label><button className="action-button">Agregar horario</button></form><div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{bloques.map((bloque) => { const slot = formatRangoHoras(bloque.hora_inicio, bloque.hora_fin); return <div key={bloque.id_bloque} className={`flex items-center justify-between gap-3 rounded-lg border border-line bg-field p-3 ${bloque.activo ? "" : "opacity-60"}`}><span className="font-semibold text-ink">{slot}{!bloque.activo && <small className="block text-xs font-normal text-ink-muted">Inactivo</small>}</span><div><button type="button" onClick={() => editar(bloque)} aria-label={`Editar ${slot}`} className="min-h-11 rounded-md px-3 text-accent hover:bg-brand/10">Editar</button>{bloque.activo ? <button type="button" onClick={() => ejecutar("bloque_desactivar", { id_bloque: bloque.id_bloque }, "Horario desactivado.")} aria-label={`Desactivar ${slot}`} className="min-h-11 rounded-md px-3 text-danger hover:bg-danger/10">Desactivar</button> : <button type="button" onClick={() => ejecutar("bloque_activar", { id_bloque: bloque.id_bloque }, "Horario activado.")} aria-label={`Activar ${slot}`} className="min-h-11 rounded-md px-3 text-accent hover:bg-brand/10">Activar</button>}</div></div>; })}</div></section>;
-}
-
-// ---------- Tienda (solo Administrador, D10) ----------
-const productoVacio = { titulo: "", precio: "", id_categoria: "", stock: "0", descripcionCorta: "" };
-
-// Mensaje de error de los campos de un producto, o ""
-function validarProducto({ titulo, precio, stock, descripcionCorta }) {
-    if (titulo !== undefined && (!titulo.trim() || titulo.trim().length > 200)) return "El nombre es obligatorio (máximo 200 caracteres).";
-    if (precio !== undefined && (!PRECIO.test(String(precio).trim()) || Number(precio) > 999999.99)) return "Escribe un precio válido (máximo 2 decimales).";
-    if (stock !== undefined && (!/^\d+$/.test(String(stock).trim()) || Number(stock) > 100000)) return "El stock debe ser un número entero entre 0 y 100000.";
-    if (descripcionCorta !== undefined && descripcionCorta.trim().length > 500) return "La descripción no puede tener más de 500 caracteres.";
-    return "";
-}
-
-export function AdminTienda({ setNotice }) {
-    const { confirmar } = useDialogos();
-    const [products, setProducts] = useState([]);
-    const [categorias, setCategorias] = useState([]);
-    const [productForm, setProductForm] = useState(productoVacio);
-    const [imagen, setImagen] = useState(null);
-    const [borradores, setBorradores] = useState({}); // ediciones por fila sin guardar
+    const { avisar } = useDialogos();
+    const { datos, error, recargar, reintentar } = useLista(cargarBloques);
+    const [panel, setPanel] = useState(null); // { bloque?, inicio, fin }
+    const [errorPanel, setErrorPanel] = useState("");
     const [guardando, setGuardando] = useState(false);
+    const [cambiando, setCambiando] = useState(null);
 
-    const cargar = useCallback(() => {
-        return api("productos", "listar")
-            .then((response) => setProducts(response.productos.map(mapProducto)))
-            .catch((err) => setNotice(err.message));
-    }, [setNotice]);
+    const abrir = (bloque = null) => {
+        setErrorPanel("");
+        setPanel({ bloque, inicio: bloque ? formatHora(bloque.hora_inicio) : "07:00", fin: bloque ? formatHora(bloque.hora_fin) : "08:00" });
+    };
 
-    useEffect(() => {
-        cargar();
-        api("productos", "categorias")
-            .then((response) => setCategorias(response.categorias))
-            .catch((err) => setNotice(err.message));
-    }, [cargar, setNotice]);
-
-    const createProduct = async (event) => {
-        event.preventDefault();
-        const problema = validarProducto(productForm) || (!productForm.id_categoria ? "Selecciona una categoría." : "") || validarImagen(imagen);
-        if (problema) {
-            setNotice(problema);
-            return;
-        }
-        const body = new FormData();
-        body.append("nombre", productForm.titulo.trim());
-        body.append("precio", productForm.precio.trim());
-        body.append("id_categoria", productForm.id_categoria);
-        body.append("stock", productForm.stock.trim());
-        body.append("descripcion", productForm.descripcionCorta.trim());
-        if (imagen) body.append("imagen", imagen);
+    const guardar = async () => {
+        const { bloque, inicio, fin } = panel;
+        if (!HORA.test(inicio) || !HORA.test(fin) || fin <= inicio) return setErrorPanel("La hora de fin debe ser posterior a la de inicio.");
+        if (bloque && inicio === formatHora(bloque.hora_inicio) && fin === formatHora(bloque.hora_fin)) return setPanel(null);
         setGuardando(true);
         try {
-            await api("productos", "crear", { method: "POST", body });
-            setProductForm(productoVacio);
-            setImagen(null);
-            event.target.reset();
-            setNotice("Artículo agregado al catálogo.");
-            await cargar();
+            await api("reservaciones", bloque ? "bloque_editar" : "bloque_crear", { method: "POST", body: { ...(bloque && { id_bloque: bloque.id_bloque }), hora_inicio: inicio, hora_fin: fin } });
+            avisar(bloque ? "Horario actualizado." : "Horario agregado.", "exito");
+            setPanel(null);
+            await recargar();
         } catch (err) {
-            setNotice(err.message);
+            setErrorPanel(err.message);
         } finally {
             setGuardando(false);
         }
     };
 
-    const valor = (product, campo) => borradores[product.id]?.[campo] ?? ({
-        titulo: product.titulo,
-        descripcionCorta: product.descripcionCorta,
-        precio: product.precioValor,
-        stock: String(product.stock),
-    })[campo];
-
-    const cambiar = (product, campo, nuevo) => setBorradores((current) => ({ ...current, [product.id]: { ...current[product.id], [campo]: nuevo } }));
-
-    const guardarFila = async (product) => {
-        const cambios = borradores[product.id] || {};
-        const problema = validarProducto(cambios);
-        if (problema) {
-            setNotice(problema);
-            return;
-        }
-        const body = new FormData();
-        body.append("id_producto", product.id);
-        if (cambios.titulo !== undefined) body.append("nombre", cambios.titulo.trim());
-        if (cambios.descripcionCorta !== undefined) body.append("descripcion", cambios.descripcionCorta.trim());
-        if (cambios.precio !== undefined) body.append("precio", String(cambios.precio).trim());
-        if (cambios.stock !== undefined) body.append("stock", String(cambios.stock).trim());
+    const alternarActivo = async (bloque, activo) => {
+        setCambiando(bloque.id_bloque);
         try {
-            await api("productos", "editar", { method: "POST", body });
-            setBorradores((current) => { const resto = { ...current }; delete resto[product.id]; return resto; });
-            setNotice("Producto actualizado.");
-            await cargar();
+            await api("reservaciones", activo ? "bloque_activar" : "bloque_desactivar", { method: "POST", body: { id_bloque: bloque.id_bloque } });
+            avisar(activo ? "Horario activado." : "Horario desactivado: ya no se ofrece en Reserva de aulas.", "exito");
+            await recargar();
         } catch (err) {
             setNotice(err.message);
+        } finally {
+            setCambiando(null);
         }
     };
 
-    const cambiarImagen = async (product, file) => {
+    const opcionesHora = (extra) => (extra && !HORAS_BLOQUE.includes(extra) ? [...HORAS_BLOQUE, extra].sort() : HORAS_BLOQUE).map((h) => ({ value: h, label: h }));
+    const lista = datos ?? [];
+
+    return (
+        <SeccionAdmin
+            titulo="Horarios disponibles"
+            detalle="Los horarios activos se ofrecen en Reserva de aulas. Un horario con reservaciones no se puede editar: desactívalo y crea uno nuevo."
+            accion={<button type="button" onClick={() => abrir()} className="action-button">+ Agregar horario</button>}
+        >
+            <TablaAdmin
+                columnas={["Bloque", "Duración", "Activo", "Acciones"]}
+                cargando={datos === null} error={error} onReintentar={reintentar} hayFilas={lista.length > 0}
+                vacio={{ icono: "reloj", titulo: "Sin horarios", detalle: "Agrega el primer bloque para que se puedan reservar aulas.", accion: { texto: "Agregar horario", onClick: () => abrir() } }}
+            >
+                {lista.map((bloque) => {
+                    const slot = formatRangoHoras(bloque.hora_inicio, bloque.hora_fin);
+                    const [h1, m1] = formatHora(bloque.hora_inicio).split(":").map(Number);
+                    const [h2, m2] = formatHora(bloque.hora_fin).split(":").map(Number);
+                    const minutos = h2 * 60 + m2 - (h1 * 60 + m1);
+                    return (
+                        <tr key={bloque.id_bloque} className={bloque.activo ? "" : ATENUADA}>
+                            <td className="whitespace-nowrap font-semibold text-ink">{slot}</td>
+                            <td>{minutos >= 60 ? `${Math.floor(minutos / 60)} h${minutos % 60 ? ` ${minutos % 60} min` : ""}` : `${minutos} min`}</td>
+                            <td><Interruptor activo={Boolean(bloque.activo)} etiqueta={`Horario ${slot} activo`} deshabilitado={cambiando === bloque.id_bloque} onCambiar={(v) => alternarActivo(bloque, v)} /></td>
+                            <td><AccionesFila nombre={slot} onEditar={() => abrir(bloque)} /></td>
+                        </tr>
+                    );
+                })}
+            </TablaAdmin>
+
+            <AnimatePresence>
+                {panel && (
+                    <PanelLateral
+                        titulo={panel.bloque ? "Editar horario" : "Nuevo horario"}
+                        subtitulo={panel.bloque ? formatRangoHoras(panel.bloque.hora_inicio, panel.bloque.hora_fin) : "Bloque que se podrá reservar"}
+                        accion={panel.bloque ? "Guardar cambios" : "Agregar horario"}
+                        onCerrar={() => setPanel(null)} onEnviar={guardar} guardando={guardando} error={errorPanel}
+                    >
+                        <div className="grid grid-cols-2 gap-4">
+                            <CustomSelect label="Inicio" value={panel.inicio} onChange={(inicio) => { setPanel({ ...panel, inicio }); setErrorPanel(""); }} options={opcionesHora(panel.inicio)} />
+                            <CustomSelect label="Fin" value={panel.fin} onChange={(fin) => { setPanel({ ...panel, fin }); setErrorPanel(""); }} options={opcionesHora(panel.fin)} />
+                        </div>
+                        <p className="text-sm text-ink-muted">Las reservaciones duran como máximo 1 hora.</p>
+                    </PanelLateral>
+                )}
+            </AnimatePresence>
+        </SeccionAdmin>
+    );
+}
+
+const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
+const PRECIO = /^\d{1,6}(\.\d{1,2})?$/;
+
+// ---------- Tienda (solo Administrador, D10) ----------
+const productoVacio = { titulo: "", precio: "", id_categoria: "", stock: "0", descripcionCorta: "" };
+const cargarProductos = () => api("productos", "listar").then((r) => r.productos.map(mapProducto));
+const cargarCategorias = () => api("productos", "categorias").then((r) => r.categorias);
+
+// Mensaje de error de los campos de un producto, o ""
+function validarProducto({ titulo, precio, stock, descripcionCorta, id_categoria }) {
+    if (!titulo.trim() || titulo.trim().length > 200) return "El nombre es obligatorio (máximo 200 caracteres).";
+    if (!id_categoria) return "Selecciona una categoría.";
+    if (!PRECIO.test(String(precio).trim()) || Number(precio) > 999999.99) return "Escribe un precio válido (máximo 2 decimales).";
+    if (!/^\d+$/.test(String(stock).trim()) || Number(stock) > 100000) return "El stock debe ser un número entero entre 0 y 100000.";
+    if (descripcionCorta.trim().length > 500) return "La descripción no puede tener más de 500 caracteres.";
+    return "";
+}
+
+export function AdminTienda() {
+    const { confirmar, avisar } = useDialogos();
+    const { datos, error, recargar, reintentar } = useLista(cargarProductos);
+    const { datos: categorias } = useLista(cargarCategorias);
+    const [busqueda, setBusqueda] = useState("");
+    const [categoria, setCategoria] = useState("");
+    const [panel, setPanel] = useState(null); // { producto?, form, imagen, vista }
+    const [errorPanel, setErrorPanel] = useState("");
+    const [guardando, setGuardando] = useState(false);
+
+    const abrir = (producto = null) => {
+        setErrorPanel("");
+        setPanel({
+            producto,
+            imagen: null,
+            vista: producto?.imagen ?? null,
+            form: producto
+                ? { titulo: producto.titulo, precio: String(producto.precioValor), id_categoria: String(producto.idCategoria ?? ""), stock: String(producto.stock), descripcionCorta: producto.descripcionCorta }
+                : productoVacio,
+        });
+    };
+    const campo = (nombre, valor) => { setPanel((p) => ({ ...p, form: { ...p.form, [nombre]: valor } })); setErrorPanel(""); };
+    const elegirImagen = (file) => {
+        if (!file) return;
         const problema = validarImagen(file);
-        if (!file || problema) {
-            if (problema) setNotice(problema);
-            return;
-        }
+        if (problema) return setErrorPanel(problema);
+        setErrorPanel("");
+        setPanel((p) => ({ ...p, imagen: file, vista: URL.createObjectURL(file) }));
+    };
+
+    const guardar = async () => {
+        const { producto, form, imagen } = panel;
+        const problema = validarProducto(form);
+        if (problema) return setErrorPanel(problema);
         const body = new FormData();
-        body.append("id_producto", product.id);
-        body.append("imagen", file);
+        const original = producto && { titulo: producto.titulo, precio: String(producto.precioValor), id_categoria: String(producto.idCategoria ?? ""), stock: String(producto.stock), descripcionCorta: producto.descripcionCorta };
+        const nombres = { titulo: "nombre", precio: "precio", id_categoria: "id_categoria", stock: "stock", descripcionCorta: "descripcion" };
+        // Al editar solo se envían los campos que cambiaron
+        Object.entries(nombres).forEach(([clave, api_]) => {
+            const valor = String(form[clave]).trim();
+            if (!producto || valor !== String(original[clave]).trim()) body.append(api_, valor);
+        });
+        if (imagen) body.append("imagen", imagen);
+        if (producto) {
+            if ([...body.keys()].length === 0) return setPanel(null);
+            body.append("id_producto", producto.id);
+        }
+        setGuardando(true);
         try {
-            await api("productos", "editar", { method: "POST", body });
-            setNotice("Imagen actualizada.");
-            await cargar();
+            await api("productos", producto ? "editar" : "crear", { method: "POST", body });
+            avisar(producto ? "Producto actualizado." : "Artículo agregado al catálogo.", "exito");
+            setPanel(null);
+            await recargar();
         } catch (err) {
-            setNotice(err.message);
+            setErrorPanel(err.message);
+        } finally {
+            setGuardando(false);
         }
     };
 
-    const desactivar = async (product) => {
-        if (!(await confirmar({ titulo: "¿Eliminar del catálogo?", mensaje: `"${product.titulo}" dejará de mostrarse en la Bisontstore.`, accion: "Eliminar", peligro: true }))) return;
+    const eliminar = async (producto) => {
+        if (!(await confirmar({ titulo: "¿Eliminar del catálogo?", mensaje: `"${producto.titulo}" dejará de mostrarse en la Bisontstore.`, accion: "Eliminar", peligro: true }))) return;
         try {
-            await api("productos", "desactivar", { method: "POST", body: { id_producto: product.id } });
-            setNotice("Producto eliminado del catálogo.");
-            await cargar();
+            await api("productos", "desactivar", { method: "POST", body: { id_producto: producto.id } });
+            avisar("Producto eliminado del catálogo.", "exito");
+            await recargar();
         } catch (err) {
-            setNotice(err.message);
+            avisar(err.message, "error");
         }
     };
 
-    return <section className="space-y-5"><section className="settings-section"><h2 className="text-lg font-bold text-ink">Agregar artículo</h2><form onSubmit={createProduct} className="mt-4 grid gap-4 sm:grid-cols-2" noValidate><label className="form-label">Nombre<input required maxLength={200} className="form-input" value={productForm.titulo} onChange={(event) => setProductForm({ ...productForm, titulo: event.target.value })}/></label><label className="form-label">Precio<input required type="number" min="0" max="999999.99" step="0.01" className="form-input" value={productForm.precio} onChange={(event) => setProductForm({ ...productForm, precio: event.target.value })}/></label><CustomSelect label="Categoría" value={productForm.id_categoria} onChange={(id_categoria) => setProductForm({ ...productForm, id_categoria })} placeholder="Selecciona una categoría" options={categorias.map((categoria) => ({ value: String(categoria.id_categoria), label: categoria.nombre }))} /><label className="form-label">Stock<input required type="number" min="0" max="100000" step="1" className="form-input" value={productForm.stock} onChange={(event) => setProductForm({ ...productForm, stock: event.target.value })}/></label><label className="form-label">Descripción breve<input maxLength={500} className="form-input" value={productForm.descripcionCorta} onChange={(event) => setProductForm({ ...productForm, descripcionCorta: event.target.value })}/></label><label className="form-label">Imagen (JPG, PNG o WebP, máx. 2 MB)<input type="file" accept="image/jpeg,image/png,image/webp" className="form-input" onChange={(event) => setImagen(event.target.files?.[0] ?? null)}/></label><button disabled={guardando} className="action-button sm:col-span-2 sm:justify-self-start">{guardando ? "Guardando..." : "Agregar artículo"}</button></form></section><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Producto</th><th>Categoría</th><th>Precio / Stock</th><th>Acción</th></tr></thead><tbody>{products.map((product) => <tr key={product.id}><td><input aria-label={`Nombre ${product.titulo}`} maxLength={200} className="form-input min-w-44" value={valor(product, "titulo")} onChange={(event) => cambiar(product, "titulo", event.target.value)}/><input aria-label={`Descripción ${product.titulo}`} maxLength={500} className="form-input mt-2 min-w-44" value={valor(product, "descripcionCorta")} onChange={(event) => cambiar(product, "descripcionCorta", event.target.value)}/></td><td>{product.categoria}<small>{product.tieneFoto ? "Con imagen" : "Sin imagen"}</small></td><td><input aria-label={`Precio ${product.titulo}`} type="number" min="0" step="0.01" className="form-input min-w-28" value={valor(product, "precio")} onChange={(event) => cambiar(product, "precio", event.target.value)}/><small>{formatPrecio(product.precioValor)}</small><input aria-label={`Stock ${product.titulo}`} type="number" min="0" step="1" className="form-input mt-2 min-w-28" value={valor(product, "stock")} onChange={(event) => cambiar(product, "stock", event.target.value)}/></td><td><div className="flex flex-col gap-2"><button type="button" disabled={!borradores[product.id]} className="min-h-11 px-3 text-accent disabled:opacity-40" onClick={() => guardarFila(product)}>Guardar</button><label className="min-h-11 cursor-pointer px-3 py-2.5 text-center text-accent">Imagen<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => { cambiarImagen(product, event.target.files?.[0]); event.target.value = ""; }}/></label><button type="button" className="min-h-11 px-3 text-danger" onClick={() => desactivar(product)}>Eliminar</button></div></td></tr>)}</tbody></table>{!products.length && <p className="p-6 text-center text-ink-muted">Aún no hay productos.</p>}</div></section>;
+    const lista = (datos ?? []).filter((p) => (!categoria || String(p.idCategoria) === categoria) && coincide(`${p.titulo} ${p.categoria} ${p.descripcionCorta}`, busqueda));
+    const opcionesCategoria = (categorias ?? []).map((c) => ({ value: String(c.id_categoria), label: c.nombre }));
+
+    return (
+        <SeccionAdmin
+            titulo="Catálogo de la Bisontstore"
+            detalle={datos && !error ? `${datos.length} ${datos.length === 1 ? "artículo" : "artículos"}` : " "}
+            busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar artículo"
+            filtros={opcionesCategoria.length > 1 && <CustomSelect ariaLabel="Filtrar por categoría" className="w-48" value={categoria} onChange={setCategoria} options={[{ value: "", label: "Todas las categorías" }, ...opcionesCategoria]} />}
+            accion={<button type="button" onClick={() => abrir()} className="action-button">+ Agregar artículo</button>}
+        >
+            <TablaAdmin
+                columnas={["Artículo", "Categoría", "Precio", "Stock", "Acciones"]}
+                cargando={datos === null} error={error} onReintentar={reintentar} hayFilas={lista.length > 0}
+                vacio={busqueda || categoria ? vacioBusqueda(() => { setBusqueda(""); setCategoria(""); }) : { icono: "tienda", titulo: "El catálogo está vacío", detalle: "Agrega el primer artículo de la tienda.", accion: { texto: "Agregar artículo", onClick: () => abrir() } }}
+            >
+                {lista.map((p) => (
+                    <tr key={p.id}>
+                        <td>
+                            <div className="flex items-center gap-3">
+                                <ImagenProducto producto={p} className="h-10 w-10 shrink-0 rounded-lg" />
+                                <div className="min-w-0">
+                                    <strong className="block font-semibold text-ink">{p.titulo}</strong>
+                                    {p.descripcionCorta && <small className="line-clamp-1 max-w-xs">{p.descripcionCorta}</small>}
+                                </div>
+                            </div>
+                        </td>
+                        <td>{p.categoria}</td>
+                        <td className="whitespace-nowrap tabular-nums">{formatPrecio(p.precioValor)}</td>
+                        <td className="whitespace-nowrap"><span className="tabular-nums">{p.stock}</span>{p.stock <= 5 && <span className="ml-2 align-middle"><EstadoStock stock={p.stock} compacto /></span>}</td>
+                        <td><AccionesFila nombre={p.titulo} onEditar={() => abrir(p)} extra={[{ texto: "Ver en la tienda", onClick: () => window.open(`${import.meta.env.BASE_URL}bisontstore`, "_blank", "noopener") }, { texto: "Eliminar", peligro: true, onClick: () => eliminar(p) }]} /></td>
+                    </tr>
+                ))}
+            </TablaAdmin>
+
+            <AnimatePresence>
+                {panel && (
+                    <PanelLateral
+                        titulo={panel.producto ? "Editar artículo" : "Nuevo artículo"}
+                        subtitulo={panel.producto?.titulo}
+                        accion={panel.producto ? "Guardar cambios" : "Agregar artículo"}
+                        onCerrar={() => setPanel(null)} onEnviar={guardar} guardando={guardando} error={errorPanel}
+                    >
+                        <label className="form-label">Nombre<input maxLength={200} className="form-input" value={panel.form.titulo} onChange={(e) => campo("titulo", e.target.value)} /></label>
+                        <CustomSelect label="Categoría" value={panel.form.id_categoria} onChange={(v) => campo("id_categoria", v)} placeholder="Selecciona una categoría" options={opcionesCategoria} />
+                        <div className="grid grid-cols-2 gap-4">
+                            <label className="form-label">Precio (MXN)<input inputMode="decimal" className="form-input" value={panel.form.precio} onChange={(e) => campo("precio", e.target.value)} placeholder="0.00" /></label>
+                            <label className="form-label">Stock<input inputMode="numeric" className="form-input" value={panel.form.stock} onChange={(e) => campo("stock", e.target.value)} /></label>
+                        </div>
+                        <label className="form-label">Descripción<textarea maxLength={500} rows={3} className="form-input resize-y" value={panel.form.descripcionCorta} onChange={(e) => campo("descripcionCorta", e.target.value)} /></label>
+                        <div className="form-label">
+                            <span>Imagen</span>
+                            <div className="flex items-center gap-4">
+                                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-line bg-field">
+                                    {panel.vista ? <img src={panel.vista} alt="" className="h-full w-full object-cover" /> : <ImagenProducto producto={{ titulo: panel.form.titulo || "Artículo", categoria: "" }} className="h-full w-full" />}
+                                </div>
+                                <div className="text-sm font-normal text-ink-muted">
+                                    <label className="action-button action-button-secondary action-button-sm cursor-pointer focus-within:outline-2 focus-within:outline-accent">
+                                        {panel.vista ? "Cambiar imagen" : "Subir imagen"}
+                                        <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => { elegirImagen(e.target.files?.[0]); e.target.value = ""; }} />
+                                    </label>
+                                    <p className="mt-1.5">JPG, PNG o WebP, máx. 2 MB.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </PanelLateral>
+                )}
+            </AnimatePresence>
+        </SeccionAdmin>
+    );
 }
 
 // ---------- Eventos (Administrador y Moderador, D15) ----------
 const eventoVacio = { titulo: "", descripcion: "", tipo: "Académico", fecha_inicio: "", fecha_fin: "", lugar: "" };
+const cargarEventos = () => api("eventos", "admin_listar").then((r) => r.eventos);
+
+// "AAAA-MM-DDTHH:MM" + 1 hora (sin pasar de las 23:45 del mismo día)
+function unaHoraDespues(valor) {
+    const [fecha, hora] = valor.split("T");
+    const [h, m] = hora.split(":").map(Number);
+    const total = Math.min(h * 60 + m + 60, 23 * 60 + 45);
+    return `${fecha}T${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
 
 function validarEvento(evento) {
-    if (evento.titulo !== undefined && (!evento.titulo.trim() || evento.titulo.trim().length > 200)) return "El título es obligatorio (máximo 200 caracteres).";
-    if (evento.descripcion !== undefined && evento.descripcion.trim().length > 1000) return "La descripción no puede tener más de 1000 caracteres.";
-    if (evento.lugar !== undefined && evento.lugar.trim().length > 150) return "El lugar no puede tener más de 150 caracteres.";
-    if (evento.fecha_inicio !== undefined && !evento.fecha_inicio) return "Indica la fecha de inicio.";
-    if (evento.fecha_fin !== undefined && !evento.fecha_fin) return "Indica la fecha de fin.";
-    if (evento.fecha_inicio && evento.fecha_fin && evento.fecha_fin < evento.fecha_inicio) return "La fecha de fin del evento debe ser posterior a la fecha de inicio.";
+    if (!evento.titulo.trim() || evento.titulo.trim().length > 200) return "El título es obligatorio (máximo 200 caracteres).";
+    if (!evento.fecha_inicio) return "Indica la fecha y hora de inicio.";
+    if (!evento.fecha_fin) return "Indica la fecha y hora de fin.";
+    if (evento.fecha_fin < evento.fecha_inicio) return "El fin del evento debe ser posterior al inicio.";
+    if (evento.lugar.trim().length > 150) return "El lugar no puede tener más de 150 caracteres.";
+    if (evento.descripcion.trim().length > 1000) return "La descripción no puede tener más de 1000 caracteres.";
     return "";
 }
 
-// Editar inicio, fin y lugar de un evento en un solo formulario (antes eran tres window.prompt)
-function DialogoFechaEvento({ evento, onGuardar, onCerrar }) {
-    const [inicio, setInicio] = useState(toDateTimeLocal(evento.fecha_inicio));
-    const [fin, setFin] = useState(toDateTimeLocal(evento.fecha_fin));
-    const [lugar, setLugar] = useState(evento.lugar || "");
-    const [error, setError] = useState("");
+export function AdminEventos() {
+    const { confirmar, avisar } = useDialogos();
+    const { datos, setDatos, error, recargar, reintentar } = useLista(cargarEventos);
+    const [busqueda, setBusqueda] = useState("");
+    const [tipo, setTipo] = useState("");
+    const [panel, setPanel] = useState(null); // { evento?, form }
+    const [errorPanel, setErrorPanel] = useState("");
     const [guardando, setGuardando] = useState(false);
 
-    useEffect(() => {
-        const onKey = (e) => { if (e.key === "Escape") onCerrar(); };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
-    }, [onCerrar]);
+    const desdeEvento = (e) => ({ titulo: e.titulo, descripcion: e.descripcion || "", tipo: e.tipo, fecha_inicio: toDateTimeLocal(e.fecha_inicio), fecha_fin: toDateTimeLocal(e.fecha_fin), lugar: e.lugar || "" });
+    const abrir = (evento = null) => { setErrorPanel(""); setPanel({ evento, form: evento ? desdeEvento(evento) : eventoVacio }); };
+    const campo = (nombre, valor) => { setPanel((p) => ({ ...p, form: { ...p.form, [nombre]: valor } })); setErrorPanel(""); };
 
-    const enviar = async (e) => {
-        e.preventDefault();
-        if (!inicio || !fin) return setError("Indica el inicio y el fin.");
-        if (fin < inicio) return setError("La fecha de fin debe ser posterior a la fecha de inicio.");
+    const guardar = async () => {
+        const { evento, form } = panel;
+        const problema = validarEvento(form);
+        if (problema) return setErrorPanel(problema);
+        const limpio = { ...form, titulo: form.titulo.trim(), descripcion: form.descripcion.trim(), lugar: form.lugar.trim() };
+        let body = limpio;
+        if (evento) {
+            // Solo los campos que cambiaron
+            const original = desdeEvento(evento);
+            body = Object.fromEntries(Object.entries(limpio).filter(([k, v]) => v !== original[k]));
+            if (!Object.keys(body).length) return setPanel(null);
+            body.id_evento = evento.id_evento;
+        }
         setGuardando(true);
-        await onGuardar({ inicio, fin, lugar });
-        setGuardando(false);
-    };
-
-    return (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-scrim p-4 backdrop-blur-sm sm:items-center" onMouseDown={(e) => { if (e.target === e.currentTarget) onCerrar(); }}>
-            <form onSubmit={enviar} role="dialog" aria-modal="true" aria-labelledby="fecha-evento-titulo" className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-pop" noValidate>
-                <h2 id="fecha-evento-titulo" className="text-lg font-bold text-ink">Fecha y lugar</h2>
-                <p className="mt-1 line-clamp-1 text-sm text-ink-muted">{evento.titulo}</p>
-                <div className="mt-4 grid gap-4">
-                    <label className="form-label">Inicio<input autoFocus type="datetime-local" className="form-input" value={inicio} onChange={(e) => { setInicio(e.target.value); setError(""); }} /></label>
-                    <label className="form-label">Fin<input type="datetime-local" min={inicio || undefined} className="form-input" value={fin} onChange={(e) => { setFin(e.target.value); setError(""); }} /></label>
-                    <label className="form-label">Lugar<input maxLength={150} className="form-input" value={lugar} onChange={(e) => setLugar(e.target.value)} /></label>
-                </div>
-                {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
-                <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                    <button type="button" onClick={onCerrar} className="action-button action-button-secondary">Cancelar</button>
-                    <button disabled={guardando} className="action-button">{guardando ? "Guardando..." : "Guardar"}</button>
-                </div>
-            </form>
-        </div>
-    );
-}
-
-export function AdminEventos({ setNotice }) {
-    const { confirmar } = useDialogos();
-    const [editandoFecha, setEditandoFecha] = useState(null); // evento cuyo horario/lugar se edita
-    const [events, setEvents] = useState([]);
-    const [eventForm, setEventForm] = useState(eventoVacio);
-    const [borradores, setBorradores] = useState({});
-    const [guardando, setGuardando] = useState(false);
-
-    const cargar = useCallback(() => {
-        return api("eventos", "admin_listar")
-            .then((response) => setEvents(response.eventos))
-            .catch((err) => setNotice(err.message));
-    }, [setNotice]);
-
-    useEffect(() => { cargar(); }, [cargar]);
-
-    const ejecutar = async (accion, body, mensaje) => {
         try {
-            await api("eventos", accion, { method: "POST", body });
-            setNotice(mensaje);
-            await cargar();
-            return true;
+            await api("eventos", evento ? "editar" : "crear", { method: "POST", body });
+            avisar(evento ? "Evento actualizado." : "Evento agregado al calendario.", "exito");
+            setPanel(null);
+            await recargar();
         } catch (err) {
-            setNotice(err.message);
-            return false;
+            setErrorPanel(err.message);
+        } finally {
+            setGuardando(false);
         }
     };
 
-    const createEvent = async (event) => {
-        event.preventDefault();
-        const problema = validarEvento(eventForm);
-        if (problema) {
-            setNotice(problema);
-            return;
+    // Visible: cambio de un solo valor, se guarda al momento (optimista)
+    const alternarVisible = async (item, visible) => {
+        setDatos((lista) => lista.map((e) => (e.id_evento === item.id_evento ? { ...e, visible } : e)));
+        try {
+            await api("eventos", visible ? "mostrar" : "ocultar", { method: "POST", body: { id_evento: item.id_evento } });
+            avisar(visible ? "El evento ya se ve en el calendario." : "Evento oculto del calendario.", "exito");
+        } catch (err) {
+            avisar(err.message, "error");
+            recargar();
         }
-        setGuardando(true);
-        const ok = await ejecutar("crear", {
-            titulo: eventForm.titulo.trim(),
-            descripcion: eventForm.descripcion.trim(),
-            tipo: eventForm.tipo,
-            fecha_inicio: eventForm.fecha_inicio,
-            fecha_fin: eventForm.fecha_fin,
-            lugar: eventForm.lugar.trim(),
-        }, "Evento agregado al calendario.");
-        if (ok) setEventForm(eventoVacio);
-        setGuardando(false);
-    };
-
-    const valor = (item, campo) => borradores[item.id_evento]?.[campo] ?? item[campo] ?? "";
-    const cambiar = (item, campo, nuevo) => setBorradores((current) => ({ ...current, [item.id_evento]: { ...current[item.id_evento], [campo]: nuevo } }));
-
-    const guardarFila = async (item) => {
-        const cambios = borradores[item.id_evento] || {};
-        const problema = validarEvento(cambios);
-        if (problema) {
-            setNotice(problema);
-            return;
-        }
-        const body = { id_evento: item.id_evento };
-        if (cambios.titulo !== undefined) body.titulo = cambios.titulo.trim();
-        if (cambios.descripcion !== undefined) body.descripcion = cambios.descripcion.trim();
-        if (await ejecutar("editar", body, "Evento actualizado.")) {
-            setBorradores((current) => { const resto = { ...current }; delete resto[item.id_evento]; return resto; });
-        }
-    };
-
-    const guardarFechaLugar = async ({ inicio, fin, lugar }) => {
-        const item = editandoFecha;
-        if (await ejecutar("editar", { id_evento: item.id_evento, fecha_inicio: inicio, fecha_fin: fin, lugar: lugar.trim() }, "Evento actualizado.")) setEditandoFecha(null);
     };
 
     const eliminar = async (item) => {
         if (!(await confirmar({ titulo: "¿Eliminar el evento?", mensaje: `"${item.titulo}" se quitará del calendario. Esta acción no se puede deshacer.`, accion: "Eliminar", peligro: true }))) return;
-        ejecutar("eliminar", { id_evento: item.id_evento }, "Evento eliminado.");
+        try {
+            await api("eventos", "eliminar", { method: "POST", body: { id_evento: item.id_evento } });
+            avisar("Evento eliminado.", "exito");
+            await recargar();
+        } catch (err) {
+            avisar(err.message, "error");
+        }
     };
 
-    return <section className="space-y-5"><section className="settings-section"><h2 className="text-lg font-bold text-ink">Publicar evento</h2><form onSubmit={createEvent} className="mt-4 grid gap-4 sm:grid-cols-2" noValidate><label className="form-label">Título<input required maxLength={200} className="form-input" value={eventForm.titulo} onChange={(event) => setEventForm({ ...eventForm, titulo: event.target.value })}/></label><CustomSelect label="Tipo" value={eventForm.tipo} onChange={(tipo) => setEventForm({ ...eventForm, tipo })} options={EVENT_TYPES.map((type) => ({ value: type, label: type }))} /><label className="form-label">Inicio<input required type="datetime-local" className="form-input" value={eventForm.fecha_inicio} onChange={(event) => setEventForm({ ...eventForm, fecha_inicio: event.target.value })}/></label><label className="form-label">Fin<input required type="datetime-local" min={eventForm.fecha_inicio || undefined} className="form-input" value={eventForm.fecha_fin} onChange={(event) => setEventForm({ ...eventForm, fecha_fin: event.target.value })}/></label><label className="form-label">Lugar<input maxLength={150} className="form-input" value={eventForm.lugar} onChange={(event) => setEventForm({ ...eventForm, lugar: event.target.value })}/></label><label className="form-label">Descripción<input maxLength={1000} className="form-input" value={eventForm.descripcion} onChange={(event) => setEventForm({ ...eventForm, descripcion: event.target.value })}/></label><button disabled={guardando} className="action-button sm:col-span-2 sm:justify-self-start">{guardando ? "Guardando..." : "Agregar evento"}</button></form></section><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Evento</th><th>Fecha</th><th>Lugar</th><th>Visible</th><th>Acción</th></tr></thead><tbody>{events.map((item) => <tr key={item.id_evento}><td><input aria-label={`Título ${item.titulo}`} maxLength={200} className="form-input min-w-44" value={valor(item, "titulo")} onChange={(event) => cambiar(item, "titulo", event.target.value)}/><small>{item.tipo}</small><input aria-label={`Descripción ${item.titulo}`} maxLength={1000} className="form-input mt-2 min-w-44" value={valor(item, "descripcion")} onChange={(event) => cambiar(item, "descripcion", event.target.value)}/></td><td className="whitespace-nowrap">{formatRangoFechaHora(item.fecha_inicio, item.fecha_fin)}</td><td>{item.lugar}</td><td>{item.visible ? "Sí" : "No"}</td><td><div className="flex flex-col gap-2"><button type="button" disabled={!borradores[item.id_evento]} className="min-h-11 px-2 text-accent disabled:opacity-40" onClick={() => guardarFila(item)}>Guardar</button><button type="button" className="min-h-11 px-2 text-accent" onClick={() => ejecutar(item.visible ? "ocultar" : "mostrar", { id_evento: item.id_evento }, item.visible ? "Evento oculto." : "Evento visible.")}>{item.visible ? "Ocultar" : "Mostrar"}</button><button type="button" className="min-h-11 px-2 text-danger" onClick={() => eliminar(item)}>Eliminar</button><button type="button" className="min-h-11 px-2 text-accent" onClick={() => setEditandoFecha(item)}>Editar fecha/lugar</button></div></td></tr>)}</tbody></table>{!events.length && <p className="p-6 text-center text-ink-muted">Aún no hay eventos.</p>}</div>{editandoFecha && <DialogoFechaEvento evento={editandoFecha} onGuardar={guardarFechaLugar} onCerrar={() => setEditandoFecha(null)} />}</section>;
+    const lista = (datos ?? []).filter((e) => (!tipo || e.tipo === tipo) && coincide(`${e.titulo} ${e.lugar || ""} ${e.descripcion || ""}`, busqueda));
+
+    return (
+        <SeccionAdmin
+            titulo="Eventos del calendario"
+            detalle={datos && !error ? `${datos.length} ${datos.length === 1 ? "evento" : "eventos"}` : " "}
+            busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar evento"
+            filtros={<CustomSelect ariaLabel="Filtrar por tipo" className="w-44" value={tipo} onChange={setTipo} options={[{ value: "", label: "Todos los tipos" }, ...EVENT_TYPES.map((t) => ({ value: t, label: t }))]} />}
+            accion={<button type="button" onClick={() => abrir()} className="action-button">+ Publicar evento</button>}
+        >
+            <TablaAdmin
+                columnas={["Evento", "Fecha", "Lugar", "Visible", "Acciones"]}
+                cargando={datos === null} error={error} onReintentar={reintentar} hayFilas={lista.length > 0}
+                vacio={busqueda || tipo ? vacioBusqueda(() => { setBusqueda(""); setTipo(""); }) : { icono: "calendario", titulo: "Aún no hay eventos", detalle: "Publica exámenes, asuetos y actividades para que aparezcan en el calendario.", accion: { texto: "Publicar evento", onClick: () => abrir() } }}
+            >
+                {lista.map((item) => (
+                    <tr key={item.id_evento} className={item.visible ? "" : ATENUADA}>
+                        <td>
+                            <strong className="block font-semibold text-ink">{item.titulo}</strong>
+                            <small className="flex items-center gap-1.5"><span aria-hidden="true" className={`h-2 w-2 rounded-full ${colorPuntoEvento(item.tipo)}`} />{item.tipo}</small>
+                        </td>
+                        <td className="whitespace-nowrap">{formatRangoFechaHora(item.fecha_inicio, item.fecha_fin)}</td>
+                        <td>{item.lugar || "—"}</td>
+                        <td><Interruptor activo={Boolean(item.visible)} etiqueta={`${item.titulo} visible en el calendario`} onCambiar={(v) => alternarVisible(item, v)} /></td>
+                        <td><AccionesFila nombre={item.titulo} onEditar={() => abrir(item)} extra={[{ texto: "Eliminar", peligro: true, onClick: () => eliminar(item) }]} /></td>
+                    </tr>
+                ))}
+            </TablaAdmin>
+
+            <AnimatePresence>
+                {panel && (
+                    <PanelLateral
+                        titulo={panel.evento ? "Editar evento" : "Nuevo evento"}
+                        subtitulo={panel.evento?.titulo}
+                        accion={panel.evento ? "Guardar cambios" : "Publicar evento"}
+                        onCerrar={() => setPanel(null)} onEnviar={guardar} guardando={guardando} error={errorPanel}
+                    >
+                        <label className="form-label">Título<input maxLength={200} className="form-input" value={panel.form.titulo} onChange={(e) => campo("titulo", e.target.value)} /></label>
+                        <CustomSelect label="Tipo" value={panel.form.tipo} onChange={(v) => campo("tipo", v)} options={EVENT_TYPES.map((t) => ({ value: t, label: t }))} />
+                        <CampoFechaHora etiqueta="Inicio" valor={panel.form.fecha_inicio} onCambiar={(v) => { campo("fecha_inicio", v); if (!panel.form.fecha_fin || panel.form.fecha_fin < v) campo("fecha_fin", unaHoraDespues(v)); }} />
+                        <CampoFechaHora etiqueta="Fin" valor={panel.form.fecha_fin} onCambiar={(v) => campo("fecha_fin", v)} horaInicial={panel.form.fecha_inicio.split("T")[1] || "10:00"} />
+                        <label className="form-label">Lugar<input maxLength={150} className="form-input" value={panel.form.lugar} onChange={(e) => campo("lugar", e.target.value)} placeholder="Aula, auditorio, cancha…" /></label>
+                        <label className="form-label">Descripción<textarea maxLength={1000} rows={4} className="form-input resize-y" value={panel.form.descripcion} onChange={(e) => campo("descripcion", e.target.value)} /></label>
+                    </PanelLateral>
+                )}
+            </AnimatePresence>
+        </SeccionAdmin>
+    );
 }

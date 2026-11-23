@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, parseFechaMySQL } from "../api/client";
 import { colorPuntoEvento } from "../utils/eventStyles";
+import { Cargando, Esqueleto } from "./Estados";
 
 const ACCESOS = [
     ["/aulas", "Reservar aula", "Aulas y horarios disponibles"],
@@ -34,7 +35,13 @@ function FeedSidebar() {
         <aside aria-label="Panel lateral" className="hidden flex-col gap-4 lg:sticky lg:top-8 lg:flex lg:self-start">
             <section className="rounded-2xl border border-line bg-surface/50 p-5 shadow-card">
                 <h2 className="text-lg font-bold text-ink">Próximos eventos</h2>
-                {eventos === null && <p className="mt-3 text-sm text-ink-muted" aria-busy="true">Cargando...</p>}
+                {eventos === null && (
+                    <Cargando etiqueta="Cargando eventos">
+                        <div className="mt-3 flex flex-col gap-3">
+                            {[0, 1, 2].map((i) => <div key={i} className="flex items-center gap-3"><Esqueleto className="h-11 w-11 shrink-0 rounded-lg" /><div className="flex-1 space-y-2"><Esqueleto className="h-3 w-4/5" /><Esqueleto className="h-2.5 w-1/2" /></div></div>)}
+                        </div>
+                    </Cargando>
+                )}
                 {eventos !== null && !eventos.length && <p className="mt-3 text-sm text-ink-muted">No hay eventos próximos este mes.</p>}
                 <ul className="mt-3 flex flex-col gap-3">
                     {(eventos ?? []).map((evento) => {

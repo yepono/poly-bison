@@ -6,6 +6,7 @@ import { api, mapProducto } from "../api/client";
 import { TESORERIA, rutaMapaLugar } from "../utils/mapaDatos";
 import PageHeader from "../components/PageHeader";
 import CustomSelect from "../components/CustomSelect";
+import { Esqueleto, EstadoError, EstadoVacio } from "../components/Estados";
 
 const ORDENES = {
     recomendados: { etiqueta: "Recomendados", fn: null },
@@ -73,11 +74,11 @@ function TarjetaProducto({ producto, indice, onAbrir }) {
 function TarjetaCargando() {
     return (
         <div className="overflow-hidden rounded-2xl border border-line bg-surface/50" aria-hidden="true">
-            <div className="aspect-square w-full animate-pulse bg-field" />
+            <Esqueleto className="aspect-square w-full rounded-none" />
             <div className="space-y-2 p-4">
-                <div className="h-2.5 w-1/3 animate-pulse rounded bg-field" />
-                <div className="h-4 w-4/5 animate-pulse rounded bg-field" />
-                <div className="h-5 w-1/2 animate-pulse rounded bg-field" />
+                <Esqueleto className="h-2.5 w-1/3" />
+                <Esqueleto className="h-4 w-4/5" />
+                <Esqueleto className="h-5 w-1/2" />
             </div>
         </div>
     );
@@ -87,6 +88,7 @@ function Bisontstore() {
     // Catálogo desde la BD (productos.php?accion=listar -> vw_catalogo_productos)
     const [products, setProducts] = useState(null);
     const [error, setError] = useState("");
+    const [intento, setIntento] = useState(0);
     const [busqueda, setBusqueda] = useState("");
     const [categoria, setCategoria] = useState("Todas");
     const [orden, setOrden] = useState("recomendados");
@@ -95,10 +97,10 @@ function Bisontstore() {
     useEffect(() => {
         let cancelled = false;
         api("productos", "listar")
-            .then((response) => { if (!cancelled) setProducts(response.productos.map(mapProducto)); })
+            .then((response) => { if (!cancelled) { setProducts(response.productos.map(mapProducto)); setError(""); } })
             .catch((err) => { if (!cancelled) { setProducts([]); setError(err.message); } });
         return () => { cancelled = true; };
-    }, []);
+    }, [intento]);
 
     const categorias = useMemo(
         () => ["Todas", ...new Set((products ?? []).map((p) => p.categoria).filter(Boolean))],
@@ -169,7 +171,7 @@ function Bisontstore() {
                 )}
             </div>
 
-            {error && <p role="alert" className="rounded-lg border border-danger/40 bg-danger/10 p-3 text-sm text-danger">{error}</p>}
+            {error && <div className="card"><EstadoError mensaje={error} onReintentar={() => { setProducts(null); setError(""); setIntento((n) => n + 1); }} /></div>}
 
             {products !== null && !error && (
                 <p className="text-sm text-ink-muted" aria-live="polite">
@@ -177,7 +179,8 @@ function Bisontstore() {
                 </p>
             )}
 
-            <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 xl:grid-cols-4" aria-busy={products === null || undefined}>
+                {products === null && <span role="status" className="sr-only">Cargando productos…</span>}
                 {products === null
                     ? Array.from({ length: 8 }, (_, i) => <TarjetaCargando key={i} />)
                     : visibles.map((producto, i) => (
@@ -186,13 +189,10 @@ function Bisontstore() {
             </div>
 
             {products !== null && !error && !visibles.length && (
-                <div className="rounded-2xl border border-line bg-surface/50 py-12 text-center">
-                    <p className="text-ink-muted">{hayFiltros ? "No hay productos que coincidan con tu búsqueda." : "Aún no hay productos en el catálogo."}</p>
-                    {hayFiltros && (
-                        <button type="button" onClick={() => { setBusqueda(""); setCategoria("Todas"); }} className="mt-3 text-sm font-semibold text-accent hover:underline">
-                            Limpiar filtros
-                        </button>
-                    )}
+                <div className="card">
+                    {hayFiltros
+                        ? <EstadoVacio icono="buscar" titulo="Sin resultados" detalle="Ningún producto coincide con tu búsqueda." accion={{ texto: "Limpiar filtros", onClick: () => { setBusqueda(""); setCategoria("Todas"); } }} />
+                        : <EstadoVacio icono="tienda" titulo="Aún no hay productos" detalle="Vuelve pronto: el catálogo se está preparando." />}
                 </div>
             )}
 

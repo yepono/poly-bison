@@ -6,6 +6,31 @@ import { api, mapPost, mapUser } from "../api/client";
 import { Link, useParams } from "react-router-dom";
 import { useCambioFoto } from "../components/useCambioFoto";
 import Avatar from "../components/Avatar";
+import PostSkeleton from "../components/PostSkeleton";
+import { Cargando, Esqueleto, EstadoError, EstadoVacio } from "../components/Estados";
+
+// Esqueleto de la página completa mientras llega el perfil de otro usuario
+function PerfilCargando() {
+    return (
+        <section className="pagina-media">
+            <Cargando etiqueta="Cargando perfil">
+                <div className="rounded-2xl border border-line bg-surface/50 p-6 shadow-card">
+                    <div className="flex items-center gap-5">
+                        <Esqueleto redondo className="h-20 w-20 shrink-0 sm:h-24 sm:w-24" />
+                        <div className="flex-1 space-y-2.5">
+                            <Esqueleto className="h-2.5 w-32" />
+                            <Esqueleto className="h-6 w-48" />
+                            <Esqueleto className="h-3.5 w-40" />
+                        </div>
+                    </div>
+                    <div className="mt-6 flex gap-2"><Esqueleto className="h-8 w-56 rounded-full" /><Esqueleto className="h-8 w-36 rounded-full" /></div>
+                    <div className="mt-6 grid grid-cols-3 gap-3">{[0, 1, 2].map((i) => <Esqueleto key={i} className="h-14" />)}</div>
+                </div>
+                <div className="mt-8 flex flex-col gap-4"><PostSkeleton /><PostSkeleton /></div>
+            </Cargando>
+        </section>
+    );
+}
 
 const ICONO_LSTI = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path strokeLinecap="round" d="M8 21h8m-4-4v4m-5-9 2-2 2 2 3-4 2 2"/></svg>;
 const ICONO_CARRERA = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path strokeLinejoin="round" d="m3 9 9-5 9 5-9 5-9-5Z"/><path strokeLinecap="round" strokeLinejoin="round" d="M7 11.5V16c0 1 2.2 2.5 5 2.5s5-1.5 5-2.5v-4.5M21 9v5"/></svg>;
@@ -19,16 +44,17 @@ function Perfil() {
     const [perfilConsultado, setPerfilConsultado] = useState(null);
     // { id, lista } publicaciones del perfil (publicaciones.php?accion=por_usuario)
     const [publicaciones, setPublicaciones] = useState(null);
+    const [intento, setIntento] = useState(0); // "Reintentar" vuelve a pedir las publicaciones
     const perfilId = String(esOtroUsuario ? userId : currentUser.id);
     const foto = useCambioFoto();
 
     useEffect(() => {
         let cancelled = false;
         api("publicaciones", "por_usuario", { params: { id: perfilId } })
-            .then((response) => { if (!cancelled) setPublicaciones({ id: perfilId, lista: response.publicaciones.map(mapPost) }); })
-            .catch(() => { if (!cancelled) setPublicaciones({ id: perfilId, lista: [] }); });
+            .then((response) => { if (!cancelled) setPublicaciones({ id: perfilId, lista: response.publicaciones.map(mapPost), error: "" }); })
+            .catch((err) => { if (!cancelled) setPublicaciones({ id: perfilId, lista: [], error: err.message }); });
         return () => { cancelled = true; };
-    }, [perfilId]);
+    }, [perfilId, intento]);
 
     const actualizarPublicacion = (actualizada) => setPublicaciones((current) => ({
         ...current,
@@ -49,10 +75,12 @@ function Perfil() {
     }, [esOtroUsuario, userId]);
 
     const cargando = esOtroUsuario && perfilConsultado?.id !== userId;
-    if (cargando) return <section className="settings-section mx-auto max-w-xl text-center" aria-busy="true"><p className="text-ink-muted">Cargando perfil...</p></section>;
+    if (cargando) return <PerfilCargando />;
     const user = esOtroUsuario ? perfilConsultado.user : currentUser;
     if (!user) return <section className="settings-section mx-auto max-w-xl text-center"><h1 className="text-2xl font-bold text-ink">Perfil no encontrado</h1><Link to="/admin" className="action-button mt-5">Volver al panel</Link></section>;
-    const ownPosts = publicaciones?.id === perfilId ? publicaciones.lista : [];
+    const postsListos = publicaciones?.id === perfilId;
+    const ownPosts = postsListos ? publicaciones.lista : [];
+    const cifrasListas = postsListos && !publicaciones.error;
     const totalLikes = ownPosts.reduce((total, post) => total + (Number(post.likes) || 0), 0);
     const careerName = getCareerName(user.carrera);
     const isLsti = careerName === "Lic. en Seguridad y Tecnologías de la Información";
@@ -93,9 +121,9 @@ function Perfil() {
                 </div>
 
                 <dl className="profile-stats">
-                    <div className="profile-stat"><dt>Semestre</dt><dd>{user.semestre ? `${user.semestre}°` : "-"}</dd></div>
-                    <div className="profile-stat"><dt>Publicaciones</dt><dd>{ownPosts.length}</dd></div>
-                    <div className="profile-stat"><dt>Me gusta</dt><dd>{totalLikes}</dd></div>
+                    <div className="profile-stat"><dt>Semestre</dt><dd>{user.semestre ? `${user.semestre}°` : "—"}</dd></div>
+                    <div className="profile-stat"><dt>Publicaciones</dt><dd>{cifrasListas ? ownPosts.length : "—"}</dd></div>
+                    <div className="profile-stat"><dt>Me gusta</dt><dd>{cifrasListas ? totalLikes : "—"}</dd></div>
                 </dl>
             </header>
 
@@ -106,10 +134,19 @@ function Perfil() {
             <div className="mt-8 border-b border-line pb-3">
                 <h2 className="text-xl font-bold text-ink">Publicaciones</h2>
             </div>
-            {ownPosts.length ? (
+            {!postsListos ? (
+                <Cargando etiqueta="Cargando publicaciones"><div className="mt-5 flex flex-col gap-4"><PostSkeleton /><PostSkeleton /></div></Cargando>
+            ) : publicaciones.error ? (
+                <EstadoError mensaje="No se pudieron cargar las publicaciones." onReintentar={() => { setPublicaciones(null); setIntento((n) => n + 1); }} />
+            ) : ownPosts.length ? (
                 <div className="mt-5 flex flex-col gap-4">{ownPosts.map((post) => <PostCard key={post.id} post={post} onPostChange={actualizarPublicacion} onPostDeleted={quitarPublicacion} />)}</div>
             ) : (
-                <p className="py-10 text-center text-ink-muted">{esOtroUsuario ? "Este usuario todavía no ha publicado." : "Todavía no has publicado. Tus publicaciones aparecerán aquí."}</p>
+                <EstadoVacio
+                    icono="publicacion"
+                    titulo={esOtroUsuario ? "Todavía no hay publicaciones" : "Todavía no has publicado"}
+                    detalle={esOtroUsuario ? "Cuando este usuario publique algo aparecerá aquí." : "Tus publicaciones aparecerán aquí."}
+                    accion={!esOtroUsuario && <Link to="/feed?publicar=1" className="action-button action-button-sm mt-1">Crear publicación</Link>}
+                />
             )}
         </section>
     );

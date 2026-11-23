@@ -1,5 +1,7 @@
 import { useCallback, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSearchParams } from "react-router-dom";
+import { Cargando, EstadoError, EstadoVacio } from "../components/Estados";
 import CreatePost from "../components/CreatePost";
 import PostCard from "../components/PostCard";
 import PostComposerBar from "../components/PostComposerBar";
@@ -49,8 +51,14 @@ function ModalPublicar({ onClose }) {
 function Feed() {
     const { posts, postsStatus, postsError, loadPosts } = useAppData();
     const [mostrarBotonFlotante, setMostrarBotonFlotante] = useState(false);
-    const [modalAbierto, setModalAbierto] = useState(false);
+    // /feed?publicar=1 (p. ej. desde "Crear publicación" en el perfil) abre el formulario
+    const [params, setParams] = useSearchParams();
+    const [modalAbierto, setModalAbierto] = useState(() => params.get("publicar") === "1");
     const cerrarModal = useCallback(() => setModalAbierto(false), []);
+
+    useEffect(() => {
+        if (params.has("publicar")) setParams({}, { replace: true });
+    }, [params, setParams]);
 
     useEffect(() => {
         const manejarScroll = () => setMostrarBotonFlotante(window.scrollY > 300);
@@ -67,18 +75,14 @@ function Feed() {
                     <PostComposerBar onOpen={() => setModalAbierto(true)} />
 
                     {postsStatus === "loading" && (
-                        <div className="flex flex-col gap-4" aria-busy="true" aria-label="Cargando publicaciones">
-                            <PostSkeleton />
-                            <PostSkeleton />
-                        </div>
+                        <Cargando etiqueta="Cargando publicaciones">
+                            <div className="flex flex-col gap-4"><PostSkeleton /><PostSkeleton /></div>
+                        </Cargando>
                     )}
-                    {postsStatus === "error" && (
-                        <div role="alert" className="py-10 text-center">
-                            <p className="text-danger">{postsError}</p>
-                            <button type="button" onClick={loadPosts} className="mt-3 text-accent underline">Reintentar</button>
-                        </div>
+                    {postsStatus === "error" && <EstadoError mensaje={postsError} onReintentar={loadPosts} />}
+                    {postsStatus === "ready" && !posts.length && (
+                        <EstadoVacio icono="publicacion" titulo="Aún no hay publicaciones" detalle="¡Sé el primero en compartir algo con la facultad!" accion={{ texto: "Crear publicación", onClick: () => setModalAbierto(true) }} />
                     )}
-                    {postsStatus === "ready" && !posts.length && <p className="py-10 text-center text-ink-muted">Aún no hay publicaciones. ¡Sé el primero en publicar!</p>}
                     {posts.map((post) => (
                         <PostCard key={post.id} post={post} />
                     ))}

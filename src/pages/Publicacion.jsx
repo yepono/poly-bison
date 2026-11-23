@@ -5,6 +5,8 @@ import Avatar from "../components/Avatar";
 import { useAppData } from "../context/AppDataContext";
 import { api, mapComentario, mapPost } from "../api/client";
 import { useDialogos } from "../components/Dialogos";
+import PostSkeleton from "../components/PostSkeleton";
+import { Cargando, EsqueletoLista, EstadoError, EstadoVacio } from "../components/Estados";
 
 const COMENTARIO_MAX = 500;
 
@@ -19,6 +21,7 @@ function Publicacion({ modal = false }) {
     const [detalle, setDetalle] = useState(null);
     // Comentarios de la publicación: { id, lista, error }
     const [comentarios, setComentarios] = useState(null);
+    const [intento, setIntento] = useState(0); // "Reintentar" en los comentarios
     const navigate = useNavigate();
     const esStaff = user.rol === "Administrador" || user.rol === "Moderador";
 
@@ -52,14 +55,18 @@ function Publicacion({ modal = false }) {
             .then((response) => { if (!cancelled) setComentarios({ id: postId, lista: response.comentarios.map(mapComentario), error: "" }); })
             .catch((err) => { if (!cancelled) setComentarios({ id: postId, lista: [], error: err.message }); });
         return () => { cancelled = true; };
-    }, [postId]);
+    }, [postId, intento]);
 
-    const listaComentarios = comentarios?.id === postId ? comentarios.lista : [];
+    const comentariosListos = comentarios?.id === postId;
+    const listaComentarios = comentariosListos ? comentarios.lista : [];
 
     if (cargandoPost) {
         return (
-            <section className="mx-auto max-w-2xl py-12 text-center" aria-busy="true">
-                <p className="text-ink-muted">Cargando publicación...</p>
+            <section className="mx-auto w-full max-w-3xl">
+                <Cargando etiqueta="Cargando publicación">
+                    <PostSkeleton />
+                    <div className="card mt-6"><EsqueletoLista filas={2} avatar /></div>
+                </Cargando>
             </section>
         );
     }
@@ -139,15 +146,17 @@ function Publicacion({ modal = false }) {
             <h1 id="publication-title" className="sr-only">Publicación de {post.autor}</h1>
             <PostCard post={post} onPostChange={postDelFeed ? undefined : (actualizado) => setDetalle({ id: postId, post: actualizado })} />
             <section className="settings-section mt-6">
-                <h1 className="text-xl font-bold text-ink">Comentarios <span className="text-ink-muted">({listaComentarios.length})</span></h1>
+                <h2 className="text-xl font-bold text-ink">Comentarios {comentariosListos && <span className="text-ink-muted">({listaComentarios.length})</span>}</h2>
                 <form onSubmit={submitComment} className="mt-5 flex flex-col gap-3 sm:flex-row">
                     <label htmlFor="comment-input" className="sr-only">Escribe un comentario</label>
                     <textarea id="comment-input" value={comment} onChange={(event) => setComment(event.target.value)} maxLength={COMENTARIO_MAX} rows={2} placeholder="Escribe un comentario..." className="form-input min-h-12 flex-1 resize-y" />
                     <button type="submit" disabled={!comment.trim() || enviando} className="action-button">{enviando ? "Enviando..." : "Comentar"}</button>
                 </form>
-                {(errorComentario || comentarios?.error) && <p role="alert" className="mt-3 text-sm text-danger">{errorComentario || comentarios.error}</p>}
+                {errorComentario && <p role="alert" className="mt-3 text-sm text-danger">{errorComentario}</p>}
                 <div className="mt-6 divide-y divide-line">
-                    {listaComentarios.length ? listaComentarios.map((item) => (
+                    {!comentariosListos ? <Cargando etiqueta="Cargando comentarios"><EsqueletoLista filas={2} avatar /></Cargando>
+                    : comentarios.error ? <EstadoError compacto mensaje="No se pudieron cargar los comentarios." onReintentar={() => { setComentarios(null); setIntento((n) => n + 1); }} />
+                    : listaComentarios.length ? listaComentarios.map((item) => (
                         <article key={item.id} className="flex gap-3 py-4 first:pt-0">
                             <Avatar src={item.avatar} nombre={item.alias || item.autor} decorativo className="h-10 w-10 border border-line" />
                             <div className="min-w-0 flex-1">
@@ -159,7 +168,7 @@ function Publicacion({ modal = false }) {
                             {(item.authorId === user.id || esStaff) && <button type="button" onClick={() => deleteComment(item)} className="mt-2 text-xs font-semibold text-danger hover:underline" aria-label={`Eliminar comentario de ${item.alias}`}>Eliminar</button>}
                             </div>
                         </article>
-                    )) : <p className="py-6 text-ink-muted">Aún no hay comentarios. Inicia la conversación.</p>}
+                    )) : <EstadoVacio compacto icono="comentario" titulo="Aún no hay comentarios" detalle="Inicia la conversación." />}
                 </div>
             </section>
             </div>

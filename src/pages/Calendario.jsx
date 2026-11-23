@@ -4,6 +4,7 @@ import { estilosTipoEvento, colorPuntoEvento } from "../utils/eventStyles";
 import TechTag from "../components/TechTag";
 import PageHeader from "../components/PageHeader";
 import { api, formatRangoFechaHora, parseFechaMySQL } from "../api/client";
+import { EstadoVacio } from "../components/Estados";
 
 const NOMBRE_MES = (anio, mes) => new Date(anio, mes, 1).toLocaleDateString("es-MX", { month: "long" });
 const capitalizar = (texto) => texto.charAt(0).toUpperCase() + texto.slice(1);
@@ -18,6 +19,7 @@ function Calendario() {
     // { clave: "AAAA-MM", lista } eventos visibles del mes (eventos.php?accion=listar)
     const [eventosMes, setEventosMes] = useState(null);
     const [error, setError] = useState("");
+    const [intento, setIntento] = useState(0);
 
     const claveMes = `${mesActual.anio}-${String(mesActual.mes + 1).padStart(2, "0")}`;
     const events = eventosMes?.clave === claveMes ? eventosMes.lista : [];
@@ -28,7 +30,7 @@ function Calendario() {
             .then((response) => { if (!cancelled) { setEventosMes({ clave: claveMes, lista: response.eventos }); setError(""); } })
             .catch((err) => { if (!cancelled) setError(err.message); });
         return () => { cancelled = true; };
-    }, [claveMes]);
+    }, [claveMes, intento]);
 
     const diasMes = new Date(mesActual.anio, mesActual.mes + 1, 0).getDate();
     const diaInicio = new Date(mesActual.anio, mesActual.mes, 1).getDay(); // 0 = domingo
@@ -127,7 +129,12 @@ function Calendario() {
                     )}
                 </div>
 
-                {error && <p role="alert" className="mb-4 text-sm text-danger">{error}</p>}
+                {error && (
+                    <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-danger/40 bg-danger/10 px-4 py-2.5 text-sm text-danger">
+                        <span>No se pudieron cargar los eventos del mes.</span>
+                        <button type="button" onClick={() => { setError(""); setIntento((n) => n + 1); }} className="action-button action-button-secondary action-button-sm">Reintentar</button>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-7 gap-2 md:gap-4 mb-4 text-center text-sm font-bold text-ink-muted uppercase tracking-wider">
                     <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div>
@@ -258,8 +265,8 @@ function Calendario() {
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="col-span-full text-center py-10 bg-field border border-line rounded-xl">
-                                        <p className="text-ink-muted text-lg">No hay eventos programados para este día.</p>
+                                    <div className="col-span-full rounded-xl border border-line bg-field/40">
+                                        <EstadoVacio compacto icono="calendario" titulo="Sin eventos este día" detalle="No hay exámenes, asuetos ni actividades programadas." />
                                     </div>
                                 )}
                             </div>

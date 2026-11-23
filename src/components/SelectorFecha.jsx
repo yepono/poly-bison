@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 
 // Selector de fecha con calendario pequeño en español (reemplaza <input type="date">, que
@@ -34,7 +35,10 @@ function SelectorFecha({ id, value, onChange, min, placeholder = "Elige una fech
     const contenedor = useRef(null);
     const rejilla = useRef(null);
     const boton = useRef(null);
+    const popup = useRef(null);
     const idEtiqueta = useId();
+    // Posición fija del calendario: se dibuja en un portal para que paneles con scroll no lo recorten
+    const [pos, setPos] = useState(null);
 
     const fecha = deISO(foco);
     const anio = fecha.getFullYear();
@@ -46,7 +50,7 @@ function SelectorFecha({ id, value, onChange, min, placeholder = "Elige una fech
     const mesAnteriorBloqueado = Boolean(min && aISO(new Date(anio, mes, 0)) < min);
 
     const abrir = () => { setFoco(value || inicial); setAbierto(true); };
-    const cerrar = (devolverFoco = true) => { setAbierto(false); if (devolverFoco) boton.current?.focus(); };
+    const cerrar = (devolverFoco = true) => { setAbierto(false); setPos(null); if (devolverFoco) boton.current?.focus(); };
     const elegir = (iso) => {
         if (deshabilitado(iso)) return;
         onChange(iso);
@@ -60,18 +64,37 @@ function SelectorFecha({ id, value, onChange, min, placeholder = "Elige una fech
         setFoco(iso);
     };
 
+    useLayoutEffect(() => {
+        if (!abierto) return undefined;
+        const ubicar = () => {
+            const r = boton.current?.getBoundingClientRect();
+            if (!r) return;
+            const ALTO = 350;
+            const arriba = window.innerHeight - r.bottom < ALTO + 8 && r.top > window.innerHeight - r.bottom;
+            const left = Math.max(8, Math.min(r.left, window.innerWidth - 288 - 8));
+            setPos({ left, top: arriba ? undefined : r.bottom + 8, bottom: arriba ? window.innerHeight - r.top + 8 : undefined });
+        };
+        ubicar();
+        window.addEventListener("resize", ubicar);
+        window.addEventListener("scroll", ubicar, true);
+        return () => {
+            window.removeEventListener("resize", ubicar);
+            window.removeEventListener("scroll", ubicar, true);
+        };
+    }, [abierto]);
+
     // Clic fuera cierra
     useEffect(() => {
         if (!abierto) return undefined;
-        const fuera = (e) => { if (!contenedor.current?.contains(e.target)) setAbierto(false); };
+        const fuera = (e) => { if (!contenedor.current?.contains(e.target) && !popup.current?.contains(e.target)) { setAbierto(false); setPos(null); } };
         document.addEventListener("mousedown", fuera);
         return () => document.removeEventListener("mousedown", fuera);
     }, [abierto]);
 
     // El foco sigue al día activo
     useEffect(() => {
-        if (abierto) rejilla.current?.querySelector(`[data-fecha="${foco}"]`)?.focus();
-    }, [abierto, foco]);
+        if (abierto && pos) rejilla.current?.querySelector(`[data-fecha="${foco}"]`)?.focus();
+    }, [abierto, pos, foco]);
 
     const onTecla = (e) => {
         const pasos = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
@@ -82,9 +105,6 @@ function SelectorFecha({ id, value, onChange, min, placeholder = "Elige una fech
         } else if (e.key === "PageUp" || e.key === "PageDown") {
             e.preventDefault();
             cambiarMes(e.key === "PageUp" ? -1 : 1);
-        } else if (e.key === "Escape") {
-            e.preventDefault();
-            cerrar();
         }
     };
 
@@ -103,6 +123,7 @@ function SelectorFecha({ id, value, onChange, min, placeholder = "Elige una fech
                 id={id}
                 type="button"
                 onClick={() => (abierto ? cerrar() : abrir())}
+                onKeyDown={(e) => { if (e.key === "Escape" && abierto) { e.preventDefault(); cerrar(); } }}
                 aria-haspopup="dialog"
                 aria-expanded={abierto}
                 className="form-input flex items-center gap-3 text-left"
@@ -122,15 +143,18 @@ function SelectorFecha({ id, value, onChange, min, placeholder = "Elige una fech
                 </svg>
             </button>
 
-            <AnimatePresence>
-                {abierto && (
+            {createPortal(<AnimatePresence>
+                {abierto && pos && (
                     <motion.div
+                        ref={popup}
+                        style={{ position: "fixed", left: pos.left, top: pos.top, bottom: pos.bottom }}
                         role="dialog"
                         aria-modal="false"
                         aria-labelledby={idEtiqueta}
                         initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
                         transition={{ duration: 0.12 }}
-                        className="absolute left-0 z-40 mt-2 w-72 rounded-xl border border-line bg-surface p-3 shadow-pop"
+                        onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); cerrar(); } }}
+                        className="z-[90] w-72 rounded-xl border border-line bg-surface p-3 shadow-pop"
                     >
                         <div className="mb-2 flex items-center justify-between">
                             <button type="button" onClick={() => cambiarMes(-1)} disabled={mesAnteriorBloqueado} aria-label="Mes anterior"
@@ -189,7 +213,7 @@ function SelectorFecha({ id, value, onChange, min, placeholder = "Elige una fech
                         </div>
                     </motion.div>
                 )}
-            </AnimatePresence>
+            </AnimatePresence>, document.body)}
         </div>
     );
 }
