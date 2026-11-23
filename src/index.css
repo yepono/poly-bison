@@ -40,6 +40,8 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-scrim: var(--scrim);
+  --color-viz-1: var(--viz-1);
+  --color-viz-2: var(--viz-2);
   --color-hero-via: var(--hero-via);
   --color-hero-to: var(--hero-to);
 

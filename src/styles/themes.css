@@ -31,6 +31,9 @@
   --brand-hover: #002244;
   --on-brand: #ffffff;
   --accent: #00bfff;
+  /* Series de gráficas (validadas: CVD y contraste vs. --surface de este tema) */
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
   --on-accent: #04121c;
 
   --danger: #ff5a5a;
@@ -81,6 +84,9 @@
   --brand-hover: #083a69;
   --on-brand: #ffffff;
   --accent: #1cc3ff;
+  /* Series de gráficas (validadas: CVD y contraste vs. --surface de este tema) */
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
   --on-accent: #04121c;
 
   --danger: #ff6b6b;
@@ -121,6 +127,9 @@
   --brand-hover: #002244;
   --on-brand: #ffffff;
   --accent: #0071a8;
+  /* Series de gráficas (validadas: CVD y contraste vs. --surface de este tema) */
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
   --on-accent: #ffffff;
 
   --danger: #c62828;

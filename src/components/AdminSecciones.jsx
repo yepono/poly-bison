@@ -1,6 +1,5 @@
 // Secciones del panel de administración conectadas a la API (Paso 5).
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { useDialogos } from "./Dialogos";
 import CustomSelect from "./CustomSelect";
@@ -11,6 +10,7 @@ import CampoFechaHora from "./CampoFechaHora";
 import { EsqueletoFilas, EstadoError, EstadoVacio } from "./Estados";
 import { EstadoStock, ImagenProducto } from "./ProductModal";
 import { colorPuntoEvento } from "../utils/eventStyles";
+import { DonaEstados, RankingInteraccion, RankingUsuarios } from "./GraficasAdmin";
 import { api, formatDia, formatFechaHora, formatHora, formatPrecio, formatRangoFechaHora, formatRangoHoras, mapProducto, toDateTimeLocal, validarImagen } from "../api/client";
 
 const EVENT_TYPES = ["Académico", "Examen", "Asueto", "Cultural", "Deportivo"];
@@ -60,24 +60,11 @@ function FilasCargando({ filas = 4 }) {
 
 // Estados de cuenta -> colores de estado (reservados para esto), siempre con etiqueta y cifra
 const ESTADOS = [
-    { campo: "usuarios_activos", nombre: "Aprobados", color: "bg-success" },
-    { campo: "pendientes", nombre: "Pendientes", color: "bg-warning" },
-    { campo: "rechazados", nombre: "Rechazados", color: "bg-ink-muted" },
-    { campo: "baneados", nombre: "Baneados", color: "bg-danger" },
+    { campo: "usuarios_activos", estado: "Aprobado", nombre: "Aprobados", color: "var(--success)", punto: "bg-success" },
+    { campo: "pendientes", estado: "Pendiente", nombre: "Pendientes", color: "var(--warning)", punto: "bg-warning" },
+    { campo: "rechazados", estado: "Rechazado", nombre: "Rechazados", color: "var(--ink-muted)", punto: "bg-ink-muted" },
+    { campo: "baneados", estado: "Baneado", nombre: "Baneados", color: "var(--danger)", punto: "bg-danger" },
 ];
-
-// Barra horizontal de una sola serie con etiqueta directa del valor
-function BarraValor({ valor, maximo, texto }) {
-    const ancho = maximo ? Math.max((valor / maximo) * 100, valor ? 2 : 0) : 0;
-    return (
-        <div className="flex items-center gap-3">
-            <div className="h-2.5 flex-1 rounded-full bg-field">
-                <div className="h-2.5 rounded-full bg-accent" style={{ width: `${ancho}%` }} />
-            </div>
-            <span className="w-16 shrink-0 text-right text-sm font-semibold tabular-nums text-ink">{texto ?? valor}</span>
-        </div>
-    );
-}
 
 // ---------- Resumen / Dashboard (solo Administrador, Paso 6) ----------
 // Datos: reportes.php -> vw_resumen_usuarios, vw_usuarios_mas_activos,
@@ -113,12 +100,13 @@ export function AdminResumen({ setNotice, onIrA }) {
     const r = resumen ?? {};
     const num = (campo) => Number(r[campo]) || 0;
 
-    const porEstado = ESTADOS.map((e) => ({ ...e, total: num(e.campo) }));
+    const porEstado = ESTADOS.map((e) => ({
+        ...e,
+        clave: e.campo,
+        total: num(e.campo),
+        onClick: onIrA ? () => onIrA("Estudiantes", e.estado) : undefined,
+    }));
     const totalUsuarios = porEstado.reduce((suma, item) => suma + item.total, 0);
-    const pct = (n) => (totalUsuarios ? Math.round((n / totalUsuarios) * 100) : 0);
-    const maxPosts = Math.max(1, ...(masActivos ?? []).map((u) => Number(u.total_publicaciones) || 0));
-    const interaccion = (p) => (Number(p.total_likes) || 0) + (Number(p.total_comentarios) || 0);
-    const maxInteraccion = Math.max(1, ...(mayorInteraccion ?? []).map(interaccion));
 
     return <>
         <FranjaCifras etiqueta="Cifras generales" cargando={cargando} cifras={[
@@ -139,57 +127,20 @@ export function AdminResumen({ setNotice, onIrA }) {
             </div>
         )}
 
-        <Tarjeta titulo="Usuarios por estado" detalle={cargando ? "Cargando..." : `${totalUsuarios} cuentas (sin incluir eliminadas)`}>
-            {cargando ? <FilasCargando filas={1} /> : <>
-                {/* Barra 100% apilada: proporción de cada estado; separación de 2px entre tramos */}
-                <div className="flex h-4 w-full gap-0.5 overflow-hidden rounded-full bg-field" aria-hidden="true">
-                    {porEstado.filter((e) => e.total).map((e) => (
-                        <div key={e.campo} className={`${e.color} h-full first:rounded-l-full last:rounded-r-full`} style={{ width: `${pct(e.total)}%`, minWidth: 4 }} title={`${e.nombre}: ${e.total} (${pct(e.total)}%)`} />
-                    ))}
-                </div>
-                <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {porEstado.map((e) => (
-                        <li key={e.campo} className="flex items-start gap-2">
-                            <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${e.color}`} aria-hidden="true" />
-                            <span>
-                                <span className="block text-sm text-ink-soft">{e.nombre}</span>
-                                <span className="text-lg font-bold tabular-nums text-ink">{e.total}</span>
-                                <span className="ml-1.5 text-xs text-ink-muted">{pct(e.total)}%</span>
-                            </span>
-                        </li>
-                    ))}
-                </ul>
-            </>}
+        <Tarjeta titulo="Usuarios por estado" detalle={cargando ? " " : `${totalUsuarios} cuentas (sin incluir eliminadas)${onIrA ? " · toca un estado para ver esas cuentas" : ""}`}>
+            {cargando ? <FilasCargando filas={2} /> : <DonaEstados datos={porEstado} />}
         </Tarjeta>
 
         <div className="grid gap-5 xl:grid-cols-2">
             <Tarjeta titulo="Usuarios más activos" detalle="Por número de publicaciones">
-                {masActivos === null ? <FilasCargando /> : !masActivos.length ? <p className="text-sm text-ink-muted">Aún no hay actividad.</p> : (
-                    <ol className="space-y-4">
-                        {masActivos.map((u, i) => (
-                            <li key={u.id_usuario}>
-                                <div className="mb-1 flex items-baseline gap-2 text-sm">
-                                    <span className="w-5 shrink-0 tabular-nums text-ink-muted">{i + 1}.</span>
-                                    <Link to={`/perfil/${u.id_usuario}`} className="min-w-0 truncate font-semibold text-ink hover:text-accent hover:underline">@{u.alias}</Link>
-                                </div>
-                                <div className="pl-7"><BarraValor valor={Number(u.total_publicaciones) || 0} maximo={maxPosts} texto={`${u.total_publicaciones} posts`} /></div>
-                            </li>
-                        ))}
-                    </ol>
-                )}
+                {masActivos === null ? <FilasCargando /> : !masActivos.length
+                    ? <EstadoVacio compacto icono="publicacion" titulo="Aún no hay actividad" />
+                    : <RankingUsuarios usuarios={masActivos} />}
             </Tarjeta>
-            <Tarjeta titulo="Publicaciones con mayor interacción" detalle="Me gusta + comentarios">
-                {mayorInteraccion === null ? <FilasCargando /> : !mayorInteraccion.length ? <p className="text-sm text-ink-muted">Aún no hay publicaciones.</p> : (
-                    <ol className="space-y-4">
-                        {mayorInteraccion.map((p) => (
-                            <li key={p.id_publicacion}>
-                                <Link to={`/publicacion/${p.id_publicacion}`} className="line-clamp-1 text-sm font-semibold text-ink hover:text-accent hover:underline">{p.titulo}</Link>
-                                <p className="mb-1 text-xs text-ink-muted">@{p.alias} · {p.total_likes} me gusta · {p.total_comentarios} comentarios</p>
-                                <BarraValor valor={interaccion(p)} maximo={maxInteraccion} />
-                            </li>
-                        ))}
-                    </ol>
-                )}
+            <Tarjeta titulo="Publicaciones con mayor interacción" detalle="Me gusta y comentarios por publicación">
+                {mayorInteraccion === null ? <FilasCargando /> : !mayorInteraccion.length
+                    ? <EstadoVacio compacto icono="publicacion" titulo="Aún no hay publicaciones" />
+                    : <RankingInteraccion publicaciones={mayorInteraccion} />}
             </Tarjeta>
         </div>
     </>;
