@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { estilosTipoEvento, colorPuntoEvento } from "../utils/eventStyles";
 import TechTag from "../components/TechTag";
 import { api, parseFechaMySQL } from "../api/client";
 
@@ -58,30 +59,6 @@ function Calendario() {
 
     // Eventos del día seleccionado para el Panel[cite: 9]
     const eventosDelDia = fechaSeleccionada ? eventosDelDiaDe(fechaSeleccionada) : [];
-
-    // Estilos dinámicos para las etiquetas de eventos[cite: 9]
-    const getEstilosPorTipo = (tipo) => {
-        switch (tipo) {
-            case 'Examen': return 'bg-cal-examen/10 text-cal-examen border-cal-examen/40';
-            case 'Académico': return 'bg-cal-academico/10 text-cal-academico border-cal-academico/40';
-            case 'Asueto': return 'bg-cal-asueto/10 text-cal-asueto border-cal-asueto/40';
-            case 'Cultural': return 'bg-cal-cultural/10 text-cal-cultural border-cal-cultural/40';
-            case 'Deportivo': return 'bg-cal-deportivo/10 text-cal-deportivo border-cal-deportivo/40';
-            default: return 'bg-surface border-line text-ink-soft';
-        }
-    };
-
-    // Estilos para los puntitos (cuando está contraído)[cite: 9]
-    const getColorPunto = (tipo) => {
-        switch (tipo) {
-            case 'Examen': return 'bg-cal-examen shadow-[0_0_5px_var(--cal-examen)]';
-            case 'Académico': return 'bg-cal-academico shadow-[0_0_5px_var(--cal-academico)]';
-            case 'Asueto': return 'bg-cal-asueto shadow-[0_0_5px_var(--cal-asueto)]';
-            case 'Cultural': return 'bg-cal-cultural shadow-[0_0_5px_var(--cal-cultural)]';
-            case 'Deportivo': return 'bg-cal-deportivo shadow-[0_0_5px_var(--cal-deportivo)]';
-            default: return 'bg-ink-muted';
-        }
-    };
 
     // Lógica para estructurar la cuadrícula y aislar la semana seleccionada
     const obtenerCeldas = () => {
@@ -174,7 +151,7 @@ function Calendario() {
                                             {eventosHoy.map((evento, idx) => (
                                                 <div
                                                     key={idx}
-                                                    className={`w-2.5 h-2.5 rounded-full ${getColorPunto(evento.tipo)}`}
+                                                    className={`w-2.5 h-2.5 rounded-full ${colorPuntoEvento(evento.tipo)}`}
                                                     title={evento.titulo}
                                                 ></div>
                                             ))}
@@ -183,7 +160,7 @@ function Calendario() {
                                         eventosHoy.map((evento, idx) => (
                                             <div
                                                 key={idx}
-                                                className={`text-2xs md:text-xs font-semibold px-2 py-1 rounded border truncate ${getEstilosPorTipo(evento.tipo)}`}
+                                                className={`text-2xs md:text-xs font-semibold px-2 py-1 rounded border truncate ${estilosTipoEvento(evento.tipo)}`}
                                                 title={evento.titulo}
                                             >
                                                 {evento.titulo}
