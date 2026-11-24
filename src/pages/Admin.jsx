@@ -10,7 +10,6 @@ import { useDialogos } from "../components/Dialogos";
 import PageHeader from "../components/PageHeader";
 import CustomSelect from "../components/CustomSelect";
 
-// Adapta un usuario de la lista de la API a la forma que usa el panel
 function mapAdminUser(record) {
     return {
         id: record.id_usuario,
@@ -31,7 +30,6 @@ function mapAdminUser(record) {
 const emptyAccountForm = { nombre: "", alias: "", correo: "", matricula: "", id_carrera: "", semestre: "1" };
 
 const allSections = ["Resumen", "Estudiantes", "Administradores", "Rentas", "Horarios", "Tienda", "Eventos", "Bitácora"];
-// Solo el administrador ve Resumen, Bitácora, Horarios y Tienda
 const soloAdministrador = ["Resumen", "Horarios", "Tienda", "Bitácora"];
 const states = ["Pendiente", "Aprobado", "Rechazado", "Baneado"];
 
@@ -42,7 +40,6 @@ function Admin() {
     const { avisar, pedirTexto } = useDialogos();
     const [users, setUsers] = useState(null); // null mientras carga
     const [errorUsuarios, setErrorUsuarios] = useState("");
-    // El resumen es solo para el administrador; el moderador entra directo a Estudiantes
     const [section, setSection] = useState(esAdministrador ? "Resumen" : "Estudiantes");
     const [search, setSearch] = useState("");
     const [careerFilter, setCareerFilter] = useState("");
@@ -50,7 +47,6 @@ function Admin() {
     const [postFilter, setPostFilter] = useState("");
     const [likeFilter, setLikeFilter] = useState("");
     const [stateFilter, setStateFilter] = useState("");
-    // Los avisos del panel se muestran como notificaciones flotantes
     const setNotice = useCallback((mensaje) => { if (mensaje) avisar(mensaje); }, [avisar]);
     const [accountForm, setAccountForm] = useState(null); // null cuando el panel está cerrado
     const [errorAlta, setErrorAlta] = useState("");

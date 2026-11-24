@@ -1,12 +1,5 @@
--- ============================================================
--- triggers.sql - Triggers
--- Se puede ejecutar más de una vez. MySQL 8.0.19+ (local, Workbench) o MariaDB 10.5+ (hosting, phpMyAdmin)
--- Requiere functions.sql (fn_asistentes_reservacion).
---
--- Convención de errores (igual en procedures.sql):
---   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '<código HTTP>|<mensaje para el usuario>'
---   El PHP separa el código y responde con ese status y ese mensaje.
--- ============================================================
+-- triggersTriggers
+
 -- Ejecutar con la base de datos destino seleccionada (ver table_creation.sql).
 SELECT DATABASE() AS base_de_datos_actual;
 
@@ -16,7 +9,6 @@ DROP TRIGGER IF EXISTS trg_reservacion_fecha_bi;
 
 DELIMITER $$
 
--- ------------------------------------------------------------
 -- trg_usuario_estado_au  (AFTER UPDATE en Usuario)
 -- Si cambia el estado de una cuenta (aprobada, rechazada, baneada,
 -- eliminada...) deja registro en Event_Log (bitácora).
@@ -24,7 +16,7 @@ DELIMITER $$
 -- si no existe, se usa id_revisor; si tampoco, queda NULL = 'Sistema'.
 -- Se dispara desde: usuarios.php (cambiar_estado, eliminar_cuenta) vía sp_usuario.
 -- Se consulta en: vw_bitacora -> reportes.php (accion=bitacora).
--- ------------------------------------------------------------
+
 CREATE TRIGGER trg_usuario_estado_au
 AFTER UPDATE ON Usuario
 FOR EACH ROW
@@ -43,12 +35,10 @@ BEGIN
   END IF;
 END$$
 
--- ------------------------------------------------------------
 -- trg_asistente_capacidad_bi  (BEFORE INSERT en Estudiantes_Reservacion)
 -- Impide registrar más asistentes que la capacidad del aula.
 -- Se dispara desde: reservaciones.php (crear) vía sp_reservacion AGREGAR_ASISTENTE.
--- Error -> HTTP 409.
--- ------------------------------------------------------------
+
 CREATE TRIGGER trg_asistente_capacidad_bi
 BEFORE INSERT ON Estudiantes_Reservacion
 FOR EACH ROW
@@ -67,12 +57,10 @@ BEGIN
   END IF;
 END$$
 
--- ------------------------------------------------------------
 -- trg_reservacion_fecha_bi  (BEFORE INSERT en Reservacion)
 -- Impide reservar en una fecha pasada.
 -- Se dispara desde: reservaciones.php (crear) vía sp_reservacion CREAR.
--- Error -> HTTP 400.
--- ------------------------------------------------------------
+
 CREATE TRIGGER trg_reservacion_fecha_bi
 BEFORE INSERT ON Reservacion
 FOR EACH ROW
@@ -85,6 +73,3 @@ END$$
 
 DELIMITER ;
 
--- Verificación: deben aparecer 3 triggers
--- (SHOW en lugar del catálogo del sistema: ver nota en functions.sql)
-SHOW TRIGGERS;

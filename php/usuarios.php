@@ -16,7 +16,6 @@ const DUPLICADOS_USUARIO = [
     "correo"    => "Ese correo ya está registrado",
 ];
 
-// Funciones de apoyo
 // Llama a sp_usuario con los parámetros por nombre (los que falten van NULL)
 function spUsuario(mysqli $conn, string $accion, array $p = []): array {
     return callProcedure($conn, "sp_usuario", "siisssssiibsss", [

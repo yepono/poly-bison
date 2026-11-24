@@ -1,19 +1,4 @@
--- ============================================================
--- procedures.sql - Rutinas globales: UNA por entidad, acciones con CASE
--- Se puede ejecutar más de una vez. MySQL 8.0.19+ (local, Workbench) o MariaDB 10.5+ (hosting, phpMyAdmin)
--- Requiere: alter_schema.sql, functions.sql, triggers.sql
---
--- Reglas comunes:
---  * Escrituras con rutinas; lecturas con vistas.
---  * p_id_actor = usuario de la sesión (lo manda PHP, nunca el cliente).
---    Las rutinas vuelven a validar permisos (defensa en profundidad).
---  * Errores de negocio:
---      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '<código HTTP>|<mensaje>'
---    Duplicados (UNIQUE) llegan a PHP como error 1062 -> HTTP 409.
---  * Las rutinas NO abren transacciones; cuando una operación usa varias
---    llamadas (o varias tablas), PHP la envuelve en una transacción.
---  * Cada acción termina con un SELECT (id creado o filas afectadas).
--- ============================================================
+--procedures
 -- Ejecutar con la base de datos destino seleccionada (ver table_creation.sql).
 SELECT DATABASE() AS base_de_datos_actual;
 
@@ -29,31 +14,29 @@ DROP PROCEDURE IF EXISTS sp_producto;
 
 DELIMITER $$
 
--- ------------------------------------------------------------
 -- sp_usuario  -> usuarios.php
 -- Acciones:
 --   REGISTRAR           alta de estudiante (rol por DEFAULT, estado Pendiente)
---   CREAR_MODERADOR     solo Administrador (D14); pide matrícula, carrera y
+--   CREAR_MODERADOR     solo Administrador; pide matrícula, carrera y
 --                       semestre (todos son estudiantes); queda Aprobado y con
 --                       debe_cambiar_contrasena = TRUE (clave temporal)
 --   DATOS_LOGIN         id, hash, estado y motivo por correo (o por id si
 --                       p_correo es NULL), más el hash de la clave temporal
 --                       de recuperación y si sigue vigente. Los hashes nunca
 --                       salen de PHP.
---   SOLICITAR_RECUPERACION  (R12, Q2-A) guarda el hash de una clave temporal
+--   SOLICITAR_RECUPERACION  guarda el hash de una clave temporal
 --                       que vence en 30 min. Solo cuentas Aprobadas; máximo
 --                       una solicitud cada 5 min. Regresa enviar = 1/0 (PHP
 --                       responde igual en ambos casos). Registra en Event_Log.
 --   USAR_TEMPORAL       al entrar con la clave temporal: pasa a ser la
 --                       contraseña, se borra la temporal y se exige cambiarla
---   ACTUALIZAR_PERFIL   correo, carrera, semestre (D13) - solo la propia cuenta
+--   ACTUALIZAR_PERFIL   correo, carrera, semestre - solo la propia cuenta
 --   CAMBIAR_CONTRASENA  guarda el nuevo hash y quita la marca de clave
 --                       temporal y cualquier recuperación pendiente - solo la
 --                       propia cuenta
 --   ACTUALIZAR_FOTO     guarda/quita el avatar (BLOB) - solo la propia cuenta
---   CAMBIAR_ESTADO      Admin/Moderador: Pendiente/Aprobado/Rechazado/Baneado (D15)
---   ELIMINAR            borrado lógico + anonimización de la propia cuenta (D12)
--- ------------------------------------------------------------
+--   CAMBIAR_ESTADO      Admin/Moderador: Pendiente/Aprobado/Rechazado/Baneado
+--   ELIMINAR            borrado lógico + anonimización de la propia cuenta 
 CREATE PROCEDURE sp_usuario(
   IN p_accion      VARCHAR(30),
   IN p_id_usuario  INT,
@@ -283,13 +266,12 @@ BEGIN
   SET @pb_id_actor = NULL;
 END$$
 
--- ------------------------------------------------------------
 -- sp_publicacion  -> publicaciones.php
 -- Acciones:
---   CREAR     título (obligatorio, D4), descripción (D5) y una etiqueta (D6)
+--   CREAR     título (obligatorio) , descripción y una etiqueta
 --   EDITAR    solo el autor; parámetros NULL = no cambiar
---   ELIMINAR  borrado lógico; el autor o Administrador/Moderador (D15)
--- ------------------------------------------------------------
+--   ELIMINAR  borrado lógico; el autor o Administrador/Moderador 
+
 CREATE PROCEDURE sp_publicacion(
   IN p_accion          VARCHAR(30),
   IN p_id_publicacion  INT,
@@ -373,14 +355,13 @@ BEGIN
   END CASE;
 END$$
 
--- ------------------------------------------------------------
 -- sp_multimedia  -> publicaciones.php (crear / editar)
--- Una imagen O un video por publicación (D7). Solo el autor.
+-- Una imagen O un video por publicación. Solo el autor.
 -- Acciones:
 --   AGREGAR_IMAGEN  BLOB + MIME (PHP ya validó tipo y tamaño)
 --   AGREGAR_VIDEO   URL externa (PHP ya validó que sea YouTube)
 --   ELIMINAR        quita el archivo (para reemplazarlo al editar)
--- ------------------------------------------------------------
+
 CREATE PROCEDURE sp_multimedia(
   IN p_accion          VARCHAR(30),
   IN p_id_multimedia   INT,
@@ -444,12 +425,11 @@ BEGIN
   END CASE;
 END$$
 
--- ------------------------------------------------------------
 -- sp_comentario  -> comentarios.php
 -- Acciones:
---   CREAR     en una publicación activa (máx. 500 caracteres, D5)
---   ELIMINAR  borrado lógico; el autor o Administrador/Moderador (D15)
--- ------------------------------------------------------------
+--   CREAR     en una publicación activa (máx. 500 caracteres)
+--   ELIMINAR  borrado lógico; el autor o Administrador/Moderador)
+
 CREATE PROCEDURE sp_comentario(
   IN p_accion          VARCHAR(30),
   IN p_id_comentario   INT,
@@ -498,12 +478,12 @@ BEGIN
   END CASE;
 END$$
 
--- ------------------------------------------------------------
+
 -- sp_reaccion  -> reacciones.php
 -- Acciones:
 --   ALTERNAR  da o quita "Like"; regresa liked (0/1) y el nuevo total
 --             (fn_total_reacciones)
--- ------------------------------------------------------------
+
 CREATE PROCEDURE sp_reaccion(
   IN p_accion          VARCHAR(30),
   IN p_id_publicacion  INT,
@@ -543,18 +523,17 @@ BEGIN
   END CASE;
 END$$
 
--- ------------------------------------------------------------
 -- sp_reservacion  -> reservaciones.php
 -- Acciones:
 --   CREAR              valida aula/bloque/disponibilidad (fn_aula_disponible)
 --                      y genera el ticket (fn_generar_ticket).
 --                      Fecha pasada -> trg_reservacion_fecha_bi.
---                      1 por día por usuario -> UNIQUE uq_user_dia (1062).
---   AGREGAR_ASISTENTE  matrícula de 7 dígitos (D16); capacidad ->
+--                      1 por día por usuario -> UNIQUE uq_user_dia.
+--   AGREGAR_ASISTENTE  matrícula de 7 dígitos; capacidad ->
 --                      trg_asistente_capacidad_bi. PHP lo llama una vez por
 --                      asistente dentro de la misma transacción que CREAR.
 --   CANCELAR           solo el dueño, solo si está Activa y no es pasada
--- ------------------------------------------------------------
+
 CREATE PROCEDURE sp_reservacion(
   IN p_accion          VARCHAR(30),
   IN p_id_reservacion  INT,
@@ -635,15 +614,13 @@ BEGIN
   END CASE;
 END$$
 
--- ------------------------------------------------------------
--- sp_bloque_horario  -> reservaciones.php (panel admin "Horarios", D9)
+-- sp_bloque_horario  -> reservaciones.php (panel admin "Horarios")
 -- Solo Administrador.
 -- Acciones:
---   CREAR       nuevo bloque (hora_fin > hora_inicio; duplicado -> 1062)
+--   CREAR       nuevo bloque (hora_fin > hora_inicio; duplicado)
 --   EDITAR      cambia horas solo si el bloque NO tiene reservaciones
 --   ACTIVAR     vuelve a ofrecer el bloque
 --   DESACTIVAR  deja de ofrecerlo (no se borra: puede tener reservaciones)
--- ------------------------------------------------------------
 CREATE PROCEDURE sp_bloque_horario(
   IN p_accion       VARCHAR(30),
   IN p_id_bloque    INT,
@@ -697,16 +674,14 @@ BEGIN
   END CASE;
 END$$
 
--- ------------------------------------------------------------
 -- sp_evento  -> eventos.php
--- Administrador o Moderador (D15).
+-- Administrador o Moderador.
 -- Acciones:
 --   CREAR     título, tipo, inicio/fin (fin >= inicio), lugar, descripción
 --   EDITAR    parámetros NULL = no cambiar
 --   OCULTAR   visible = 0 (botón "Ocultar" del panel)
 --   MOSTRAR   visible = 1 (botón "Mostrar" del panel)
 --   ELIMINAR  borrado físico (ninguna tabla depende de Eventos)
--- ------------------------------------------------------------
 CREATE PROCEDURE sp_evento(
   IN p_accion       VARCHAR(30),
   IN p_id_evento    INT,
@@ -791,14 +766,12 @@ BEGIN
   END CASE;
 END$$
 
--- ------------------------------------------------------------
 -- sp_producto  -> productos.php
--- Solo Administrador (D15).
+-- Solo Administrador.
 -- Acciones:
---   CREAR       categoría, nombre, descripción, precio, stock, foto BLOB (D10)
+--   CREAR       categoría, nombre, descripción, precio, stock, foto BLOB
 --   EDITAR      parámetros NULL = no cambiar (la foto solo si se manda)
 --   DESACTIVAR  estado = 0 (botón "Eliminar" del panel; no se borra)
--- ------------------------------------------------------------
 CREATE PROCEDURE sp_producto(
   IN p_accion        VARCHAR(30),
   IN p_id_producto   INT,
@@ -879,7 +852,3 @@ BEGIN
 END$$
 
 DELIMITER ;
-
--- Verificación: deben aparecer 9 procedimientos
--- (SHOW en lugar del catálogo del sistema: ver nota en functions.sql)
-SHOW PROCEDURE STATUS WHERE Db = DATABASE();

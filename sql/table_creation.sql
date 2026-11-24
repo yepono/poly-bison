@@ -1,13 +1,4 @@
--- ============================================================
--- table_creation.sql - Tablas y catálogos iniciales de PolyBison
--- Compatible con MySQL 8.0.19+ y MariaDB 10.5+ (IONOS: MariaDB 11).
---
--- ANTES DE EJECUTAR: selecciona la base de datos destino.
---   * Local (Workbench): ejecuta primero 00_local_bd_y_usuario.sql y
---     haz doble clic en "poly_bison" para dejarla como esquema por defecto.
---   * Hosting (phpMyAdmin): abre la base de datos que te asignó el panel.
--- Pensado para una base de datos VACÍA (instalación nueva).
--- ============================================================
+
 
 -- Base de datos actual (debe mostrar la BD destino, no NULL)
 SELECT DATABASE() AS base_de_datos_actual;
@@ -16,29 +7,23 @@ SELECT DATABASE() AS base_de_datos_actual;
 -- Va ANTES de crear rutinas para que sus parámetros también sean utf8mb4.
 ALTER DATABASE CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 1. Carreras
--- ------------------------------------------------------------
 CREATE TABLE Carreras (
   id_carrera INT AUTO_INCREMENT PRIMARY KEY,
   nombre     VARCHAR(200) NOT NULL UNIQUE,
   activo     BOOL NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 2. Rol
--- ------------------------------------------------------------
 CREATE TABLE Rol (
   id_rol      INT AUTO_INCREMENT PRIMARY KEY,
   nombre      VARCHAR(50) NOT NULL UNIQUE,
   descripcion VARCHAR(200)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 3. Usuario
 -- matricula, id_carrera y semestre son NULL para admins/moderadores.
 -- "estado" reemplaza a "activo" (ya incluye Baneado).
--- ------------------------------------------------------------
 CREATE TABLE Usuario (
   id_usuario      INT AUTO_INCREMENT PRIMARY KEY,
   id_rol          INT NOT NULL,
@@ -63,9 +48,7 @@ CREATE TABLE Usuario (
   CONSTRAINT chk_usuario_semestre CHECK (semestre IS NULL OR semestre BETWEEN 1 AND 12)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 4. Publicacion
--- ------------------------------------------------------------
 CREATE TABLE Publicacion (
   id_publicacion INT AUTO_INCREMENT PRIMARY KEY,
   id_usuario     INT NOT NULL,
@@ -78,9 +61,7 @@ CREATE TABLE Publicacion (
   INDEX idx_pub_usuario (id_usuario)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 5. Etiqueta
--- ------------------------------------------------------------
 CREATE TABLE Etiqueta (
   id_etiqueta INT AUTO_INCREMENT PRIMARY KEY,
   nombre      VARCHAR(150) NOT NULL UNIQUE,
@@ -88,9 +69,7 @@ CREATE TABLE Etiqueta (
   activo      BOOL NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 6. Publicacion_Etiqueta (PK compuesta)
--- ------------------------------------------------------------
 CREATE TABLE Publicacion_Etiqueta (
   id_publicacion INT NOT NULL,
   id_etiqueta    INT NOT NULL,
@@ -99,10 +78,8 @@ CREATE TABLE Publicacion_Etiqueta (
   CONSTRAINT fk_pe_eti FOREIGN KEY (id_etiqueta)    REFERENCES Etiqueta(id_etiqueta)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 7. Multimedia
 -- Imagen -> BLOB en BD | Video -> solo enlace externo
--- ------------------------------------------------------------
 CREATE TABLE Multimedia (
   id_multimedia  INT AUTO_INCREMENT PRIMARY KEY,
   id_publicacion INT NOT NULL,
@@ -121,9 +98,7 @@ CREATE TABLE Multimedia (
   INDEX idx_mult_pub (id_publicacion)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 8. Comentario
--- ------------------------------------------------------------
 CREATE TABLE Comentario (
   id_comentario  INT AUTO_INCREMENT PRIMARY KEY,
   id_publicacion INT NOT NULL,
@@ -137,9 +112,7 @@ CREATE TABLE Comentario (
   INDEX idx_com_usuario (id_usuario)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 9. Reaccion (likes/dislikes) - alimenta "mayor interacción"
--- ------------------------------------------------------------
 CREATE TABLE Reaccion (
   id_usuario     INT NOT NULL,
   id_publicacion INT NOT NULL,
@@ -151,9 +124,7 @@ CREATE TABLE Reaccion (
   INDEX idx_reac_pub (id_publicacion)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 10. Ubicacion (mapa interactivo)
--- ------------------------------------------------------------
 CREATE TABLE Ubicacion (
   id_ubicacion INT AUTO_INCREMENT PRIMARY KEY,
   nombre       VARCHAR(250) NOT NULL,
@@ -166,9 +137,7 @@ CREATE TABLE Ubicacion (
   INDEX idx_ubic_tipo (tipo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 11. Aula (inventario de 3 aulas de estudio)
--- ------------------------------------------------------------
 CREATE TABLE Aula (
   id_aula      INT AUTO_INCREMENT PRIMARY KEY,
   nombre       VARCHAR(250) NOT NULL UNIQUE,
@@ -179,9 +148,7 @@ CREATE TABLE Aula (
   CONSTRAINT chk_aula_cap CHECK (capacidad > 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 12. Bloque_Horario
--- ------------------------------------------------------------
 CREATE TABLE Bloque_Horario (
   id_bloque   INT AUTO_INCREMENT PRIMARY KEY,
   hora_inicio TIME NOT NULL,
@@ -190,14 +157,12 @@ CREATE TABLE Bloque_Horario (
   CONSTRAINT chk_bloque CHECK (hora_fin > hora_inicio)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 13. Reservacion
 -- Columna generada "ocupa": vale 1 si la reserva está Activa o Completada
 -- y NULL si fue Cancelada. Como UNIQUE permite varios NULL, las
 -- cancelaciones no bloquean nuevas reservas.
 --   - uq_aula_slot : evita empalmes (misma aula, fecha y bloque)
 --   - uq_user_dia  : máximo 1 hora diaria por estudiante
--- ------------------------------------------------------------
 CREATE TABLE Reservacion (
   id_reservacion INT AUTO_INCREMENT PRIMARY KEY,
   id_aula        INT NOT NULL,
@@ -216,10 +181,8 @@ CREATE TABLE Reservacion (
   INDEX idx_res_fecha (fecha_reserva)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 14. Estudiantes_Reservacion (asistentes)
 -- El SP de reserva debe validar que no excedan Aula.capacidad.
--- ------------------------------------------------------------
 CREATE TABLE Estudiantes_Reservacion (
   id_asistente   INT AUTO_INCREMENT PRIMARY KEY,
   id_reservacion INT NOT NULL,
@@ -229,9 +192,7 @@ CREATE TABLE Estudiantes_Reservacion (
   CONSTRAINT fk_asis_res FOREIGN KEY (id_reservacion) REFERENCES Reservacion(id_reservacion) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 15. Eventos (calendario)
--- ------------------------------------------------------------
 CREATE TABLE Eventos (
   id_evento         INT AUTO_INCREMENT PRIMARY KEY,
   titulo            VARCHAR(200) NOT NULL,
@@ -248,18 +209,14 @@ CREATE TABLE Eventos (
   INDEX idx_evento_fecha (fecha_inicio)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 16. Categoria_Producto
--- ------------------------------------------------------------
 CREATE TABLE Categoria_Producto (
   id_categoria INT AUTO_INCREMENT PRIMARY KEY,
   nombre       VARCHAR(100) NOT NULL UNIQUE,
   activo       BOOL NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 17. Productos (Bison Store - solo catálogo)
--- ------------------------------------------------------------
 CREATE TABLE Productos (
   id_producto  INT AUTO_INCREMENT PRIMARY KEY,
   id_categoria INT NOT NULL,
@@ -276,10 +233,8 @@ CREATE TABLE Productos (
   INDEX idx_prod_cat (id_categoria)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
 -- 18. Event_Log (bitácora)
 -- id_usuario NULL = acción automática del sistema (triggers)
--- ------------------------------------------------------------
 CREATE TABLE Event_Log (
   id_log               INT AUTO_INCREMENT PRIMARY KEY,
   id_usuario           INT NULL,
